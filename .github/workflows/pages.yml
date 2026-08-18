@@ -48,6 +48,10 @@ jobs:
 
       - name: Konfiguracja Pages
         uses: actions/configure-pages@v5
+        with:
+          # Wlacza Pages w ustawieniach repozytorium przy pierwszym uruchomieniu,
+          # zeby nie trzeba bylo klikac tego recznie w Settings.
+          enablement: true
 
       - name: Spakowanie katalogu site/
         uses: actions/upload-pages-artifact@v3
