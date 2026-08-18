@@ -1,0 +1,156 @@
+name: Import ZIP do repozytorium
+
+# Pobiera archiwum ZIP z podanego adresu, rozpakowuje je i zapisuje
+# w repozytorium na osobnej galezi. Uruchamiany recznie (takze z telefonu):
+# zakladka "Actions" -> "Import ZIP do repozytorium" -> "Run workflow".
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_url:
+        description: 'Adres URL archiwum ZIP'
+        required: true
+        default: 'https://sfprivate-555.7m.pl/SF_555_UPDATE1.01.zip'
+      target_branch:
+        description: 'Galaz docelowa (tworzona od nowa przy kazdym uruchomieniu)'
+        required: true
+        default: 'import/sf555-zip'
+      base_branch:
+        description: 'Galaz bazowa'
+        required: true
+        default: 'claude/shakes-fidget-github-setup-qlour5'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie repozytorium
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_branch }}
+          fetch-depth: 0
+
+      - name: Pobranie archiwum
+        run: |
+          set -euo pipefail
+          echo "Pobieram: ${{ inputs.zip_url }}"
+          curl -fsSL --retry 3 --retry-delay 2 -o /tmp/import.zip "${{ inputs.zip_url }}"
+          ls -lh /tmp/import.zip
+          file /tmp/import.zip
+          if ! unzip -tq /tmp/import.zip; then
+            echo "::error::Pobrany plik nie jest poprawnym archiwum ZIP."
+            exit 1
+          fi
+
+      - name: Podglad zawartosci archiwum
+        run: |
+          set -euo pipefail
+          {
+            echo "## Zawartosc archiwum"
+            echo
+            echo '```'
+            unzip -l /tmp/import.zip | head -60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rozpakowanie
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/extract && mkdir -p /tmp/extract
+          unzip -q -o /tmp/import.zip -d /tmp/extract
+
+          # Jesli archiwum ma jeden katalog na szczycie, zdejmujemy go,
+          # zeby pliki gry trafily do korzenia repozytorium.
+          shopt -s dotglob nullglob
+          entries=(/tmp/extract/*)
+          if [ "${#entries[@]}" -eq 1 ] && [ -d "${entries[0]}" ]; then
+            echo "Zdejmuje katalog nadrzedny: $(basename "${entries[0]}")"
+            mv "${entries[0]}" /tmp/game
+          else
+            mv /tmp/extract /tmp/game
+          fi
+          echo "Plikow w archiwum: $(find /tmp/game -type f | wc -l)"
+
+      - name: Kontrola rozmiaru plikow
+        run: |
+          set -euo pipefail
+          # GitHub odrzuca pliki powyzej 100 MB i ostrzega powyzej 50 MB.
+          big=$(find /tmp/game -type f -size +95M)
+          if [ -n "$big" ]; then
+            echo "::error::Pliki przekraczaja limit 100 MB GitHuba (potrzebny Git LFS):"
+            echo "$big" | while read -r f; do echo "  $(du -h "$f")"; done
+            exit 1
+          fi
+          find /tmp/game -type f -size +45M | while read -r f; do
+            echo "::warning::Duzy plik (powyzej 45 MB): $(du -h "$f")"
+          done
+
+      - name: Przeniesienie plikow do repozytorium
+        run: |
+          set -euo pipefail
+          # Zawartosc archiwum zastepuje stare pliki gry (--delete), wiec
+          # nic sie nie dubluje. Wylaczone z podmiany: .git i .github.
+          # Chronione przed skasowaniem (ale archiwum moze je nadpisac):
+          # dokumentacja i pliki konfiguracyjne repozytorium.
+          rsync -a --delete \
+            --exclude '/.git/' \
+            --exclude '/.github/' \
+            --filter 'P /README.md' \
+            --filter 'P /docs/' \
+            --filter 'P /.gitignore' \
+            --filter 'P /.gitattributes' \
+            /tmp/game/ ./
+
+      - name: Raport plikow pominietych przez .gitignore
+        run: |
+          set -euo pipefail
+          ignored=$(git status --porcelain --ignored | grep '^!!' | sed 's/^!! //' || true)
+          if [ -n "$ignored" ]; then
+            {
+              echo
+              echo "## Pliki pominiete przez .gitignore"
+              echo
+              echo "Jesli ktorykolwiek jest potrzebny do dzialania gry, trzeba go odblokowac w \`.gitignore\`."
+              echo
+              echo '```'
+              echo "$ignored"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Zapis i wypchniecie galezi
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B "${{ inputs.target_branch }}"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "Brak zmian — repozytorium ma juz dokladnie te zawartosc."
+            exit 0
+          fi
+
+          git commit -m "Import zawartosci archiwum $(basename '${{ inputs.zip_url }}')"
+          git push -f origin "HEAD:refs/heads/${{ inputs.target_branch }}"
+
+      - name: Podsumowanie
+        run: |
+          set -euo pipefail
+          {
+            echo
+            echo "## Wynik"
+            echo
+            echo "- Galaz: \`${{ inputs.target_branch }}\`"
+            echo "- Plikow w repozytorium: $(git ls-files | wc -l)"
+            echo
+            echo "### Katalogi najwyzszego poziomu"
+            echo
+            echo '```'
+            git ls-files | awk -F/ '{ if (NF>1) print $1"/"; else print $1 }' | sort | uniq -c | sort -rn
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -91,3 +91,35 @@ folder. Ograniczenia: max 100 plikow na raz i 25 MB na plik.
   `dump_*.sql`, `backup_*.sql`, `.env` i logi.
 - **Prywatnosc repo**: jesli kod ma nie byc publiczny, ustaw
   `Settings > General > Danger Zone > Change repository visibility` na Private.
+
+### Wariant D — automatyczny import archiwum ZIP (dziala z telefonu)
+
+W repozytorium jest gotowy workflow `.github/workflows/import-zip.yml`, ktory
+sam pobiera archiwum spod podanego adresu, rozpakowuje je i zapisuje w repo.
+Cala praca dzieje sie po stronie GitHuba — wystarczy przegladarka w telefonie.
+
+1. Wejdz w zakladke **Actions** w repozytorium.
+2. Z listy po lewej wybierz **Import ZIP do repozytorium**.
+3. Kliknij **Run workflow** i sprawdz pola:
+   - *Adres URL archiwum ZIP* — domyslnie ustawiony na paczke SF 555,
+   - *Galaz docelowa* — domyslnie `import/sf555-zip`,
+   - *Galaz bazowa* — galaz, od ktorej zaczyna sie import.
+4. Kliknij zielony **Run workflow** i poczekaj (przy duzym archiwum kilka minut).
+
+Po zakonczeniu w podsumowaniu uruchomienia znajdziesz liste plikow z archiwum,
+liczbe plikow w repozytorium i ostrzezenia o plikach pominietych przez `.gitignore`.
+
+Wazne szczegoly:
+
+- Import trafia na **osobna galaz** (`import/sf555-zip`), a nie na galaz robocza.
+  Dzieki temu nic sie nie nadpisuje w ciemno — zmiany mozna najpierw obejrzec.
+- Galaz docelowa jest tworzona od nowa przy kazdym uruchomieniu, wiec workflow
+  mozna bezpiecznie puszczac wielokrotnie.
+- Stare pliki gry sa **zastepowane** zawartoscia archiwum (`rsync --delete`),
+  wiec nie powstaja duplikaty. `README.md`, `docs/`, `.gitignore`,
+  `.gitattributes` oraz `.github/` sa chronione przed skasowaniem.
+- Jesli w archiwum jest plik wiekszy niz 100 MB, workflow zatrzyma sie
+  z bledem i wypisze jego nazwe — taki plik wymaga Git LFS.
+
+Jesli krok zapisu zwroci blad uprawnien, wlacz zapis dla Actions:
+`Settings > Actions > General > Workflow permissions > Read and write permissions`.
