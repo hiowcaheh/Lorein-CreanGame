@@ -1,0 +1,15 @@
+# Blokada dostepu do plikow, ktore nigdy nie powinny byc pobierane przez HTTP.
+<FilesMatch "^\.env|^\.env\.|\.sql$|^\.git">
+    Require all denied
+</FilesMatch>
+
+# Starsza skladnia Apache 2.2 — na wypadek starego hostingu.
+<IfModule !mod_authz_core.c>
+    <FilesMatch "^\.env|^\.env\.|\.sql$|^\.git">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# Bez listowania katalogow.
+Options -Indexes

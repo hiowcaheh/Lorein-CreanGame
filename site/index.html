@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lorein — prywatny serwer gry</title>
+<meta name="description" content="Prywatny serwer gry przegladarkowej opartej na silniku Shakes &amp; Fidget.">
+<style>
+  :root {
+    --tlo:        #14100c;
+    --tlo-karta:  #1e1811;
+    --obrys:      #3a2e20;
+    --tekst:      #e8ddc8;
+    --tekst-cichy:#a89578;
+    --zloto:      #f0c042;
+    --zielen:     #7bb661;
+    --czerwien:   #c85a4a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--tlo);
+    background-image:
+      radial-gradient(ellipse at 50% 0%, #2a2015 0%, transparent 60%);
+    color: var(--tekst);
+    font-family: "Segoe UI", Tahoma, Verdana, sans-serif;
+    line-height: 1.65;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .strona {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 4rem;
+  }
+
+  header { text-align: center; margin-bottom: 3rem; }
+
+  h1 {
+    font-size: clamp(2.2rem, 8vw, 3.4rem);
+    margin: 0 0 .3rem;
+    color: var(--zloto);
+    letter-spacing: .04em;
+    text-shadow: 0 2px 12px rgba(240,192,66,.25);
+  }
+
+  .podtytul {
+    margin: 0;
+    color: var(--tekst-cichy);
+    font-size: 1.05rem;
+  }
+
+  h2 {
+    font-size: 1.15rem;
+    color: var(--zloto);
+    margin: 0 0 .75rem;
+    letter-spacing: .02em;
+  }
+
+  section {
+    background: var(--tlo-karta);
+    border: 1px solid var(--obrys);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  p { margin: 0 0 .9rem; }
+  p:last-child { margin-bottom: 0; }
+
+  a { color: var(--zloto); }
+  a:hover { color: #ffd97a; }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .9rem;
+    color: var(--tekst-cichy);
+    border: 1px solid var(--obrys);
+    border-radius: 999px;
+    padding: .3rem .9rem;
+    margin-top: 1rem;
+  }
+
+  .kropka {
+    width: .55rem;
+    height: .55rem;
+    border-radius: 50%;
+    background: var(--zloto);
+    box-shadow: 0 0 8px var(--zloto);
+  }
+
+  .przycisk {
+    display: inline-block;
+    background: linear-gradient(#3a2e1c, #241c12);
+    border: 1px solid #5a4726;
+    color: var(--zloto);
+    text-decoration: none;
+    font-weight: 600;
+    padding: .7rem 1.6rem;
+    border-radius: 8px;
+    margin-top: .5rem;
+  }
+
+  .przycisk:hover { border-color: var(--zloto); color: #ffd97a; }
+
+  dl { margin: 0; }
+
+  dt {
+    color: var(--zloto);
+    font-weight: 600;
+    font-size: .9rem;
+    margin-top: .9rem;
+  }
+
+  dt:first-child { margin-top: 0; }
+
+  dd {
+    margin: .15rem 0 0;
+    color: var(--tekst-cichy);
+    font-size: .95rem;
+  }
+
+  ul { margin: 0; padding-left: 1.2rem; color: var(--tekst-cichy); }
+  li { margin-bottom: .35rem; }
+
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: .88em;
+    background: #0f0c08;
+    border: 1px solid var(--obrys);
+    border-radius: 4px;
+    padding: .1rem .4rem;
+    color: var(--tekst);
+  }
+
+  footer {
+    text-align: center;
+    color: var(--tekst-cichy);
+    font-size: .85rem;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--obrys);
+  }
+</style>
+</head>
+<body>
+<div class="strona">
+
+  <header>
+    <h1>Lorein</h1>
+    <p class="podtytul">Prywatny serwer gry przegladarkowej</p>
+    <div class="status"><span class="kropka"></span> Serwer w budowie</div>
+  </header>
+
+  <section>
+    <h2>O projekcie</h2>
+    <p>
+      Lorein to prywatny serwer klasycznej gry przegladarkowej z klimatem
+      fantasy — questy, arena, gildie, lochy i wieza. Klient dziala w
+      przegladarce dzieki Ruffle, wiec do gry nie jest potrzebny Flash.
+    </p>
+    <p>
+      Projekt jest w trakcie przebudowy: modernizacja kodu serwera,
+      poprawki bezpieczenstwa i wlasne zmiany w rozgrywce.
+    </p>
+  </section>
+
+  <section>
+    <h2>Jak zagrac</h2>
+    <p>
+      Ta strona jest wizytowka projektu. Sama gra dziala pod osobnym adresem,
+      na serwerze z obsluga PHP i baza danych.
+    </p>
+    <p><a class="przycisk" href="#" id="link-gry">Adres gry — wkrotce</a></p>
+  </section>
+
+  <section>
+    <h2>Pod maska</h2>
+    <dl>
+      <dt>Klient</dt>
+      <dd>ActionScript 3, uruchamiany przez Ruffle — zrodla w repozytorium</dd>
+
+      <dt>Serwer</dt>
+      <dd>PHP 8.3 z PDO, bez frameworka</dd>
+
+      <dt>Baza</dt>
+      <dd>MariaDB, InnoDB, utf8mb4</dd>
+
+      <dt>Zawartosc</dt>
+      <dd>22 jezyki, panel administracyjny, sklep, czat globalny</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Zasady</h2>
+    <ul>
+      <li>Serwer prywatny, prowadzony hobbystycznie.</li>
+      <li>Brak platnosci — waluta premium jest w grze darmowa.</li>
+      <li>Administracja nie odpowiada za utrate dobr wirtualnych.</li>
+      <li>Konta moga zostac zresetowane na etapie testow.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Strona zbudowana z gałęzi projektu i publikowana przez GitHub Pages.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+name: GitHub Pages
+
+# Publikuje WYLACZNIE katalog site/ — statyczna wizytowke projektu.
+#
+# To jest celowe i wazne: gdyby Pages publikowalo korzen repozytorium,
+# GitHub wystawilby publicznie wszystkie pliki .php jako zwykly tekst,
+# razem z konfiguracja polaczenia z baza. PHP na Pages sie NIE wykonuje.
+
+on:
+  push:
+    branches:
+      - claude/shakes-fidget-github-setup-qlour5
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Jedno wdrozenie na raz; nie przerywamy trwajacego.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie repozytorium
+        uses: actions/checkout@v4
+
+      - name: Kontrola bezpieczenstwa katalogu site/
+        run: |
+          set -euo pipefail
+          # Zadnego kodu serwerowego ani sekretow w publikowanym katalogu.
+          znalezione=$(find site -type f \( \
+            -name '*.php'  -o -name '*.sql' -o \
+            -name '.env'   -o -name '.env.*' \) ! -name '.env.example')
+          if [ -n "$znalezione" ]; then
+            echo "::error::W katalogu site/ znalazly sie pliki, ktore nie moga byc publiczne:"
+            echo "$znalezione"
+            exit 1
+          fi
+          echo "site/ zawiera wylacznie pliki statyczne — publikacja bezpieczna."
+
+      - name: Konfiguracja Pages
+        uses: actions/configure-pages@v5
+
+      - name: Spakowanie katalogu site/
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Wdrozenie na GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,52 @@
+# Lokalne / testowe uruchomienie gry.
+#
+# Start:  docker compose up -d
+# Gra:    http://localhost:8080
+#
+# Przed pierwszym uruchomieniem skopiuj .env.example do .env w korzeniu
+# repozytorium i ustaw wlasne hasla.
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?ustaw DB_ROOT_PASSWORD w .env}
+      MARIADB_DATABASE: sf555
+      MARIADB_USER: ${DB_USER:-sf555_app}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?ustaw DB_PASSWORD w .env}
+    volumes:
+      - dbdata:/var/lib/mysql
+      # Schemat wgrywa sie automatycznie przy pierwszym starcie pustej bazy.
+      - ./sf555/DATABASE.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    # Port 3306 celowo NIE jest publikowany na zewnatrz — baza jest widoczna
+    # wylacznie dla kontenera z gra, w prywatnej sieci Dockera.
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SF_DB_HOST: db
+      SF_DB_PORT: "3306"
+      SF_DB_NAME: sf555
+      SF_DB_USER: ${DB_USER:-sf555_app}
+      SF_DB_PASS: ${DB_PASSWORD:?ustaw DB_PASSWORD w .env}
+    volumes:
+      - ./sf555:/var/www/html
+    ports:
+      # Tylko petla lokalna. Zeby wystawic gre publicznie, postaw przed tym
+      # serwer proxy z HTTPS zamiast zmieniac to na 0.0.0.0.
+      - "127.0.0.1:8080:80"
+
+volumes:
+  dbdata:

@@ -18,8 +18,10 @@ serwer, jak i **zrodla klienta** (`.fla` + klasy ActionScript 3).
 ```
 sf555/          # katalog gry — to jest webroot wystawiany przez serwer WWW
 client-src/     # zrodla klienta Flash (.fla, .swf, klasy .as) — NIE na serwer
+site/           # statyczna wizytowka projektu publikowana przez GitHub Pages
+deploy/         # Dockerfile, skrypt konta bazy, instrukcja hostingu
 docs/           # dokumentacja techniczna
-.github/        # workflow importujacy paczki ZIP
+.github/        # workflow importujacy paczki ZIP i publikujacy Pages
 ```
 
 ### `sf555/` — serwer gry
@@ -83,15 +85,50 @@ Konfiguracja rozbita jest na dwie tabele:
 
 Szczegoly: [`docs/ARCHITEKTURA.md`](docs/ARCHITEKTURA.md).
 
-## Uruchomienie lokalne
+## Uruchomienie
 
-1. Zaimportuj `sf555/DATABASE.sql` do bazy `sf555`.
-2. Ustaw dane dostepowe do bazy w `sf555/dbconnect.php`.
-3. W tabeli `server_config` ustaw `HOST` na swoj adres (domyslnie `localhost/sf555`).
-4. Wystaw katalog `sf555/` przez serwer WWW z PHP i wejdz na `index.php`.
+### Docker (najszybciej)
+
+```bash
+cp .env.example .env          # ustaw wlasne hasla
+docker compose up -d
+```
+
+Gra: `http://localhost:8080`. Schemat bazy wgrywa sie automatycznie przy
+pierwszym starcie. Port bazy celowo nie jest wystawiany na zewnatrz.
+
+### Zwykly hosting PHP
+
+1. Wgraj na serwer **zawartosc katalogu `sf555/`** (i nic wiecej).
+2. Zaimportuj `DATABASE.sql`, potem `deploy/db_user.sql` — tworzy konto
+   aplikacyjne o minimalnych uprawnieniach.
+3. Skopiuj `.env.example` do `.env` i wpisz dane bazy.
+4. W tabeli `server_config` ustaw `HOST` na swoj adres.
 
 Nazwa katalogu na serwerze musi zgadzac sie z wartoscia `HOST` — przy domyslnym
 `localhost/sf555` gra musi lezec w katalogu `sf555`.
+
+### Konfiguracja polaczenia z baza
+
+`dbconnect.php` nie zawiera zadnych hasel. Czyta je ze zmiennych srodowiskowych
+(`SF_DB_HOST`, `SF_DB_PORT`, `SF_DB_NAME`, `SF_DB_USER`, `SF_DB_PASS`), a gdy
+tych nie ma — z pliku `sf555/.env`, ktory jest zablokowany w `.gitignore`.
+Brak konfiguracji konczy sie bledem, bez cichego fallbacku na konto roota.
+
+Pelny opis zabezpieczen: [`deploy/HOSTING.md`](deploy/HOSTING.md).
+
+## GitHub Pages
+
+Katalog `site/` jest publikowany przez workflow `.github/workflows/pages.yml`
+jako statyczna wizytowka projektu.
+
+**Gry nie da sie uruchomic na GitHub Pages** — Pages serwuje wylacznie pliki
+statyczne, a caly backend to PHP. Co wiecej, publikowanie korzenia
+repozytorium wystawiloby pliki `.php` jako tekst do pobrania, razem
+z konfiguracja bazy. Dlatego workflow publikuje tylko `site/` i przerywa
+wdrozenie, gdyby trafil tam plik `.php`, `.sql` lub `.env`.
+
+Wlaczenie: `Settings > Pages > Source` → **GitHub Actions**.
 
 ## Uwaga o koncach linii
 
