@@ -1,0 +1,37 @@
+# --- Lokalna konfiguracja / sekrety ---
+.env
+.env.*
+!.env.example
+dbconnect.local.php
+config.local.php
+
+# --- Logi i pliki tymczasowe ---
+*.log
+logs/
+tmp/
+cache/
+*.bak
+*.old
+*~
+
+# --- Zrzuty bazy robione lokalnie (poza DATABASE.sql, ktory jest wersjonowany) ---
+dump_*.sql
+backup_*.sql
+*.sql.gz
+
+# --- Zaleznosci ---
+vendor/
+node_modules/
+
+# --- Systemowe ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Edytory / IDE ---
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+nbproject/
+.phpunit.result.cache
