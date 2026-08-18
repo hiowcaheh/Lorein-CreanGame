@@ -84,6 +84,7 @@ Konfiguracja rozbita jest na dwie tabele:
 - `game_settings` — balans rozgrywki (szanse na grzyby, mnozniki pracy, questy, ...).
 
 Szczegoly: [`docs/ARCHITEKTURA.md`](docs/ARCHITEKTURA.md).
+Co da sie w grze zmienic i jakim kosztem: [`docs/MODOWANIE.md`](docs/MODOWANIE.md).
 
 ## Uruchomienie
 
