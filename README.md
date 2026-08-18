@@ -17,13 +17,15 @@ przez Ruffle) + backend w PHP + baza MariaDB/MySQL.
 Katalog glowny repozytorium = katalog glowny serwera WWW (webroot).
 
 ```
-index.php       # strona startowa: osadza klienta Flash + czat globalny
-config.php      # konfiguracja wysylana do klienta (format "klucz<TAB>wartosc")
-req.php         # CALY backend gry: routing akcji, walka, przedmioty, gildie
-dbconnect.php   # polaczenie PDO z baza
-DATABASE.sql    # schemat bazy + dane startowe (server_config, game_settings, witch)
-globals.php     # (do wgrania) stale, teksty bledow, smilies
-res/            # (do wgrania) klient .swf, grafiki, chat.js, chat.css, smilies
+index.php        # strona startowa: osadza klienta Flash + czat globalny
+config.php       # konfiguracja wysylana do klienta (format "klucz<TAB>wartosc")
+req.php          # CALY backend gry: routing akcji, walka, przedmioty, gildie
+globals.php      # sesja, autoryzacja czatu, tablica smilies, grupy uzytkownikow
+dbconnect.php    # polaczenie PDO z baza
+papaya_cfg.php   # konfiguracja Papaya (sklep grzybow) — plik tekstowy, bez kodu PHP
+crossdomain.xml  # polityka cross-domain dla klienta Flash
+DATABASE.sql     # schemat bazy + dane startowe (server_config, game_settings, witch)
+res/             # (do wgrania) klient .swf, grafiki, chat.js, chat.css, smilies
 ```
 
 ## Jak to dziala (skrot)

@@ -127,3 +127,39 @@ Lista rzeczy, ktore warto poprawic — kolejnosc mniej wiecej wg wagi:
    oraz mieszanka jezykow (polski + slowacki `servername = 's1.sfgame.cz'`).
 10. **Pole 62 w `config.php`** to zaszyfrowany blob przekazywany klientowi —
     nie ruszac bez znajomosci formatu, klient go weryfikuje.
+11. **`crossdomain.xml` otwarty na osciez** — `domain="*"`, `headers="*"`,
+    `secure="false"`, `permitted-cross-domain-policies="all"`. Dowolna strona
+    moze wykonywac zapytania do serwera w imieniu zalogowanego gracza.
+    Docelowo zawezic do wlasnych domen i wlaczyc `secure="true"` (HTTPS).
+12. **Dwa niezalezne mechanizmy sesji**: gra identyfikuje gracza przez `SSID`
+    w URL-u (`req.php`), a czat przez `$_SESSION['user_ssid']` (`globals.php`).
+    Trzeba pamietac o obu przy zmianach w logowaniu i wylogowaniu.
+13. **`SSID` w adresie URL** trafia do logow serwera, historii przegladarki
+    i naglowka `Referer` — to de facto haslo sesyjne wystawione na widok.
+
+## 6. Czat i platnosci
+
+**Czat globalny** obsluguje `globals.php` + `index.php`:
+
+- `auth()` — sprawdza `$_SESSION['user_ssid']` w tabeli `user_data`
+- `loaduserdata()` — wczytuje wiersz gracza po `ssid`
+- `get_group_name()` — mapuje kolumne `user_data.group`:
+  `1` Gracz, `2` VIP, `3` Moderator, `4` Admin
+- `get_color()` — kolumna `color` nadpisuje kolor grupy (`color1`, `color2`…)
+- `$smilies` — 24 emotikony w formacie `"(usmiech)" => "usmiech.gif"`,
+  pliki leza w `res/chat/smilies/`
+- blokady czatu: `user_data.chat_ban_until`, wiadomosci w tabeli `chat`
+
+Uwaga: `globals.php` zaczyna sie od `ob_start()`, wiec kazde wyjscie jest
+buforowane — przy dodawaniu naglowkow HTTP trzeba o tym pamietac.
+
+**Papaya (sklep grzybow)**: `papaya_cfg.php` to plik konfiguracyjny w formacie
+`klucz<TAB>wartosc`, **bez znacznikow PHP** — serwer oddaje go doslownie,
+a klient Flash (`res/papaya44.swf`) parsuje. Definiuje wyglad sklepu: czcionke,
+grafiki przyciskow, pozycje obrazkow dilera, 10 „speciali" (akcje sezonowe)
+i metody platnosci. Aktualnie aktywna jest jedna metoda o indeksie 9 („Free"),
+czyli platnosci sa wylaczone — to wlasciwe ustawienie dla prywatnego serwera.
+Sciezki do grafik sa wzgledne do `image root` = `res/sfgame/`.
+
+Powiazania w `config.php`: pole 30 → `res/papaya44.swf`, pole 31 →
+`papaya_cfg.php`, pole 56 → `html_payment.php` (plik jeszcze nie wgrany).
