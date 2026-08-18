@@ -128,7 +128,17 @@ repozytorium wystawiloby pliki `.php` jako tekst do pobrania, razem
 z konfiguracja bazy. Dlatego workflow publikuje tylko `site/` i przerywa
 wdrozenie, gdyby trafil tam plik `.php`, `.sql` lub `.env`.
 
-Wlaczenie: `Settings > Pages > Source` → **GitHub Actions**.
+### Wlaczenie (jednorazowo, wymaga uprawnien wlasciciela repozytorium)
+
+`Settings > Pages > Source` → **GitHub Actions**.
+
+Tego kroku nie da sie zautomatyzowac: token GitHub Actions nie moze zalozyc
+strony Pages (`Resource not accessible by integration`), bo wymaga to uprawnien
+administratora repozytorium. Po wlaczeniu wystarczy uruchomic workflow —
+`Actions > GitHub Pages > Run workflow` — albo wypchnac zmiane w `site/`.
+
+Adres strony po wdrozeniu:
+`https://hiowcaheh.github.io/Lorein-CreanGame/`
 
 ## Uwaga o koncach linii
 

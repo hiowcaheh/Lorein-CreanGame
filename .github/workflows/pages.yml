@@ -47,11 +47,12 @@ jobs:
           echo "site/ zawiera wylacznie pliki statyczne — publikacja bezpieczna."
 
       - name: Konfiguracja Pages
+        # WYMAGA jednorazowego wlaczenia Pages w ustawieniach repozytorium:
+        # Settings > Pages > Source > GitHub Actions.
+        # Token Actions nie moze wlaczyc Pages sam — probowane parametrem
+        # enablement: true, API odpowiada "Resource not accessible by integration",
+        # bo zalozenie strony wymaga uprawnien administratora repozytorium.
         uses: actions/configure-pages@v5
-        with:
-          # Wlacza Pages w ustawieniach repozytorium przy pierwszym uruchomieniu,
-          # zeby nie trzeba bylo klikac tego recznie w Settings.
-          enablement: true
 
       - name: Spakowanie katalogu site/
         uses: actions/upload-pages-artifact@v3
