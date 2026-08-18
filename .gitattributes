@@ -1,12 +1,21 @@
-# Normalizacja koncow linii dla kodu
+# Normalizacja koncow linii dla kodu serwera
 *.php   text eol=lf
 *.sql   text eol=lf
 *.js    text eol=lf
 *.css   text eol=lf
 *.html  text eol=lf
 *.md    text eol=lf
+*.as    text eol=lf
 
-# Zasoby gry traktowane jako binaria (bez normalizacji, bez diffow)
+# --- Pliki czytane bezposrednio przez klienta Flash ---
+# Zadnej normalizacji: klient parsuje je bajt w bajt, wiec zamiana CRLF
+# na LF moze rozsypac parsowanie. Nadpisuje regule *.php powyzej.
+papaya_cfg.php  -text
+lang/*.txt      -text
+res/**          -text
+
+# Zasoby i zrodla klienta jako binaria (bez normalizacji, bez diffow)
+*.fla   binary
 *.swf   binary
 *.png   binary
 *.jpg   binary

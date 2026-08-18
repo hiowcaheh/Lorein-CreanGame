@@ -1,7 +1,9 @@
 # Architektura silnika — notatki techniczne
 
-Notatki z analizy plikow `index.php`, `config.php`, `req.php`, `dbconnect.php`
-i `DATABASE.sql`. Punkt wyjscia do dalszych przerobek.
+Notatki z analizy zrodel serwera i klienta. Punkt wyjscia do dalszych przerobek.
+
+Sciezki plikow serwera podawane sa wzgledem katalogu `sf555/`, a sciezki
+zrodel klienta wzgledem `client-src/`.
 
 ## 1. Protokol klient ↔ serwer
 
@@ -163,3 +165,70 @@ Sciezki do grafik sa wzgledne do `image root` = `res/sfgame/`.
 
 Powiazania w `config.php`: pole 30 → `res/papaya44.swf`, pole 31 →
 `papaya_cfg.php`, pole 56 → `html_payment.php` (plik jeszcze nie wgrany).
+
+## 7. Zrodla klienta Flash (`client-src/`)
+
+Klient jest dostepny w postaci zrodlowej, wiec da sie go przerabiac i
+kompilowac od nowa — nie tylko podmieniac gotowy `.swf`.
+
+| Element                        | Rola                                          |
+|--------------------------------|-----------------------------------------------|
+| `sfgame555.swf.fla`            | projekt Adobe Animate: grafiki, klipy, timeline |
+| `sfgame555.swf.swf`            | skompilowany klient                            |
+| `sfgame555.swf_as/`            | 207 klas ActionScript 3                        |
+
+Najwazniejsze miejsca:
+
+- **`sfgame_fla/MainTimeline.as`** (~1,7 MB) — cala logika klienta: budowa
+  ekranow, wysylanie zapytan do `req.php`, mapowanie pol odpowiedzi `$ret`
+  na elementy interfejsu. Kazda zmiana protokolu po stronie serwera musi miec
+  odpowiednik tutaj.
+- **`com/hurlant/`** — biblioteka as3crypto (AES, RSA, TLS, Base64). To ona
+  obsluguje zaszyfrowany blob z pola 62 w `config.php`.
+- **`fl/`** — standardowe komponenty Adobe Flash (przyciski, focus manager).
+- Pozostale klasy w korzeniu — skorki przyciskow (`btnClass*`), pola tekstowe,
+  czcionki (`GorillaMilkshake`, `SFGameFont`), suwaki.
+
+Kolejnosc pracy przy zmianie protokolu: najpierw indeks pola w `req.php`,
+potem jego odczyt w `MainTimeline.as`, na koncu rekompilacja `.fla` do
+`res/sfgame555.swf`.
+
+## 8. Panel administracyjny, sklep i czat
+
+**`admin/`** — panel z 12 podstronami (`admin/pages/`):
+
+| Podstrona            | Funkcja                                  |
+|----------------------|------------------------------------------|
+| `login.php`          | logowanie do panelu                      |
+| `main.php`           | pulpit                                   |
+| `config.php`         | edycja tabeli `server_config`            |
+| `game_settings.php`  | edycja tabeli `game_settings` (balans)   |
+| `users.php`, `user.php`, `edit_user.php` | lista i edycja graczy |
+| `edit_dungeons.php`  | postep lochow gracza                     |
+| `message.php`, `mass_message.php` | wiadomosci do graczy        |
+| `vouchers.php`       | generowanie kodow (tabela `vouchers`)    |
+| `chat.php`           | moderacja czatu, blokady                 |
+
+Wspolna logika w `admin/include/functions.php`, szablony w `admin/templates/`.
+
+**`shop/`** — sklep za grzyby, kategorie w `shop/categories/`: `elixirs.php`,
+`smith.php` (kowal), `tavern.php` (karczma), `dungeon.php` (odblokowania lochow),
+`chatcolor.php` (kolor nicku — kolumna `user_data.color`),
+`redeemvoucher.php` (realizacja kodow). Zapytania AJAX obsluguje `shop/ajax.php`.
+
+**Czat globalny** — `chat.php` zwraca JSON (`success`, `error`, `messages`),
+`res/chat.js` odpytuje go cyklicznie. `format_comment()` zamienia BBCode
+(`[center]`, `[list]`) i emotikony z tablicy `$smilies` na HTML.
+
+**`lang/`** — pliki tlumaczen klienta dla 22 jezykow (`sfgame_pl.txt`,
+`sfgame_de.txt`, …) oraz `papaya_pl.txt` dla sklepu grzybow. Sa parsowane
+przez klienta Flash bajt w bajt — zachowuja konce linii CRLF i nie wolno ich
+normalizowac (patrz `.gitattributes`).
+
+## 9. Kolejnosc prac przy zmianach
+
+1. **Balans** (najbezpieczniejsze) — tabela `game_settings`, bez ruszania kodu.
+2. **Tresci i tlumaczenia** — pliki `lang/*.txt`, pamietajac o CRLF.
+3. **Panel i sklep** — zwykly PHP, zmiany nie dotykaja protokolu gry.
+4. **Logika serwera** — `req.php`, przy zachowaniu indeksow pol `$ret`.
+5. **Protokol i klient** — zmiana indeksow pol wymaga rekompilacji `.fla`.
