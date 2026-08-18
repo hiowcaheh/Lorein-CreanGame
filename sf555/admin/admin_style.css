@@ -1,0 +1,386 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #000000;
+    color: #ffffff;
+    font-family: Verdana, Geneva, sans-serif;
+    overflow: hidden;
+}
+
+a {
+    color: #4A4A4A;
+    text-decoration: none;
+    font-size: 11px;
+}
+
+a:hover {
+    color: #BCBCBC;
+}
+
+#game-dashboard {
+    height: 100vh;
+    width: 100vw;
+    background: #000000;
+}
+
+/* --- Panel Boczny --- */
+aside {
+    background: #050505;
+    border-right: 1px solid #3D3D3D;
+    padding: 20px 15px;
+}
+
+.admin-nav-btn {
+    font-family: Verdana, sans-serif;
+    background: #111111;
+    border: 1px solid #3D3D3D;
+    color: #ffffff !important;
+    font-size: 12px;
+    padding: 12px 10px;
+    margin-bottom: 4px;
+    border-radius: 2px;
+}
+
+.admin-nav-btn:hover {
+    background: #222222;
+    border-color: #666666;
+}
+
+.admin-nav-btn.active {
+    background: #153315 !important;
+    border-color: #32CD32 !important;
+    box-shadow: 0 0 8px rgba(50, 205, 50, 0.2);
+}
+
+.sidebar-content {
+    height: 100%;
+}
+
+.admin-logout-btn {
+    margin-top: 14px;
+    border-color: #7a1d1d;
+    color: #ffb3b3 !important;
+}
+
+.admin-logout-btn:hover {
+    background: #2a1111;
+    border-color: #c94a4a;
+}
+
+/* --- Główna Zawartość --- */
+.main-content {
+    height: 100vh;
+    background: #000000;
+}
+
+.admin-info-header {
+    background: #0e0e0e;
+    border-bottom: 1px solid #3D3D3D;
+    padding: 15px 25px;
+}
+
+.admin-info-header h1 {
+    font-size: 15px;
+    font-weight: normal;
+}
+
+.admin-viewport {
+    flex: 1;
+    overflow-y: auto;
+    padding: 25px;
+}
+
+.admin-page-section {
+    min-height: 100%;
+}
+
+/* --- Karty i Elementy Panelu --- */
+.admin-card {
+    background: #0e0e0e;
+    border: 1px solid #3D3D3D;
+    border-radius: 2px;
+}
+
+/* --- Formularze i Elementy Wejściowe (Twoje Inputy) --- */
+input.admin-input,
+textarea.admin-input,
+select.admin-select {
+    color: silver;
+    padding: 6px 12px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #32CD32;
+    background: #3A3A3A;
+    border-radius: 2px;
+    font-family: "Comic Sans MS", Arial, sans-serif;
+    font-weight: 900 !important;
+}
+
+input.admin-input:focus,
+textarea.admin-input:focus,
+select.admin-select:focus {
+    outline: none;
+    border: 1px solid lime;
+    box-shadow: inset 0 2px 2px lime, 0 0 10px lime;
+}
+
+/* --- Przyciski (Twoje Buttony) --- */
+button.admin-btn,
+a.admin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: green;
+    color: black;
+    padding: 6px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    border: solid 1px black;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+a.admin-btn-mini,
+button.admin-btn-mini {
+    min-width: auto;
+    padding: 2px 8px;
+    font-size: 11px;
+    line-height: 1.2;
+    border-radius: 2px;
+    font-family: Verdana, Geneva, sans-serif;
+}
+
+a.admin-btn-danger,
+button.admin-btn-danger {
+    background: #8b1010;
+    color: #ffe0e0;
+    border-color: #320000;
+}
+
+a.admin-btn-danger:hover,
+button.admin-btn-danger:hover {
+    background: #c41d1d;
+    color: #ffffff;
+}
+
+button.admin-btn:hover,
+a.admin-btn:hover {
+    background: #32CD32;
+    color: black;
+}
+
+.admin-auth-screen {
+    min-height: 100vh;
+    width: 100vw;
+    padding: 24px;
+    background: #000000;
+}
+
+.admin-auth-card {
+    width: min(100%, 460px);
+    background: #0a0a0a;
+    border: 1px solid #3D3D3D;
+    box-shadow: 0 0 0 1px rgba(50, 205, 50, 0.12), 0 0 24px rgba(0, 0, 0, 0.45);
+    padding: 30px 26px;
+}
+
+.admin-auth-kicker {
+    color: #32CD32;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.admin-auth-label {
+    color: #d0d0d0;
+    font-size: 12px;
+}
+
+.admin-auth-error {
+    background: rgba(122, 29, 29, 0.35);
+    border: 1px solid #a33a3a;
+    color: #ffd0d0;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.admin-success-note {
+    background: rgba(28, 79, 28, 0.35);
+    border: 1px solid #32CD32;
+    color: #d8ffd8;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+/* --- Rangi (Zaimplementowane 1:1 z Twojego CSS) --- */
+.Gracz { color: white; font-weight: bold; }
+.VIP { color: rgb(243, 195, 51); font-weight: bold; text-shadow: 1px 1px 10px rgb(243, 195, 51); background: url('images/vip.gif'); }
+.Moderator { color: green; font-weight: bold; background: url('images/moderator.gif'); }
+.Admin { color: red; text-shadow: 1px 1px 8px red; font-weight: bold; background: url('images/admin.gif'); }
+
+/* --- Kolory Tekstów Czatu --- */
+.color1 { font-weight: bold; color: #EAEAAE; }
+.color2 { color: #5EA9FF; }
+.color3 { color: #5EFF91; }
+.color4 { color: #00DFFC; font-weight: bold; font-family: "Comic Sans MS", Arial, sans-serif; }
+.color5 { color: #8C4D00; background: url('images/brown.gif'); }
+.color6 { color: #B300AD; background: url('images/violet.gif'); }
+
+/* --- Sekcja Czatu --- */
+.chat_table {
+    color: #ACB1BC;
+    background: #0e0e0e;
+    border-left: 1px #3D3D3D solid;
+    border-top: 1px #3D3D3D solid;
+}
+
+.chat_table_header {
+    text-align: center;
+    font-weight: bold;
+    background: #222222;
+    border: 1px solid #3D3D3D;
+    border-bottom: none;
+    color: #ffffff;
+}
+
+#chat_messages {
+    background: #0e0e0e;
+    border: 1px solid #3D3D3D;
+    height: 400px;
+    overflow-y: scroll;
+}
+
+.message {
+    padding: 6px 10px;
+    word-break: break-all;
+    border-bottom: 1px solid #222222;
+}
+
+.message_ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.message_ul li {
+    display: inline-block;
+}
+
+.chat-message-time {
+    min-width: 78px;
+    color: #808080;
+    font-size: 11px;
+}
+
+.chat-message-author {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.chat-message-body {
+    color: #d0d0d0;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.admin-chat-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: end;
+}
+
+.admin-data-table {
+    border: 1px solid #3D3D3D;
+    font-size: 13px;
+}
+
+.admin-data-table thead th {
+    background: #222222;
+    border-color: #3D3D3D;
+    color: #ffffff;
+}
+
+.admin-data-table tbody td,
+.admin-data-table tbody th {
+    border-color: #3D3D3D;
+}
+
+.admin-data-table a {
+    color: #8bd48b;
+    font-size: 13px;
+}
+
+.admin-data-table a:hover {
+    color: #c7ffc7;
+}
+
+.player-section-label {
+    color: #d8d8d8;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+}
+
+.player-badge-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.player-badge-item {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 8px 12px;
+    background: #111111;
+    border: 1px solid #3D3D3D;
+    border-radius: 2px;
+}
+
+.player-badge-item:hover {
+    border-color: #32CD32;
+}
+
+.admin-empty-state {
+    color: #9a9a9a;
+    font-size: 13px;
+}
+
+.admin-textarea {
+    min-height: 180px;
+    resize: vertical;
+}
+
+@media (max-width: 991.98px) {
+    #sidebarMenu {
+        background-color: #050505 !important;
+        max-width: 280px;
+    }
+}
+
+.admin-access-card {
+    width: min(100%, 620px);
+    background: #050505;
+    border: 1px solid #3D3D3D;
+    box-shadow: 0 0 0 1px rgba(50, 205, 50, 0.12), 0 0 24px rgba(0, 0, 0, 0.45);
+    padding: 32px 28px;
+}
+
+.admin-access-label {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 6px 12px;
+    border: 1px solid #32CD32;
+    color: #32CD32;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
