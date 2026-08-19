@@ -10,10 +10,10 @@
  * brzegowymi opisanymi nizej.
  */
 
-import type { PoolConnection } from 'mysql2/promise';
 import { PhpResponse } from '../protocol/response.js';
 import { ctypeDigit, intval, round, time, urlencode } from '../compat/php.js';
 import type { GameRequest } from '../protocol/request.js';
+import type { Sql } from '../db/client.js';
 
 /** Ile sekund bez aktywnosci oznacza, ze gracz jest juz offline. */
 const ONLINE_WINDOW_SECONDS = 900;
@@ -33,7 +33,7 @@ interface RankingRow {
   class: number | null;
 }
 
-export async function ranking(db: PoolConnection, req: GameRequest): Promise<PhpResponse> {
+export async function ranking(sql: Sql, req: GameRequest): Promise<PhpResponse> {
   const parts = req.extra.split(';');
   let pos: number;
 
@@ -42,14 +42,14 @@ export async function ranking(db: PoolConnection, req: GameRequest): Promise<Php
   if (ctypeDigit(parts[1] ?? '')) {
     pos = intval(req.extra.replaceAll(';', ''));
   } else {
-    pos = await positionOfPlayer(db, parts[0] ?? '');
+    pos = await positionOfPlayer(sql, parts[0] ?? '');
   }
 
   if (pos < WINDOW_OFFSET) {
     pos = WINDOW_OFFSET;
   }
 
-  const playerCount = await countPlayers(db);
+  const playerCount = await countPlayers(sql);
 
   if (pos > playerCount && playerCount > WINDOW_OFFSET) {
     pos = playerCount;
@@ -59,7 +59,7 @@ export async function ranking(db: PoolConnection, req: GameRequest): Promise<Php
   }
 
   const offset = pos - WINDOW_OFFSET;
-  const rows = await fetchPage(db, offset);
+  const rows = await fetchPage(sql, offset);
 
   // PHP zaczyna od `$ret = ["007"]`, ale pierwszy wiersz nadpisuje pole 0.
   // Gdy wynik jest pusty, pole 0 zostaje i na koncu dostaje jeszcze jeden
@@ -103,45 +103,45 @@ export async function ranking(db: PoolConnection, req: GameRequest): Promise<Php
 /**
  * Pozycja gracza w rankingu.
  *
- * Oryginal liczy ja zmienna uzytkownika MySQL (`@r:=@r+1`). Tutaj uzyta jest
- * funkcja okna `ROW_NUMBER()` — daje ten sam wynik przy tym samym porzadku
- * sortowania, a dziala takze na Postgresie, gdyby baza kiedys sie zmienila.
+ * Oryginal liczy ja zmienna uzytkownika MySQL (`@r:=@r+1`), ktorej Postgres
+ * nie ma. Funkcja okna `ROW_NUMBER()` daje ten sam wynik przy tym samym
+ * porzadku sortowania.
  */
-async function positionOfPlayer(db: PoolConnection, playerName: string): Promise<number> {
-  const [rows] = await db.query(
-    `SELECT pos FROM (
-       SELECT user_name,
-              ROW_NUMBER() OVER (ORDER BY honor DESC, lvl DESC, user_id DESC) AS pos
-       FROM user_data
-     ) ranked
-     WHERE user_name = ?
-     LIMIT 1`,
-    [playerName],
-  );
+async function positionOfPlayer(sql: Sql, playerName: string): Promise<number> {
+  const rows = await sql<{ pos: string }[]>`
+    SELECT pos FROM (
+      SELECT user_name,
+             ROW_NUMBER() OVER (ORDER BY honor DESC, lvl DESC, user_id DESC) AS pos
+      FROM user_data
+    ) ranked
+    WHERE user_name = ${playerName}
+    LIMIT 1
+  `;
 
-  const row = (rows as { pos?: number | string }[])[0];
-  return intval(row?.pos ?? 0);
+  return intval(rows[0]?.pos ?? 0);
 }
 
-async function countPlayers(db: PoolConnection): Promise<number> {
-  const [rows] = await db.query('SELECT COUNT(*) AS total FROM user_data');
-  const row = (rows as { total?: number | string }[])[0];
-  return intval(row?.total ?? 0);
+async function countPlayers(sql: Sql): Promise<number> {
+  const rows = await sql<{ total: string }[]>`SELECT COUNT(*) AS total FROM user_data`;
+  return intval(rows[0]?.total ?? 0);
 }
 
-async function fetchPage(db: PoolConnection, offset: number): Promise<RankingRow[]> {
-  const [rows] = await db.query(
-    `SELECT user_data.user_name,
-            user_data.lvl,
-            user_data.honor,
-            user_data.last_activ,
-            user_data.class,
-            (SELECT guilds.name FROM guilds WHERE guilds.guild_id = user_data.guild_id) AS guild
-     FROM user_data
-     ORDER BY user_data.honor DESC, user_data.lvl DESC, user_data.user_id DESC
-     LIMIT ?, ?`,
-    [offset, PAGE_SIZE],
-  );
-
-  return rows as RankingRow[];
+/**
+ * Strona rankingu.
+ *
+ * MySQL-owe `LIMIT :offset, 15` nie istnieje w Postgresie — odpowiednikiem
+ * jest `LIMIT 15 OFFSET :offset`.
+ */
+async function fetchPage(sql: Sql, offset: number): Promise<RankingRow[]> {
+  return sql<RankingRow[]>`
+    SELECT user_data.user_name,
+           user_data.lvl,
+           user_data.honor,
+           user_data.last_activ,
+           user_data.class,
+           (SELECT guilds.name FROM guilds WHERE guilds.guild_id = user_data.guild_id) AS guild
+    FROM user_data
+    ORDER BY user_data.honor DESC, user_data.lvl DESC, user_data.user_id DESC
+    LIMIT ${PAGE_SIZE} OFFSET ${offset}
+  `;
 }

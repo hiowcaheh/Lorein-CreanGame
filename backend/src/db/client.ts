@@ -1,45 +1,46 @@
 /**
- * Pula polaczen do bazy gry.
+ * Polaczenie z Postgresem (Supabase).
  *
- * Na tym etapie zapytania pisane sa recznie w SQL — tak jak w `req.php`,
- * co ulatwia porownanie portu z oryginalem. Kolejnym krokiem jest
- * introspekcja schematu (19 tabel) do typowanego modelu; wymaga to jednak
- * dostepu do dzialajacej bazy, wiec nalezy do wdrozenia u Ciebie, nie tutaj.
+ * Zapytania pisane sa jako szablony `sql\`...\`` z postgres.js. To nie jest
+ * kwestia estetyki: wartosci wstawiane przez `${}` zawsze ida jako parametry,
+ * nigdy jako sklejony tekst. Wstrzykniecie SQL staje sie wiec niemozliwe
+ * z samej konstrukcji — a w `req.php` czesc zapytan jest jeszcze sklejana
+ * recznie, wiec to realna poprawa, a nie ozdobnik.
  */
 
-import mysql from 'mysql2/promise';
+import postgres from 'postgres';
 import { config } from '../config.js';
 
-let pool: mysql.Pool | undefined;
+export type Sql = postgres.Sql;
 
-export function getPool(): mysql.Pool {
-  pool ??= mysql.createPool({
-    host: config.db.host,
-    port: config.db.port,
-    database: config.db.database,
-    user: config.db.user,
-    password: config.db.password,
-    waitForConnections: true,
-    connectionLimit: 10,
-    charset: 'utf8mb4',
-    // Gra trzyma czasy jako liczby uniksowe, a nie typy DATE — bez tego
-    // sterownik probowalby konwertowac je na obiekty Date.
-    dateStrings: true,
+let sql: Sql | undefined;
+
+export function getSql(): Sql {
+  sql ??= postgres(config.databaseUrl, {
+    // Supabase w trybie transakcyjnym (Supavisor, port 6543) nie obsluguje
+    // instrukcji preparowanych — bez tego zapytania zaczynaja padac dopiero
+    // pod obciazeniem, co jest wyjatkowo nieprzyjemne do zdiagnozowania.
+    prepare: !config.usePooler,
+
+    // Na Vercelu kazde wywolanie funkcji to osobny, krotko zyjacy proces.
+    // Duza pula polaczen nie ma tam sensu i tylko wyczerpuje limity bazy.
+    max: config.usePooler ? 1 : 10,
+    idle_timeout: 20,
+    connect_timeout: 10,
+
+    // Gra trzyma czasy jako liczby uniksowe w kolumnach tekstowych
+    // i bigintach — nie chcemy automatycznej konwersji na Date.
+    types: {
+      bigint: postgres.BigInt,
+    },
+
+    onnotice: () => {},
   });
 
-  return pool;
+  return sql;
 }
 
-export async function withConnection<T>(fn: (conn: mysql.PoolConnection) => Promise<T>): Promise<T> {
-  const conn = await getPool().getConnection();
-  try {
-    return await fn(conn);
-  } finally {
-    conn.release();
-  }
-}
-
-export async function closePool(): Promise<void> {
-  await pool?.end();
-  pool = undefined;
+export async function closeSql(): Promise<void> {
+  await sql?.end({ timeout: 5 });
+  sql = undefined;
 }

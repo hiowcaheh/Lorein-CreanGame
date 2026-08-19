@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { PoolConnection } from 'mysql2/promise';
+import type { Sql } from '../src/db/client.js';
 import { ranking } from '../src/actions/ranking.js';
 import { parseRequest } from '../src/protocol/request.js';
 
@@ -35,20 +35,24 @@ const fx: { now: number; cases: RankingCase[] } = JSON.parse(
  * i odpowiada danymi ze scenariusza, dzieki czemu test nie potrzebuje
  * dzialajacego MySQL-a.
  */
-function stubConnection(testCase: RankingCase): PoolConnection {
-  return {
-    query: async (sql: string, params?: unknown[]) => {
-      if (sql.includes('ROW_NUMBER')) {
-        return [[{ pos: testCase.lookupPos }]];
-      }
-      if (sql.includes('COUNT(*)')) {
-        return [[{ total: testCase.playerCount }]];
-      }
-      const offset = Number(params?.[0] ?? 0);
-      const limit = Number(params?.[1] ?? 15);
-      return [testCase.rows.slice(offset, offset + limit)];
-    },
-  } as unknown as PoolConnection;
+function stubConnection(testCase: RankingCase): Sql {
+  const stub = async (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const text = strings.join(' ? ');
+
+    if (text.includes('ROW_NUMBER')) {
+      return [{ pos: testCase.lookupPos }];
+    }
+    if (text.includes('COUNT(*)')) {
+      return [{ total: testCase.playerCount }];
+    }
+
+    // fetchPage: LIMIT ${PAGE_SIZE} OFFSET ${offset}
+    const limit = Number(values[0] ?? 15);
+    const offset = Number(values[1] ?? 0);
+    return testCase.rows.slice(offset, offset + limit);
+  };
+
+  return stub as unknown as Sql;
 }
 
 describe('akcja 007 (ranking) — zgodnosc z req.php', () => {

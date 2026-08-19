@@ -9,8 +9,10 @@ serwer, jak i **zrodla klienta** (`.fla` + klasy ActionScript 3).
 | Warstwa       | Technologia                                            |
 |---------------|--------------------------------------------------------|
 | Klient        | Flash / ActionScript 3, uruchamiany przez Ruffle        |
-| Backend       | PHP 8.3, PDO, bez frameworka                            |
-| Baza          | MariaDB 12.x / MySQL, InnoDB, `utf8mb4`                 |
+| Backend (stary) | PHP 8.3, PDO, bez frameworka                          |
+| Backend (nowy)  | TypeScript + Hono, w trakcie portu                    |
+| Baza (stara)  | MariaDB 12.x / MySQL, InnoDB, `utf8mb4`                 |
+| Baza (nowa)   | PostgreSQL / Supabase                                   |
 | Panel i sklep | PHP + jQuery 1.9                                        |
 
 ## Struktura repozytorium

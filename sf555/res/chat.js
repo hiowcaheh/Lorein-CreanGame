@@ -4,6 +4,27 @@ const php_file = "chat.php";
 let chatTimer = null;
 let isRefreshLoopRunning = false;
 
+// Odstepy odpytywania czatu.
+//
+// Wczesniej bylo to sztywne 5 sekund, niezaleznie od tego, czy ktokolwiek
+// patrzy na okno. Jedna otwarta karta generowala wtedy okolo 43 tysiecy
+// zapytan miesiecznie przy dwoch godzinach dziennie — a przy hostingu
+// rozliczanym za liczbe wywolan to jest glowny koszt calej gry.
+//
+// Karta w tle odpytuje duzo rzadziej; powrot do niej odswieza czat
+// natychmiast, wiec gracz nie zauwaza roznicy.
+const POLL_ACTIVE_MS = 20000;
+const POLL_HIDDEN_MS = 120000;
+
+function currentPollInterval() {
+    return document.hidden ? POLL_HIDDEN_MS : POLL_ACTIVE_MS;
+}
+
+function scheduleNextPoll() {
+    if (chatTimer) clearTimeout(chatTimer);
+    chatTimer = setTimeout(update_chat_set, currentPollInterval());
+}
+
 function postData(url, data = {}) {
     return fetch(url, {
         method: "POST",
@@ -87,19 +108,30 @@ function update_chat() {
 
 function update_chat_set() {
     if (chatTimer) clearTimeout(chatTimer);
+    // Flaga byla zadeklarowana, ale nigdy nie ustawiana — bez tego
+    // obsluga powrotu do karty (nizej) nigdy by nie zadzialala.
+    isRefreshLoopRunning = true;
 
     postData(php_file)
         .then(data => {
             renderChatHtml(data);
             toggleLoader(false);
-            chatTimer = setTimeout(update_chat_set, 5000);
+            scheduleNextPoll();
         })
         .catch(err => {
             console.error("Czat offline lub błąd formatu JSON:", err);
             toggleLoader(false);
-            chatTimer = setTimeout(update_chat_set, 5000);
+            scheduleNextPoll();
         });
 }
+
+// Powrot do karty odswieza czat od razu i przywraca szybszy rytm,
+// zamiast kazac graczowi czekac do konca dlugiego odstepu.
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && isRefreshLoopRunning) {
+        update_chat_set();
+    }
+});
 
 function send_chat() {
     const messageInput = document.getElementById("message");
