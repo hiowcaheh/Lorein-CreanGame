@@ -31,6 +31,17 @@
     width: 100vw;
     height: 100vh;
     height: 100dvh;
+
+    /* Po dodaniu strony do ekranu poczatkowego iOS oddaje cala powierzchnie
+       ekranu — razem z paskiem pod wyciecie aparatu i belka gestu. W poziomie
+       wyciecie wypada z boku i przykryloby menu gry. Marginesy bezpieczne sa
+       zerowe dopoki nie sa potrzebne, wiec nic tu nie tracimy w przegladarce. */
+    box-sizing: border-box;
+    padding:
+      env(safe-area-inset-top, 0px)
+      env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px)
+      env(safe-area-inset-left, 0px);
   }
 
   #gra ruffle-player {
@@ -103,6 +114,9 @@
   var stan = document.getElementById("stan");
   var diag = document.getElementById("diag");
   var debug = new URLSearchParams(location.search).has("debug");
+
+  /** `?proporcje=1` — wierne proporcje zamiast rozciagniecia na caly ekran. */
+  var proporcje = new URLSearchParams(location.search).has("proporcje");
 
   function pokazBlad(text) {
     panel.classList.add("widoczny");
@@ -227,6 +241,50 @@
     });
   }
 
+  // ------------------------------------------- klawiatura ekranowa --
+
+  /**
+   * Odtwarzacz, gdy juz powstanie. Potrzebny poza `uruchom()`, bo od jego
+   * fokusu zalezy, czy na telefonie wyskoczy klawiatura.
+   */
+  var odtwarzacz = null;
+
+  /**
+   * Dlaczego klawiatura wyskakiwala "raz tak, raz nie".
+   *
+   * Ruffle rysuje gre na plotnie, wiec pola tekstowe Flasha nie sa polami
+   * HTML i przegladarka sama z siebie klawiatury nie pokaze. Ruffle ma na to
+   * ukryty `<input>` w cieniu odtwarzacza i ustawia na nim fokus, gdy gra
+   * zglosi wejscie w pole tekstowe. Jego wlasny kod robi to tak:
+   *
+   *     if (this.instance?.has_focus()) {
+   *         this.virtualKeyboard.focus({ preventScroll: true });   // od razu
+   *     } else {
+   *         setTimeout(() => this.virtualKeyboard.focus(...), 0);  // z opoznieniem
+   *     }
+   *
+   * Druga galaz jest zgubna na iOS: Safari otwiera klawiature WYLACZNIE
+   * w bezposredniej reakcji na gest uzytkownika, a `setTimeout` juz nim nie
+   * jest — dotkniecie sie "konczy" i prosba zostaje odrzucona. Wystarczy
+   * wiec zadbac, zeby odtwarzacz mial fokus, zanim gracz dotknie pola.
+   *
+   * Robimy to dwa razy: raz po wczytaniu gry i za kazdym dotknieciem ekranu,
+   * w fazie przechwytywania — czyli ZANIM Ruffle obsluzy to samo dotkniecie.
+   */
+  function przejmijFokus() {
+    if (!odtwarzacz || panel.classList.contains("widoczny")) return;
+    try {
+      odtwarzacz.focus({ preventScroll: true });
+    } catch (e) {
+      // Starsze przegladarki nie znaja opcji — probujemy bez niej.
+      try { odtwarzacz.focus(); } catch (e2) { /* trudno */ }
+    }
+  }
+
+  // `capture` i `passive`: nie przechwytujemy dotkniecia, tylko sluchamy go
+  // wczesniej niz Ruffle. Dotkniecie leci dalej do gry bez zmian.
+  document.addEventListener("pointerdown", przejmijFokus, { capture: true, passive: true });
+
   // ------------------------------------------------- pelny ekran --
 
   /**
@@ -282,6 +340,7 @@
     try {
       var ruffle = window.RufflePlayer.newest();
       player = ruffle.createPlayer();
+      odtwarzacz = player;
       document.getElementById("gra").appendChild(player);
     } catch (e) {
       pokazBlad("Blad uruchamiania odtwarzacza:<br>" + e);
@@ -305,17 +364,29 @@
       unmuteOverlay: "hidden",
       splashScreen: false,
 
-      // `showAll` zachowuje proporcje obrazu, `letterbox` wypelnia reszte
-      // czernia. Rozciaganie na sile (`exactFit`) znieksztalcaloby postacie.
-      scale: "showAll",
-      letterbox: "on",
+      // Scena gry ma 1280x800 (proporcje 16:10), a ekran telefonu w poziomie
+      // bywa duzo szerszy — na iPhonie Pro Max to 2,17:1. Przy `showAll` gra
+      // dopasowuje sie wysokoscia, a po bokach zostaja szerokie czarne pasy.
+      //
+      // `exactFit` rozciaga obraz na cala dostepna powierzchnie. Postacie sa
+      // wtedy odrobine szersze niz w oryginale — to cena za wykorzystanie
+      // calego ekranu. `forceScale` jest konieczne, bo bez niego wygrywa
+      // ustawienie sceny z samego pliku SWF.
+      //
+      // Kto woli wierne proporcje, dopisuje `?proporcje=1` do adresu.
+      scale: proporcje ? "showAll" : "exactFit",
+      forceScale: !proporcje,
+      letterbox: proporcje ? "on" : "off",
 
       allowScriptAccess: true,
       backgroundColor: "#000000",
       quality: "high",
       wmode: "opaque",
       menu: false,
-      salign: "t"
+      salign: proporcje ? "t" : ""
+    }).then(function () {
+      // Gra jest wczytana — od tej chwili ma trzymac fokus (patrz nizej).
+      przejmijFokus();
     }).catch(function (err) {
       pokazBlad("Nie udalo sie wczytac pliku gry <code>" + SWF + "</code>.<br>" +
                 String(err) + "<br><br><a href='?debug=1'>Diagnostyka</a>");
