@@ -121,6 +121,7 @@ tych nie ma — z pliku `sf555/.env`, ktory jest zablokowany w `.gitignore`.
 Brak konfiguracji konczy sie bledem, bez cichego fallbacku na konto roota.
 
 Pelny opis zabezpieczen: [`deploy/HOSTING.md`](deploy/HOSTING.md).
+Wdrozenie na Vercel krok po kroku: [`deploy/VERCEL.md`](deploy/VERCEL.md).
 
 ## GitHub Pages
 
