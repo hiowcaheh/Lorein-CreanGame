@@ -1,0 +1,611 @@
+{
+    "now": 1750000000,
+    "cases": [
+        {
+            "name": "pusty ranking — pole zerowe dostaje przedrostek dwa razy",
+            "extra": "Nikt;",
+            "rows": [],
+            "playerCount": 0,
+            "lookupPos": 0,
+            "expected": "007007/;"
+        },
+        {
+            "name": "trzech graczy, wszystkie trzy klasy",
+            "extra": "Ktos;",
+            "rows": [
+                {
+                    "user_name": "Wojownik",
+                    "guild": "Zelazni",
+                    "lvl": 50,
+                    "honor": 900,
+                    "class": 1,
+                    "last_activ": "1749999990"
+                },
+                {
+                    "user_name": "Magik",
+                    "guild": "",
+                    "lvl": 40,
+                    "honor": 800,
+                    "class": 2,
+                    "last_activ": "1749999000"
+                },
+                {
+                    "user_name": "Lowca",
+                    "guild": "Cienie",
+                    "lvl": 30,
+                    "honor": 700,
+                    "class": 3,
+                    "last_activ": "1749999101"
+                }
+            ],
+            "playerCount": 3,
+            "lookupPos": 2,
+            "expected": "0071/Wojownik/Zelazni/50/900/1/2/Magik//-40/800/0/-3/Lowca/Cienie/30/700/1/;"
+        },
+        {
+            "name": "dwudziestu graczy, pozycja podana liczba",
+            "extra": "12;12",
+            "rows": [
+                {
+                    "user_name": "Gracz1",
+                    "guild": "",
+                    "lvl": 99,
+                    "honor": 4990,
+                    "class": 2,
+                    "last_activ": "1749999900"
+                },
+                {
+                    "user_name": "Gracz2",
+                    "guild": "",
+                    "lvl": 98,
+                    "honor": 4980,
+                    "class": 3,
+                    "last_activ": "1749999800"
+                },
+                {
+                    "user_name": "Gracz3",
+                    "guild": "",
+                    "lvl": 97,
+                    "honor": 4970,
+                    "class": 1,
+                    "last_activ": "1749999700"
+                },
+                {
+                    "user_name": "Gracz4",
+                    "guild": "Gildia 4",
+                    "lvl": 96,
+                    "honor": 4960,
+                    "class": 2,
+                    "last_activ": "1749999600"
+                },
+                {
+                    "user_name": "Gracz5",
+                    "guild": "",
+                    "lvl": 95,
+                    "honor": 4950,
+                    "class": 3,
+                    "last_activ": "1749999500"
+                },
+                {
+                    "user_name": "Gracz6",
+                    "guild": "",
+                    "lvl": 94,
+                    "honor": 4940,
+                    "class": 1,
+                    "last_activ": "1749999400"
+                },
+                {
+                    "user_name": "Gracz7",
+                    "guild": "",
+                    "lvl": 93,
+                    "honor": 4930,
+                    "class": 2,
+                    "last_activ": "1749999300"
+                },
+                {
+                    "user_name": "Gracz8",
+                    "guild": "Gildia 8",
+                    "lvl": 92,
+                    "honor": 4920,
+                    "class": 3,
+                    "last_activ": "1749999200"
+                },
+                {
+                    "user_name": "Gracz9",
+                    "guild": "",
+                    "lvl": 91,
+                    "honor": 4910,
+                    "class": 1,
+                    "last_activ": "1749999100"
+                },
+                {
+                    "user_name": "Gracz10",
+                    "guild": "",
+                    "lvl": 90,
+                    "honor": 4900,
+                    "class": 2,
+                    "last_activ": "1749999000"
+                },
+                {
+                    "user_name": "Gracz11",
+                    "guild": "",
+                    "lvl": 89,
+                    "honor": 4890,
+                    "class": 3,
+                    "last_activ": "1749998900"
+                },
+                {
+                    "user_name": "Gracz12",
+                    "guild": "Gildia 12",
+                    "lvl": 88,
+                    "honor": 4880,
+                    "class": 1,
+                    "last_activ": "1749998800"
+                },
+                {
+                    "user_name": "Gracz13",
+                    "guild": "",
+                    "lvl": 87,
+                    "honor": 4870,
+                    "class": 2,
+                    "last_activ": "1749998700"
+                },
+                {
+                    "user_name": "Gracz14",
+                    "guild": "",
+                    "lvl": 86,
+                    "honor": 4860,
+                    "class": 3,
+                    "last_activ": "1749998600"
+                },
+                {
+                    "user_name": "Gracz15",
+                    "guild": "",
+                    "lvl": 85,
+                    "honor": 4850,
+                    "class": 1,
+                    "last_activ": "1749998500"
+                },
+                {
+                    "user_name": "Gracz16",
+                    "guild": "Gildia 16",
+                    "lvl": 84,
+                    "honor": 4840,
+                    "class": 2,
+                    "last_activ": "1749998400"
+                },
+                {
+                    "user_name": "Gracz17",
+                    "guild": "",
+                    "lvl": 83,
+                    "honor": 4830,
+                    "class": 3,
+                    "last_activ": "1749998300"
+                },
+                {
+                    "user_name": "Gracz18",
+                    "guild": "",
+                    "lvl": 82,
+                    "honor": 4820,
+                    "class": 1,
+                    "last_activ": "1749998200"
+                },
+                {
+                    "user_name": "Gracz19",
+                    "guild": "",
+                    "lvl": 81,
+                    "honor": 4810,
+                    "class": 2,
+                    "last_activ": "1749998100"
+                },
+                {
+                    "user_name": "Gracz20",
+                    "guild": "Gildia 20",
+                    "lvl": 80,
+                    "honor": 4800,
+                    "class": 3,
+                    "last_activ": "1749998000"
+                }
+            ],
+            "playerCount": 20,
+            "lookupPos": 0,
+            "expected": "00713/Gracz13//-87/4870/0/-14/Gracz14//86/4860/0/15/Gracz15//85/4850/0/16/Gracz16/Gildia 16/-84/4840/0/-17/Gracz17//83/4830/0/18/Gracz18//82/4820/0/19/Gracz19//-81/4810/0/-20/Gracz20/Gildia 20/80/4800/0/;"
+        },
+        {
+            "name": "dwudziestu graczy, wyszukiwanie po nazwie",
+            "extra": "Gracz15;",
+            "rows": [
+                {
+                    "user_name": "Gracz1",
+                    "guild": "",
+                    "lvl": 99,
+                    "honor": 4990,
+                    "class": 2,
+                    "last_activ": "1749999900"
+                },
+                {
+                    "user_name": "Gracz2",
+                    "guild": "",
+                    "lvl": 98,
+                    "honor": 4980,
+                    "class": 3,
+                    "last_activ": "1749999800"
+                },
+                {
+                    "user_name": "Gracz3",
+                    "guild": "",
+                    "lvl": 97,
+                    "honor": 4970,
+                    "class": 1,
+                    "last_activ": "1749999700"
+                },
+                {
+                    "user_name": "Gracz4",
+                    "guild": "Gildia 4",
+                    "lvl": 96,
+                    "honor": 4960,
+                    "class": 2,
+                    "last_activ": "1749999600"
+                },
+                {
+                    "user_name": "Gracz5",
+                    "guild": "",
+                    "lvl": 95,
+                    "honor": 4950,
+                    "class": 3,
+                    "last_activ": "1749999500"
+                },
+                {
+                    "user_name": "Gracz6",
+                    "guild": "",
+                    "lvl": 94,
+                    "honor": 4940,
+                    "class": 1,
+                    "last_activ": "1749999400"
+                },
+                {
+                    "user_name": "Gracz7",
+                    "guild": "",
+                    "lvl": 93,
+                    "honor": 4930,
+                    "class": 2,
+                    "last_activ": "1749999300"
+                },
+                {
+                    "user_name": "Gracz8",
+                    "guild": "Gildia 8",
+                    "lvl": 92,
+                    "honor": 4920,
+                    "class": 3,
+                    "last_activ": "1749999200"
+                },
+                {
+                    "user_name": "Gracz9",
+                    "guild": "",
+                    "lvl": 91,
+                    "honor": 4910,
+                    "class": 1,
+                    "last_activ": "1749999100"
+                },
+                {
+                    "user_name": "Gracz10",
+                    "guild": "",
+                    "lvl": 90,
+                    "honor": 4900,
+                    "class": 2,
+                    "last_activ": "1749999000"
+                },
+                {
+                    "user_name": "Gracz11",
+                    "guild": "",
+                    "lvl": 89,
+                    "honor": 4890,
+                    "class": 3,
+                    "last_activ": "1749998900"
+                },
+                {
+                    "user_name": "Gracz12",
+                    "guild": "Gildia 12",
+                    "lvl": 88,
+                    "honor": 4880,
+                    "class": 1,
+                    "last_activ": "1749998800"
+                },
+                {
+                    "user_name": "Gracz13",
+                    "guild": "",
+                    "lvl": 87,
+                    "honor": 4870,
+                    "class": 2,
+                    "last_activ": "1749998700"
+                },
+                {
+                    "user_name": "Gracz14",
+                    "guild": "",
+                    "lvl": 86,
+                    "honor": 4860,
+                    "class": 3,
+                    "last_activ": "1749998600"
+                },
+                {
+                    "user_name": "Gracz15",
+                    "guild": "",
+                    "lvl": 85,
+                    "honor": 4850,
+                    "class": 1,
+                    "last_activ": "1749998500"
+                },
+                {
+                    "user_name": "Gracz16",
+                    "guild": "Gildia 16",
+                    "lvl": 84,
+                    "honor": 4840,
+                    "class": 2,
+                    "last_activ": "1749998400"
+                },
+                {
+                    "user_name": "Gracz17",
+                    "guild": "",
+                    "lvl": 83,
+                    "honor": 4830,
+                    "class": 3,
+                    "last_activ": "1749998300"
+                },
+                {
+                    "user_name": "Gracz18",
+                    "guild": "",
+                    "lvl": 82,
+                    "honor": 4820,
+                    "class": 1,
+                    "last_activ": "1749998200"
+                },
+                {
+                    "user_name": "Gracz19",
+                    "guild": "",
+                    "lvl": 81,
+                    "honor": 4810,
+                    "class": 2,
+                    "last_activ": "1749998100"
+                },
+                {
+                    "user_name": "Gracz20",
+                    "guild": "Gildia 20",
+                    "lvl": 80,
+                    "honor": 4800,
+                    "class": 3,
+                    "last_activ": "1749998000"
+                }
+            ],
+            "playerCount": 20,
+            "lookupPos": 15,
+            "expected": "007-8/Gracz8/Gildia 8/92/4920/1/9/Gracz9//91/4910/1/10/Gracz10//-90/4900/0/-11/Gracz11//89/4890/0/12/Gracz12/Gildia 12/88/4880/0/13/Gracz13//-87/4870/0/-14/Gracz14//86/4860/0/15/Gracz15//85/4850/0/16/Gracz16/Gildia 16/-84/4840/0/-17/Gracz17//83/4830/0/18/Gracz18//82/4820/0/19/Gracz19//-81/4810/0/-20/Gracz20/Gildia 20/80/4800/0/;"
+        },
+        {
+            "name": "pozycja poza zakresem zostaje przycieta do liczby graczy",
+            "extra": "999;999",
+            "rows": [
+                {
+                    "user_name": "Gracz1",
+                    "guild": "",
+                    "lvl": 99,
+                    "honor": 4990,
+                    "class": 2,
+                    "last_activ": "1749999900"
+                },
+                {
+                    "user_name": "Gracz2",
+                    "guild": "",
+                    "lvl": 98,
+                    "honor": 4980,
+                    "class": 3,
+                    "last_activ": "1749999800"
+                },
+                {
+                    "user_name": "Gracz3",
+                    "guild": "",
+                    "lvl": 97,
+                    "honor": 4970,
+                    "class": 1,
+                    "last_activ": "1749999700"
+                },
+                {
+                    "user_name": "Gracz4",
+                    "guild": "Gildia 4",
+                    "lvl": 96,
+                    "honor": 4960,
+                    "class": 2,
+                    "last_activ": "1749999600"
+                },
+                {
+                    "user_name": "Gracz5",
+                    "guild": "",
+                    "lvl": 95,
+                    "honor": 4950,
+                    "class": 3,
+                    "last_activ": "1749999500"
+                },
+                {
+                    "user_name": "Gracz6",
+                    "guild": "",
+                    "lvl": 94,
+                    "honor": 4940,
+                    "class": 1,
+                    "last_activ": "1749999400"
+                },
+                {
+                    "user_name": "Gracz7",
+                    "guild": "",
+                    "lvl": 93,
+                    "honor": 4930,
+                    "class": 2,
+                    "last_activ": "1749999300"
+                },
+                {
+                    "user_name": "Gracz8",
+                    "guild": "Gildia 8",
+                    "lvl": 92,
+                    "honor": 4920,
+                    "class": 3,
+                    "last_activ": "1749999200"
+                },
+                {
+                    "user_name": "Gracz9",
+                    "guild": "",
+                    "lvl": 91,
+                    "honor": 4910,
+                    "class": 1,
+                    "last_activ": "1749999100"
+                },
+                {
+                    "user_name": "Gracz10",
+                    "guild": "",
+                    "lvl": 90,
+                    "honor": 4900,
+                    "class": 2,
+                    "last_activ": "1749999000"
+                },
+                {
+                    "user_name": "Gracz11",
+                    "guild": "",
+                    "lvl": 89,
+                    "honor": 4890,
+                    "class": 3,
+                    "last_activ": "1749998900"
+                },
+                {
+                    "user_name": "Gracz12",
+                    "guild": "Gildia 12",
+                    "lvl": 88,
+                    "honor": 4880,
+                    "class": 1,
+                    "last_activ": "1749998800"
+                },
+                {
+                    "user_name": "Gracz13",
+                    "guild": "",
+                    "lvl": 87,
+                    "honor": 4870,
+                    "class": 2,
+                    "last_activ": "1749998700"
+                },
+                {
+                    "user_name": "Gracz14",
+                    "guild": "",
+                    "lvl": 86,
+                    "honor": 4860,
+                    "class": 3,
+                    "last_activ": "1749998600"
+                },
+                {
+                    "user_name": "Gracz15",
+                    "guild": "",
+                    "lvl": 85,
+                    "honor": 4850,
+                    "class": 1,
+                    "last_activ": "1749998500"
+                },
+                {
+                    "user_name": "Gracz16",
+                    "guild": "Gildia 16",
+                    "lvl": 84,
+                    "honor": 4840,
+                    "class": 2,
+                    "last_activ": "1749998400"
+                },
+                {
+                    "user_name": "Gracz17",
+                    "guild": "",
+                    "lvl": 83,
+                    "honor": 4830,
+                    "class": 3,
+                    "last_activ": "1749998300"
+                },
+                {
+                    "user_name": "Gracz18",
+                    "guild": "",
+                    "lvl": 82,
+                    "honor": 4820,
+                    "class": 1,
+                    "last_activ": "1749998200"
+                },
+                {
+                    "user_name": "Gracz19",
+                    "guild": "",
+                    "lvl": 81,
+                    "honor": 4810,
+                    "class": 2,
+                    "last_activ": "1749998100"
+                },
+                {
+                    "user_name": "Gracz20",
+                    "guild": "Gildia 20",
+                    "lvl": 80,
+                    "honor": 4800,
+                    "class": 3,
+                    "last_activ": "1749998000"
+                }
+            ],
+            "playerCount": 20,
+            "lookupPos": 0,
+            "expected": "00713/Gracz13//-87/4870/0/-14/Gracz14//86/4860/0/15/Gracz15//85/4850/0/16/Gracz16/Gildia 16/-84/4840/0/-17/Gracz17//83/4830/0/18/Gracz18//82/4820/0/19/Gracz19//-81/4810/0/-20/Gracz20/Gildia 20/80/4800/0/;"
+        },
+        {
+            "name": "nazwy wymagajace kodowania URL",
+            "extra": "Zażółć gęślą;",
+            "rows": [
+                {
+                    "user_name": "Gracz Ze Spacja",
+                    "guild": "Gildia Z Spacja",
+                    "lvl": 10,
+                    "honor": 100,
+                    "class": 1,
+                    "last_activ": "1750000000"
+                },
+                {
+                    "user_name": "Zażółć",
+                    "guild": "Ćma & Ćwierć",
+                    "lvl": 9,
+                    "honor": 90,
+                    "class": 2,
+                    "last_activ": "1749995000"
+                },
+                {
+                    "user_name": "Znaki!'()*",
+                    "guild": "",
+                    "lvl": 8,
+                    "honor": 80,
+                    "class": 3,
+                    "last_activ": "1750000000"
+                }
+            ],
+            "playerCount": 3,
+            "lookupPos": 1,
+            "expected": "0071/Gracz Ze Spacja/Gildia Z Spacja/10/100/1/2/Zażółć/Ćma & Ćwierć/-9/90/0/-3/Znaki!'()*//8/80/1/;"
+        },
+        {
+            "name": "granica online dokladnie na 900 sekundach",
+            "extra": "X;",
+            "rows": [
+                {
+                    "user_name": "Rowno900",
+                    "guild": "",
+                    "lvl": 10,
+                    "honor": 100,
+                    "class": 1,
+                    "last_activ": "1749999100"
+                },
+                {
+                    "user_name": "O sekunde za duzo",
+                    "guild": "",
+                    "lvl": 10,
+                    "honor": 99,
+                    "class": 1,
+                    "last_activ": "1749999099"
+                }
+            ],
+            "playerCount": 2,
+            "lookupPos": 1,
+            "expected": "0071/Rowno900//10/100/1/2/O sekunde za duzo//10/99/0/;"
+        }
+    ]
+}

@@ -1,0 +1,300 @@
+{
+    "round": [
+        {
+            "value": 2.5,
+            "precision": 0,
+            "expected": 3
+        },
+        {
+            "value": -2.5,
+            "precision": 0,
+            "expected": -3
+        },
+        {
+            "value": 0.5,
+            "precision": 0,
+            "expected": 1
+        },
+        {
+            "value": -0.5,
+            "precision": 0,
+            "expected": -1
+        },
+        {
+            "value": 1.5,
+            "precision": 0,
+            "expected": 2
+        },
+        {
+            "value": -1.5,
+            "precision": 0,
+            "expected": -2
+        },
+        {
+            "value": 3.4,
+            "precision": 0,
+            "expected": 3
+        },
+        {
+            "value": -3.4,
+            "precision": 0,
+            "expected": -3
+        },
+        {
+            "value": 0.285,
+            "precision": 2,
+            "expected": 0.29
+        },
+        {
+            "value": 1.005,
+            "precision": 2,
+            "expected": 1.01
+        },
+        {
+            "value": 1.55,
+            "precision": 1,
+            "expected": 1.6
+        },
+        {
+            "value": -1.55,
+            "precision": 1,
+            "expected": -1.6
+        },
+        {
+            "value": 2.675,
+            "precision": 2,
+            "expected": 2.68
+        },
+        {
+            "value": 1234,
+            "precision": -2,
+            "expected": 1200
+        },
+        {
+            "value": 1250,
+            "precision": -2,
+            "expected": 1300
+        },
+        {
+            "value": 1350,
+            "precision": -2,
+            "expected": 1400
+        },
+        {
+            "value": -1250,
+            "precision": -2,
+            "expected": -1300
+        },
+        {
+            "value": 9999,
+            "precision": -3,
+            "expected": 10000
+        },
+        {
+            "value": 0,
+            "precision": 0,
+            "expected": 0
+        },
+        {
+            "value": 0.0001,
+            "precision": 2,
+            "expected": 0
+        },
+        {
+            "value": 123.456,
+            "precision": 1,
+            "expected": 123.5
+        },
+        {
+            "value": 123.456,
+            "precision": 2,
+            "expected": 123.46
+        },
+        {
+            "value": -123.456,
+            "precision": 1,
+            "expected": -123.5
+        },
+        {
+            "value": 0.3333333333333333,
+            "precision": 4,
+            "expected": 0.3333
+        },
+        {
+            "value": 0.6666666666666666,
+            "precision": 4,
+            "expected": 0.6667
+        },
+        {
+            "value": 3.3333333333333335,
+            "precision": 0,
+            "expected": 3
+        },
+        {
+            "value": -3.3333333333333335,
+            "precision": 0,
+            "expected": -3
+        }
+    ],
+    "intval": [
+        {
+            "value": "12abc",
+            "expected": 12
+        },
+        {
+            "value": "abc",
+            "expected": 0
+        },
+        {
+            "value": "-45xyz",
+            "expected": -45
+        },
+        {
+            "value": "  7 ",
+            "expected": 7
+        },
+        {
+            "value": "3.9",
+            "expected": 3
+        },
+        {
+            "value": 3.9,
+            "expected": 3
+        },
+        {
+            "value": -3.9,
+            "expected": -3
+        },
+        {
+            "value": true,
+            "expected": 1
+        },
+        {
+            "value": false,
+            "expected": 0
+        },
+        {
+            "value": null,
+            "expected": 0
+        },
+        {
+            "value": "",
+            "expected": 0
+        },
+        {
+            "value": "+8",
+            "expected": 8
+        },
+        {
+            "value": "0012",
+            "expected": 12
+        }
+    ],
+    "urlencode": [
+        {
+            "value": "Gracz 1",
+            "expected": "Gracz+1"
+        },
+        {
+            "value": "Zażółć gęślą jaźń",
+            "expected": "Za%C5%BC%C3%B3%C5%82%C4%87+g%C4%99%C5%9Bl%C4%85+ja%C5%BA%C5%84"
+        },
+        {
+            "value": "a+b=c&d",
+            "expected": "a%2Bb%3Dc%26d"
+        },
+        {
+            "value": "nick_test-1.2",
+            "expected": "nick_test-1.2"
+        },
+        {
+            "value": "!'()*",
+            "expected": "%21%27%28%29%2A"
+        },
+        {
+            "value": "100%",
+            "expected": "100%25"
+        },
+        {
+            "value": "ąę\/łó",
+            "expected": "%C4%85%C4%99%2F%C5%82%C3%B3"
+        },
+        {
+            "value": "",
+            "expected": ""
+        }
+    ],
+    "ctype_digit": [
+        {
+            "value": "123",
+            "expected": true
+        },
+        {
+            "value": "",
+            "expected": false
+        },
+        {
+            "value": "12a",
+            "expected": false
+        },
+        {
+            "value": "0",
+            "expected": true
+        },
+        {
+            "value": " 12",
+            "expected": false
+        },
+        {
+            "value": "-1",
+            "expected": false
+        }
+    ],
+    "explode": [
+        {
+            "sep": ";",
+            "subject": "a;b;c",
+            "limit": null,
+            "expected": [
+                "a",
+                "b",
+                "c"
+            ]
+        },
+        {
+            "sep": ";",
+            "subject": "a;b;c",
+            "limit": 2,
+            "expected": [
+                "a",
+                "b;c"
+            ]
+        },
+        {
+            "sep": ";",
+            "subject": "",
+            "limit": null,
+            "expected": [
+                ""
+            ]
+        },
+        {
+            "sep": ";",
+            "subject": "a",
+            "limit": null,
+            "expected": [
+                "a"
+            ]
+        },
+        {
+            "sep": ";",
+            "subject": "a;b;c;d",
+            "limit": 3,
+            "expected": [
+                "a",
+                "b",
+                "c;d"
+            ]
+        }
+    ]
+}

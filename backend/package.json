@@ -1,0 +1,27 @@
+{
+  "name": "lorein-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend gry Lorein w TypeScript — stopniowy port req.php",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "gen:protocol": "node scripts/gen-protocol.mjs"
+  },
+  "dependencies": {
+    "hono": "^4.6.14",
+    "@hono/node-server": "^1.13.7",
+    "mysql2": "^3.11.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.8",
+    "@types/node": "^22.10.2"
+  }
+}

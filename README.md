@@ -18,6 +18,7 @@ serwer, jak i **zrodla klienta** (`.fla` + klasy ActionScript 3).
 ```
 sf555/          # katalog gry — to jest webroot wystawiany przez serwer WWW
 client-src/     # zrodla klienta Flash (.fla, .swf, klasy .as) — NIE na serwer
+backend/        # nowy backend w TypeScript — stopniowy port req.php
 site/           # statyczna wizytowka projektu publikowana przez GitHub Pages
 deploy/         # Dockerfile, skrypt konta bazy, instrukcja hostingu
 docs/           # dokumentacja techniczna
@@ -85,6 +86,7 @@ Konfiguracja rozbita jest na dwie tabele:
 
 Szczegoly: [`docs/ARCHITEKTURA.md`](docs/ARCHITEKTURA.md).
 Co da sie w grze zmienic i jakim kosztem: [`docs/MODOWANIE.md`](docs/MODOWANIE.md).
+Port backendu do TypeScript: [`backend/README.md`](backend/README.md).
 
 ## Uruchomienie
 
