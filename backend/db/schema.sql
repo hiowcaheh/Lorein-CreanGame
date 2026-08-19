@@ -490,4 +490,42 @@ SELECT setval(pg_get_serial_sequence('server_config', 'id'), 11, true);
 SELECT setval(pg_get_serial_sequence('game_settings', 'id'), 19, true);
 SELECT setval(pg_get_serial_sequence('witch',         'id'),  1, true);
 
+-- ------------------------------------------------ zamkniecie API REST --
+
+-- Supabase wystawia kazda tabele ze schematu `public` przez publiczne API
+-- REST, autoryzowane kluczem `anon`. Ten klucz z zalozenia jest jawny —
+-- siedzi w kodzie klienta. Bez RLS kazdy, kto go zna, moglby czytac
+-- i zmieniac dane graczy: srebro, grzyby, honor, hasla.
+--
+-- Wlaczamy RLS i celowo NIE dodajemy zadnych polityk. Efekt: przez REST
+-- nie da sie zrobic nic. Backend gry laczy sie bezposrednio z Postgresem
+-- jako wlasciciel tabel, a wlasciciel omija RLS — wiec gra dziala normalnie.
+--
+-- Linter Supabase zglosi to jako INFO „RLS enabled, no policy". To jest
+-- stan docelowy, a nie usterka do naprawienia.
+
+ALTER TABLE user_data             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_fights           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items_shakes          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items_fidget          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items_tavern          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tower_helper_items    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guilds                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guild_chat            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guild_invites         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guild_attacks         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guild_attacks_archive ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE banned_ips            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vouchers              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE witch                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE server_config         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE game_settings         ENABLE ROW LEVEL SECURITY;
+
+-- RLS chroni wiersze; to chroni takze przed odczytem samej struktury.
+REVOKE ALL ON ALL TABLES    IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+
 COMMIT;
