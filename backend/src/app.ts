@@ -36,13 +36,41 @@ const handlers: Record<string, Handler> = {
 
 export const app = new Hono();
 
-app.get('/health', (c) =>
-  c.json({
+/**
+ * Awaria po stronie serwera nie moze konczyc sie pusta odpowiedzia.
+ *
+ * Klient Flash, ktory dostanie 500 bez tresci, po prostu stoi — gracz widzi
+ * czarny ekran i nie ma zadnej wskazowki. Tutaj przyczyna trafia do logow
+ * Vercela, a w odpowiedzi zostaje krotki komunikat mozliwy do odczytania
+ * w przegladarce.
+ */
+app.onError((err, c) => {
+  console.error('Blad obslugi zapytania:', c.req.path, err);
+
+  const message = err instanceof Error ? err.message : String(err);
+  return c.text(`Blad serwera: ${message}`, 500, {
+    'content-type': 'text/plain; charset=utf-8',
+    'access-control-allow-origin': '*',
+  });
+});
+
+app.get('/health', async (c) => {
+  // Sprawdzamy takze baze — samo "aplikacja wstala" niewiele mowi, gdy
+  // najczestsza przyczyna problemow jest zle ustawione DATABASE_URL.
+  let database = 'ok';
+  try {
+    await getSql()`SELECT 1`;
+  } catch (err) {
+    database = err instanceof Error ? err.message : String(err);
+  }
+
+  return c.json({
     status: 'ok',
+    database,
     ported: Object.keys(handlers).sort(),
     legacyProxy: config.legacyBaseUrl !== '',
-  }),
-);
+  });
+});
 
 /**
  * Konfiguracja pobierana przez klienta Flash przy starcie.
