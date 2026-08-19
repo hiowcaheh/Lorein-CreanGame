@@ -26,7 +26,11 @@ export function getSql(): Sql {
     // Duza pula polaczen nie ma tam sensu i tylko wyczerpuje limity bazy.
     max: config.usePooler ? 1 : 10,
     idle_timeout: 20,
-    connect_timeout: 10,
+
+    // Krotki limit na nawiazanie polaczenia. Funkcja na Vercelu i tak zostanie
+    // ubita po kilkunastu sekundach, a wtedy zamiast czytelnego bledu dostaje
+    // sie pusta odpowiedz albo 504. Lepiej zglosic problem samemu.
+    connect_timeout: 8,
 
     // Gra trzyma czasy jako liczby uniksowe w kolumnach tekstowych
     // i bigintach — nie chcemy automatycznej konwersji na Date.

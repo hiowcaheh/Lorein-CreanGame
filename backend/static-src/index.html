@@ -121,16 +121,41 @@
     };
   }
 
-  function sprawdz(etykieta, url, walidator) {
+  /**
+   * Kazdy test ma wlasny limit czasu i wlasny wiersz.
+   *
+   * Testy ida ROWNOLEGLE — wczesniej szly po kolei i zawieszony `/health`
+   * blokowal wszystkie ponizej, wiec nie bylo widac, czy dziala cokolwiek
+   * innego. Teraz nawet gdy jeden test wisi, reszta zdazy sie wypisac.
+   */
+  function sprawdz(etykieta, url, walidator, limitMs) {
     var gotowe = wiersz(etykieta);
+    var limit = limitMs || 12000;
+    var rozstrzygniete = false;
+
+    var licznik = setTimeout(function () {
+      if (!rozstrzygniete) {
+        rozstrzygniete = true;
+        gotowe(false, "przekroczono " + (limit / 1000) + " s — brak odpowiedzi");
+      }
+    }, limit);
+
     return fetch(url, { cache: "no-store" })
       .then(function (r) {
         return r.text().then(function (tekst) {
+          if (rozstrzygniete) return;
+          rozstrzygniete = true;
+          clearTimeout(licznik);
           var w = walidator(r, tekst);
           gotowe(w.dobrze, w.opis);
         });
       })
-      .catch(function (e) { gotowe(false, String(e)); });
+      .catch(function (e) {
+        if (rozstrzygniete) return;
+        rozstrzygniete = true;
+        clearTimeout(licznik);
+        gotowe(false, String(e));
+      });
   }
 
   function uruchomDiagnostyke() {
@@ -144,39 +169,45 @@
       window.RufflePlayer ? "wczytany" : "NIE wczytal sie z unpkg.com"
     );
 
-    sprawdz("backend /health", "health", function (res, tekst) {
-      if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status };
-      try {
-        var j = JSON.parse(tekst);
-        return {
-          dobrze: j.database === "ok",
-          opis: "baza: " + j.database + "; akcje: " + (j.ported || []).join(", ")
-        };
-      } catch (e) {
-        return { dobrze: false, opis: "odpowiedz nie jest JSON-em: " + tekst.slice(0, 90) };
-      }
-    })
-    .then(function () {
-      return sprawdz("konfiguracja klienta (/config.php)", "config.php", function (res, tekst) {
+    // Najpierw testy nietykajace bazy — daja wynik od razu.
+    var testy = [
+      sprawdz("plik gry", SWF, function (res, tekst) {
+        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status };
+        return { dobrze: tekst.length > 100000, opis: Math.round(tekst.length / 1024) + " kB" };
+      }, 20000),
+
+      sprawdz("grafika", "res/sfgame/scr/fight/monster/monster2.jpg", function (res) {
+        return { dobrze: res.ok, opis: res.ok ? "zasoby dostepne" : "HTTP " + res.status };
+      }, 15000),
+
+      sprawdz("backend bez bazy (/req.php)", "req.php?req=" + new Array(33).join("0") + "999", function (res, tekst) {
+        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — " + tekst.slice(0, 90) };
+        return { dobrze: true, opis: "funkcja odpowiada: " + JSON.stringify(tekst.slice(0, 20)) };
+      }, 20000),
+
+      sprawdz("backend + baza (/health)", "health", function (res, tekst) {
+        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — " + tekst.slice(0, 110) };
+        try {
+          var j = JSON.parse(tekst);
+          return {
+            dobrze: j.database === "ok",
+            opis: "baza: " + j.database
+          };
+        } catch (e) {
+          return { dobrze: false, opis: "odpowiedz nie jest JSON-em: " + tekst.slice(0, 90) };
+        }
+      }, 25000),
+
+      sprawdz("konfiguracja klienta (/config.php)", "config.php", function (res, tekst) {
         if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — " + tekst.slice(0, 110) };
         var linie = tekst.split("\n").filter(Boolean);
         var p25 = linie.filter(function (l) { return l.indexOf("25\t") === 0; })[0];
         return { dobrze: linie.length > 10 && !!p25, opis: linie.length + " pol; endpoint: " + (p25 ? p25.slice(3) : "BRAK") };
-      });
-    })
-    .then(function () {
-      return sprawdz("plik gry", SWF, function (res, tekst) {
-        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status };
-        return { dobrze: tekst.length > 100000, opis: Math.round(tekst.length / 1024) + " kB" };
-      });
-    })
-    .then(function () {
-      return sprawdz("grafika", "res/sfgame/scr/fight/monster/monster2.jpg", function (res) {
-        return { dobrze: res.ok, opis: res.ok ? "zasoby dostepne" : "HTTP " + res.status };
-      });
-    })
-    .then(function () {
-      wiersz("podsumowanie")(true, "skopiuj powyzsze i wyslij");
+      }, 25000)
+    ];
+
+    Promise.all(testy).then(function () {
+      wiersz("podsumowanie")(true, "wszystkie testy zakonczone — skopiuj powyzsze i wyslij");
     });
   }
 
