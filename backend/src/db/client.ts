@@ -9,7 +9,7 @@
  */
 
 import postgres from 'postgres';
-import { config } from '../config.js';
+import { config } from '../config';
 
 export type Sql = postgres.Sql;
 

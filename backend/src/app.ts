@@ -11,17 +11,17 @@
  */
 
 import { Hono } from 'hono';
-import { parseRequest } from './protocol/request.js';
-import { PhpResponse } from './protocol/response.js';
-import { ACT } from './protocol/constants.js';
-import { ranking } from './actions/ranking.js';
-import { register, login, loginFollowUp } from './actions/account.js';
-import { hero } from './actions/hero.js';
-import { buildClientConfig } from './clientConfig.js';
-import { getSql } from './db/client.js';
-import { config } from './config.js';
-import type { GameRequest } from './protocol/request.js';
-import type { Sql } from './db/client.js';
+import { parseRequest } from './protocol/request';
+import { PhpResponse } from './protocol/response';
+import { ACT } from './protocol/constants';
+import { ranking } from './actions/ranking';
+import { register, login, loginFollowUp } from './actions/account';
+import { hero } from './actions/hero';
+import { buildClientConfig } from './clientConfig';
+import { getSql } from './db/client';
+import { config } from './config';
+import type { GameRequest } from './protocol/request';
+import type { Sql } from './db/client';
 
 type Handler = (sql: Sql, req: GameRequest, ip: string) => Promise<PhpResponse>;
 

@@ -20,7 +20,7 @@
  * zachowuje kolejnosc wstawiania.
  */
 
-import { toPhpString } from '../compat/php.js';
+import { toPhpString } from '../compat/php';
 
 export class PhpResponse {
   private readonly values = new Map<number, string>();

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { Sql } from '../src/db/client.js';
-import { ranking } from '../src/actions/ranking.js';
-import { parseRequest } from '../src/protocol/request.js';
+import type { Sql } from '../src/db/client';
+import { ranking } from '../src/actions/ranking';
+import { parseRequest } from '../src/protocol/request';
 
 /**
  * Test roznicowy dla akcji 007.

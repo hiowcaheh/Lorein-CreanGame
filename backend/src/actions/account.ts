@@ -13,14 +13,14 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import { PhpResponse } from '../protocol/response.js';
-import { ACT, ERR, SF } from '../protocol/constants.js';
-import { intval, time, urlencode } from '../compat/php.js';
-import { loadDefaultStats } from '../game/stats.js';
-import { fetchPlayerBySsid, loadDefaultData } from '../game/playerState.js';
-import { getRng } from '../compat/rng.js';
-import type { GameRequest } from '../protocol/request.js';
-import type { Sql } from '../db/client.js';
+import { PhpResponse } from '../protocol/response';
+import { ACT, ERR, SF } from '../protocol/constants';
+import { intval, time, urlencode } from '../compat/php';
+import { loadDefaultStats } from '../game/stats';
+import { fetchPlayerBySsid, loadDefaultData } from '../game/playerState';
+import { getRng } from '../compat/rng';
+import type { GameRequest } from '../protocol/request';
+import type { Sql } from '../db/client';
 
 function md5(value: string): string {
   return createHash('md5').update(value, 'utf8').digest('hex');

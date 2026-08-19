@@ -2,8 +2,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
-import { ranking } from '../src/actions/ranking.js';
-import { parseRequest } from '../src/protocol/request.js';
+import { ranking } from '../src/actions/ranking';
+import { parseRequest } from '../src/protocol/request';
 
 /**
  * Test integracyjny akcji 007 na prawdziwym Postgresie.

@@ -7,9 +7,9 @@
 
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { app } from './app.js';
-import { config } from './config.js';
-import { closeSql } from './db/client.js';
+import { app } from './app';
+import { config } from './config';
+import { closeSql } from './db/client';
 
 // Lokalnie sami serwujemy pliki gry z `public/`. Na Vercelu robi to
 // warstwa statyczna, a rewrite w vercel.json dziala dopiero wtedy, gdy
