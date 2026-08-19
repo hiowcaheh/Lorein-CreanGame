@@ -163,6 +163,7 @@
     stan.textContent = "Sprawdzam, co dziala, a co nie:";
     diag.innerHTML = "";
 
+    wiersz("wersja strony")(true, "__WERSJA__");
     wiersz("adres strony")(true, location.origin);
     wiersz("Ruffle (odtwarzacz Flash)")(
       !!(window.RufflePlayer && window.RufflePlayer.newest),

@@ -2,5 +2,21 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api" }
+  ],
+  "headers": [
+    {
+      "comment": "Strona uruchamiajaca gre nie moze byc cache'owana — inaczej przegladarka trzyma stara wersje mimo nowego wdrozenia.",
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "comment": "Zasoby gry sa niezmienne — mozna je trzymac dlugo.",
+      "source": "/res/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
   ]
 }

@@ -6,10 +6,24 @@
  * przy budowaniu — Vercel klonuje caly projekt, wiec `../sf555` jest
  * dostepne mimo ustawienia Root Directory na `backend`.
  *
+ * Dwie pulapki, ktore ten skrypt musi omijac naraz:
+ *
+ *   1. Vercel potrafi uruchomic polecenie budowania WIECEJ NIZ RAZ.
+ *      Skrypt nie moze wiec niczego usuwac — wczesniejsze `rm -rf public`
+ *      kasowalo katalog dokladnie wtedy, gdy Vercel zbieral z niego pliki:
+ *      `ENOENT: ... /public/res/sfgame/char/...`
+ *
+ *   2. Vercel przywraca `public/` z cache budowania miedzy wdrozeniami.
+ *      Pomijanie calego kopiowania na podstawie znacznika powodowalo, ze
+ *      wdrazala sie STARA strona, mimo nowego commita.
+ *
+ * Rozwiazanie: male pliki kopiujemy ZAWSZE (to one sie zmieniaja), a ciezkie
+ * katalogi `res/` i `lang/` tylko wtedy, gdy jeszcze ich nie ma.
+ *
  * Uruchomienie:  npm run build
  */
 
-import { cp, mkdir, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,71 +43,81 @@ async function exists(path) {
 
 const haveAssets = await exists(gameRoot);
 
-// Znacznik informujacy, ze katalog jest juz gotowy.
-//
-// Vercel potrafi uruchomic polecenie budowania wiecej niz raz. Wczesniej
-// skrypt zaczynal od `rm -rf public`, wiec drugi przebieg kasowal katalog
-// dokladnie wtedy, gdy Vercel zbieral z niego pliki wyjsciowe:
-//
-//   ENOENT: no such file or directory, open '.../public/res/sfgame/char/...'
-//
-// Teraz skrypt jest idempotentny: niczego nie usuwa, a powtorne wywolanie
-// konczy sie od razu. Przy okazji oszczedza to drugiego kopiowania 96 MB.
-const marker = resolve(publicDir, '.przygotowane');
-
 await mkdir(publicDir, { recursive: true });
 
-if (await exists(marker)) {
-  console.log('Katalog public/ jest juz przygotowany — pomijam.');
-  process.exit(0);
-}
-
 if (!haveAssets) {
-  // Brak zasobow NIE przerywa budowania. Backend i tak sie wdrozy, `/health`
-  // odpowie, a strona gry pokaze czytelny komunikat zamiast bialego ekranu.
-  // Latwiej wtedy zdiagnozowac przyczyne niz z nieudanego builda.
   console.warn('');
   console.warn('  UWAGA: nie znaleziono zasobow gry w ' + gameRoot);
-  console.warn('');
-  console.warn('  Na Vercelu oznacza to, ze build nie widzi katalogu sf555/,');
-  console.warn('  bo lezy on poza Root Directory. Wlacz w ustawieniach projektu:');
-  console.warn('    Settings > General > Root Directory');
-  console.warn('    -> "Include source files outside of the Root Directory"');
-  console.warn('');
   console.warn('  Backend zostanie wdrozony i /health bedzie dzialac,');
   console.warn('  ale sama gra sie nie wczyta.');
   console.warn('');
 }
 
-// Zasoby czytane przez klienta Flash. Reszta `sf555/` to stary backend PHP,
-// ktorego nie publikujemy — pliki .php trafilyby na serwer statyczny
-// jako tekst do pobrania.
-const assets = [
+/**
+ * Ciezkie katalogi — kopiowane tylko raz.
+ *
+ * Ich zawartosc pochodzi z paczki gry i nie zmienia sie miedzy wdrozeniami,
+ * wiec ponowne przepisywanie 96 MB niczego nie wnosi.
+ */
+const heavy = [
   ['res', 'res'],
   ['lang', 'lang'],
+];
+
+/**
+ * Male pliki — kopiowane ZAWSZE.
+ *
+ * To one zmieniaja sie razem z kodem, wiec pominiecie ich oznaczaloby
+ * wdrozenie starej wersji strony.
+ */
+const light = [
   ['favicon.ico', 'favicon.ico'],
   ['crossdomain.xml', 'crossdomain.xml'],
-  // Konfiguracja sklepu grzybow jest plikiem tekstowym mimo rozszerzenia .php
-  // — klient parsuje ja bajt w bajt, wiec kopiujemy bez zmian.
   ['papaya_cfg.php', 'papaya_cfg.php'],
 ];
 
 if (haveAssets) {
-  for (const [from, to] of assets) {
+  for (const [from, to] of heavy) {
+    const source = resolve(gameRoot, from);
+    const target = resolve(publicDir, to);
+
+    if (!(await exists(source))) {
+      console.warn(`pomijam brakujacy zasob: ${from}`);
+      continue;
+    }
+    if (await exists(target)) {
+      console.log(`${from} jest juz na miejscu — pomijam kopiowanie`);
+      continue;
+    }
+
+    await cp(source, target, { recursive: true });
+    console.log(`skopiowano ${from}`);
+  }
+
+  for (const [from, to] of light) {
     const source = resolve(gameRoot, from);
     if (!(await exists(source))) {
       console.warn(`pomijam brakujacy zasob: ${from}`);
       continue;
     }
-    await cp(source, resolve(publicDir, to), { recursive: true });
+    await cp(source, resolve(publicDir, to), { recursive: true, force: true });
     console.log(`skopiowano ${from}`);
   }
 }
 
-// Strona uruchamiajaca gre.
-await cp(resolve(staticSrc, 'index.html'), resolve(publicDir, 'index.html'));
-console.log('skopiowano index.html');
+/**
+ * Strona uruchamiajaca gre — zawsze swieza, ze znacznikiem wersji.
+ *
+ * Znacznik trafia do diagnostyki (`?debug=1`), wiec od razu widac, czy
+ * przegladarka albo cache Vercela nie podaja starej strony.
+ */
+const stamp = [
+  process.env['VERCEL_GIT_COMMIT_SHA']?.slice(0, 7) ?? 'lokalnie',
+  new Date().toISOString().replace('T', ' ').slice(0, 16),
+].join(' · ');
 
-await writeFile(marker, new Date().toISOString() + '\n', 'utf8');
+const page = await readFile(resolve(staticSrc, 'index.html'), 'utf8');
+await writeFile(resolve(publicDir, 'index.html'), page.replaceAll('__WERSJA__', stamp), 'utf8');
+console.log(`skopiowano index.html (wersja: ${stamp})`);
 
 console.log(`\nKatalog ${publicDir} gotowy.`);
