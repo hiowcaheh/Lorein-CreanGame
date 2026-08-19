@@ -27,15 +27,27 @@ async function exists(path) {
   }
 }
 
-if (!(await exists(gameRoot))) {
-  console.error(`Nie znaleziono zasobow gry w ${gameRoot}`);
-  console.error('Na Vercelu upewnij sie, ze Root Directory wskazuje na "backend",');
-  console.error('a repozytorium zawiera katalog sf555/.');
-  process.exit(1);
-}
+const haveAssets = await exists(gameRoot);
 
 await rm(publicDir, { recursive: true, force: true });
 await mkdir(publicDir, { recursive: true });
+
+if (!haveAssets) {
+  // Brak zasobow NIE przerywa budowania. Backend i tak sie wdrozy, `/health`
+  // odpowie, a strona gry pokaze czytelny komunikat zamiast bialego ekranu.
+  // Latwiej wtedy zdiagnozowac przyczyne niz z nieudanego builda.
+  console.warn('');
+  console.warn('  UWAGA: nie znaleziono zasobow gry w ' + gameRoot);
+  console.warn('');
+  console.warn('  Na Vercelu oznacza to, ze build nie widzi katalogu sf555/,');
+  console.warn('  bo lezy on poza Root Directory. Wlacz w ustawieniach projektu:');
+  console.warn('    Settings > General > Root Directory');
+  console.warn('    -> "Include source files outside of the Root Directory"');
+  console.warn('');
+  console.warn('  Backend zostanie wdrozony i /health bedzie dzialac,');
+  console.warn('  ale sama gra sie nie wczyta.');
+  console.warn('');
+}
 
 // Zasoby czytane przez klienta Flash. Reszta `sf555/` to stary backend PHP,
 // ktorego nie publikujemy — pliki .php trafilyby na serwer statyczny
@@ -50,14 +62,16 @@ const assets = [
   ['papaya_cfg.php', 'papaya_cfg.php'],
 ];
 
-for (const [from, to] of assets) {
-  const source = resolve(gameRoot, from);
-  if (!(await exists(source))) {
-    console.warn(`pomijam brakujacy zasob: ${from}`);
-    continue;
+if (haveAssets) {
+  for (const [from, to] of assets) {
+    const source = resolve(gameRoot, from);
+    if (!(await exists(source))) {
+      console.warn(`pomijam brakujacy zasob: ${from}`);
+      continue;
+    }
+    await cp(source, resolve(publicDir, to), { recursive: true });
+    console.log(`skopiowano ${from}`);
   }
-  await cp(source, resolve(publicDir, to), { recursive: true });
-  console.log(`skopiowano ${from}`);
 }
 
 // Strona uruchamiajaca gre.
