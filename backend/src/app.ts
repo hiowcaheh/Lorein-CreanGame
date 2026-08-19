@@ -20,6 +20,7 @@ import { hero } from './actions/hero.js';
 import { buildClientConfig } from './clientConfig.js';
 import { getSql } from './db/client.js';
 import { config } from './config.js';
+import { konto } from './api/konto.js';
 import type { GameRequest } from './protocol/request.js';
 import type { Sql } from './db/client.js';
 
@@ -53,6 +54,15 @@ app.onError((err, c) => {
     'access-control-allow-origin': '*',
   });
 });
+
+/*
+ * API nowego klienta.
+ *
+ * Stary protokol (`/req.php`, 511 pol sklejonych ukosnikami) dziala dalej
+ * obok — te same tabele, inna forma odpowiedzi. Dzieki temu obie wersje
+ * gry moga chodzic rownolegle, dopoki nowa nie przejmie wszystkiego.
+ */
+app.route('/api', konto);
 
 /**
  * Najprostszy mozliwy dowod zycia — bez bazy, bez zadnej pracy.

@@ -54,10 +54,12 @@ export interface DanePostaci {
 
 export function TworzeniePostaci({
   onZapisz,
+  onWroc,
   pracuje,
   blad,
 }: {
   onZapisz: (dane: DanePostaci) => void;
+  onWroc: () => void;
   pracuje: boolean;
   blad: string | null;
 }) {
@@ -254,6 +256,10 @@ export function TworzeniePostaci({
           onClick={() => onZapisz({ nick: nick.trim(), email: email.trim(), haslo, wyglad })}
         >
           {pracuje ? 'Tworzę…' : 'Rozpocznij grę'}
+        </button>
+
+        <button type="button" className="przycisk drugi" style={{ marginTop: '.5rem' }} onClick={onWroc}>
+          Mam już bohatera
         </button>
       </div>
       </div>

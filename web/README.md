@@ -69,3 +69,19 @@ brakuje 9 i to sa dziury w oryginalnej paczce grafik, nie blad reguly.
 ```bash
 npm test
 ```
+
+## Przejscie calego toru w przegladarce
+
+`e2e/przejscie.mjs` przechodzi gre tak, jak robi to gracz: zaklada
+bohatera, oglada ekran postaci, odswieza strone, wylogowuje sie, loguje
+ponownie i probuje zlego hasla.
+
+```bash
+cd ../backend && DATABASE_URL=postgres://... npm start   # port 8787
+cd ../web     && npm run dev                              # port 5173
+CHROMIUM=/sciezka/do/chrome node e2e/przejscie.mjs /katalog/na/zrzuty
+```
+
+Warto uruchamiac po zmianach w logowaniu. Zlapal juz blad, ktorego zaden
+test jednostkowy nie widzial: menu zostawalo otwarte po wylogowaniu
+i zaslanialo ekran logowania.
