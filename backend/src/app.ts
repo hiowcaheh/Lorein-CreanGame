@@ -54,6 +54,41 @@ app.onError((err, c) => {
   });
 });
 
+/**
+ * Najprostszy mozliwy dowod zycia — bez bazy, bez zadnej pracy.
+ *
+ * Gdy `/version` odpowiada, a `/health` nie, problem jest wylacznie
+ * w polaczeniu z baza. Gdy nie odpowiada nawet `/version`, funkcja nie
+ * uruchamia sie w ogole.
+ */
+app.get('/version', (c) =>
+  c.text(
+    [
+      'commit: ' + (process.env['VERCEL_GIT_COMMIT_SHA']?.slice(0, 7) ?? 'lokalnie'),
+      'region: ' + (process.env['VERCEL_REGION'] ?? '-'),
+      'DATABASE_URL: ' + (process.env['DATABASE_URL'] ? 'ustawione' : 'BRAK'),
+      'host bazy: ' + opiszHostBazy(),
+    ].join('\n'),
+    200,
+    { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*' },
+  ),
+);
+
+/**
+ * Sam host i port adresu bazy, bez loginu i hasla — zeby dalo sie sprawdzic,
+ * czy do Vercela trafil pooler (port 6543), czy polaczenie bezposrednie.
+ */
+function opiszHostBazy(): string {
+  const raw = process.env['DATABASE_URL'];
+  if (!raw) return 'brak zmiennej';
+  try {
+    const u = new URL(raw);
+    return `${u.hostname}:${u.port || '(domyslny)'}`;
+  } catch {
+    return 'adres nie da sie sparsowac — sprawdz znaki specjalne w hasle';
+  }
+}
+
 app.get('/health', async (c) => {
   // Sprawdzamy takze baze — samo "aplikacja wstala" niewiele mowi, gdy
   // najczestsza przyczyna problemow jest zle ustawione DATABASE_URL.

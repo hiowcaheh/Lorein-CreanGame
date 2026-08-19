@@ -181,6 +181,11 @@
         return { dobrze: res.ok, opis: res.ok ? "zasoby dostepne" : "HTTP " + res.status };
       }, 15000),
 
+      sprawdz("funkcja zyje (/version)", "version", function (res, tekst) {
+        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — " + tekst.slice(0, 90) };
+        return { dobrze: true, opis: tekst.replace(/\n/g, " | ") };
+      }, 15000),
+
       sprawdz("backend bez bazy (/req.php)", "req.php?req=" + new Array(33).join("0") + "999", function (res, tekst) {
         if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — " + tekst.slice(0, 90) };
         return { dobrze: true, opis: "funkcja odpowiada: " + JSON.stringify(tekst.slice(0, 20)) };

@@ -15,6 +15,15 @@ export type Sql = postgres.Sql;
 
 let sql: Sql | undefined;
 
+/**
+ * Blad polaczenia z baza nie moze wywracac calej funkcji.
+ *
+ * Na Vercelu jedna instancja obsluguje wiele zapytan. Zawieszone albo
+ * odrzucone polaczenie potrafi ubic proces, a wtedy KOLEJNE zapytania —
+ * takze te niesiegajace bazy — dostaja `FUNCTION_INVOCATION_FAILED`.
+ * Dokladnie tak wygladala awaria: `/req.php` zwracalo 500, mimo ze nie
+ * dotyka bazy w ogole.
+ */
 export function getSql(): Sql {
   sql ??= postgres(config.databaseUrl, {
     // Supabase w trybie transakcyjnym (Supavisor, port 6543) nie obsluguje
@@ -39,6 +48,17 @@ export function getSql(): Sql {
     },
 
     onnotice: () => {},
+
+    // Bez tego bledy polaczenia trafiaja do procesu jako nieobsluzone
+    // i ubijaja cala instancje funkcji.
+    onclose: () => {},
+  });
+
+  // postgres.js zglasza czesc problemow przez zdarzenie na obiekcie puli.
+  // Bez nasluchu Node traktuje je jak nieobsluzony wyjatek.
+  const emitter = sql as unknown as { on?: (event: string, handler: (e: unknown) => void) => void };
+  emitter.on?.('error', (err) => {
+    console.error('Blad puli polaczen (zignorowany, zapytanie zwroci wlasny blad):', err);
   });
 
   return sql;
