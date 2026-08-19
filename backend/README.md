@@ -173,6 +173,15 @@ i zostawia rozwiazywanie importow Node'owi. Projekt jest modulem ESM
 TypeScript tego nie zglosi — `tsc --noEmit` i testy przechodza, a funkcja
 na serwerze nie wstaje. Szczegoly: `deploy/VERCEL.md`, pulapka 6.
 
+### Druga zelazna zasada: ksztalt eksportu w `api/index.ts`
+
+Vercel rozpoznaje rodzaj funkcji po **ksztalcie eksportu**, nie po liczbie
+argumentow. Zwykla funkcja bez pol `GET`/`POST` i bez `fetch` jest wolana jak
+handler Node'a `(req, res)` — a `handle()` z `hono/vercel` wlasnie taka jest.
+Hono dostaje wtedy `IncomingMessage` zamiast `Request` i zapytanie wisi az do
+limitu czasu. Dlatego wejscie uzywa `getRequestListener` z `@hono/node-server`.
+Szczegoly: `deploy/VERCEL.md`, pulapka 8.
+
 ### Dlaczego az taka ostroznosc ze zgodnoscia
 
 Trzy rzeczy rozjezdzaja port po cichu, bez bledu w logach:

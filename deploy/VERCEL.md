@@ -132,7 +132,7 @@ w uruchomionej funkcji.
 **Zasada: kazdy import wzgledny w `src/`, `api/` i `test/` konczy sie `.js`,**
 nawet jesli plik na dysku to `.ts`.
 
-### 7. Przepisanie sciezek moglo wskazywac samo na siebie
+### 7. Przepisanie sciezek wskazywalo samo na siebie (poprawione zapobiegawczo)
 
 Wczesniejsza regula lapala wszystko poza `/api/`:
 
@@ -157,6 +157,55 @@ ktora na pewno istnieje w wyniku budowania (`functions/api/index.func`):
 Kosztem jest jedna linijka wiecej przy dodawaniu adresu do backendu. Zyskiem —
 brak reguly, ktora moze zapetlic sie sama na sobie, i zero konkurencji miedzy
 funkcja a plikami statycznymi.
+
+Uczciwie: to **nie byla** przyczyna awarii. Diagnostyka pokazala pozniej, ze
+zapytania dochodzily do funkcji bez problemu — wisialy juz w srodku. Regula
+zostaje w poprawionej postaci, bo byla realna pulapka, ale nie ona psula gre.
+
+### 8. `handle()` z `hono/vercel` wiesza kazde zapytanie
+
+To byla **wlasciwa przyczyna** czarnego ekranu.
+
+Vercel rozpoznaje rodzaj funkcji po **ksztalcie eksportu**, a nie po liczbie
+argumentow. Kod z `@vercel/node` (`serverless-handler`):
+
+```js
+const isWebHandler =
+  HTTP_METHODS.some(m => typeof listener[m] === 'function') ||
+  typeof listener.fetch === 'function';
+
+if (isWebHandler) return createWebHandler(listener);
+if (typeof listener === 'function') return listener;   // (req, res)
+```
+
+`handle(app)` z `hono/vercel` zwraca `(req) => app.fetch(req)` — zwykla
+funkcje. Nie ma pol `GET`/`POST`, nie ma `fetch`, wiec **nie przechodzi**
+zadnego z dwoch warunkow i laduje w drugiej galezi: Vercel wola ja jak
+handlera Node'a, `listener(req, res)`.
+
+Hono dostaje wtedy zamiast `Request` surowe `IncomingMessage`. Skutki
+rozkladaja sie po adresach nierowno i przez to mylaco:
+
+```
+/version, /health, /config.php   nikt nie wola res.end()  -> FUNCTION_INVOCATION_TIMEOUT
+/req.php                          wyjatek w routerze Hono  -> FUNCTION_INVOCATION_FAILED
+```
+
+Jeden blad, dwa rozne komunikaty — i zaden z nich nie wskazuje na przyczyne.
+
+**Poprawnie** — prawdziwy handler `(req, res)`, ta sama droga, ktora dziala
+w `api/ping.ts`:
+
+```ts
+import { getRequestListener } from '@hono/node-server';
+import { app } from '../src/app.js';
+
+export default getRequestListener(app.fetch);
+```
+
+Alternatywa (`export default { fetch: app.fetch }`) tez przechodzi detekcje,
+ale opiera sie na heurystyce Vercela. `getRequestListener` to zwykly Node HTTP
+i nie zalezy od niczyich domyslow.
 
 ## Jak sprawdzic wdrozenie BEZ wdrazania
 
@@ -191,6 +240,27 @@ node -e "import('./api/index.js').then(async m => {
 Jesli to wypisze `ERR_MODULE_NOT_FOUND`, wdrozenie nie ma prawa zadzialac —
 i wiadomo o tym przed wypchnieciem zmian, a nie po dwudziestu minutach
 zgadywania. `vercel dev` wymaga zalogowania, `vercel build` nie.
+
+Samo wywolanie `default(new Request(...))` **nie wystarcza** — tak funkcji
+nie wola Vercel. Zeby zlapac pulapke 8, trzeba powtorzyc jego detekcje
+i podac funkcji prawdziwe `(req, res)`:
+
+```js
+const HTTP_METHODS = ['GET','HEAD','OPTIONS','POST','PUT','DELETE','PATCH'];
+let listener = await import(sciezka);
+for (let i = 0; i < 5; i++) if (listener.default) listener = listener.default;
+
+const isWebHandler =
+  HTTP_METHODS.some((m) => typeof listener[m] === 'function') ||
+  typeof listener.fetch === 'function';
+
+// gdy false, a listener jest funkcja — Vercel wola ja jako (req, res):
+http.createServer((req, res) => listener(req, res)).listen(4123);
+```
+
+Dopiero taki test odtwarza awarie: `/version` wisi, `/req.php` rzuca
+`TypeError: Cannot read properties of undefined (reading 'length')`
+w routerze Hono.
 
 ## Gdy Vercel nie zauwazy wypchnietego commita
 
