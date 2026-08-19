@@ -9,7 +9,7 @@
  * Uruchomienie:  npm run build
  */
 
-import { cp, mkdir, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,8 +29,24 @@ async function exists(path) {
 
 const haveAssets = await exists(gameRoot);
 
-await rm(publicDir, { recursive: true, force: true });
+// Znacznik informujacy, ze katalog jest juz gotowy.
+//
+// Vercel potrafi uruchomic polecenie budowania wiecej niz raz. Wczesniej
+// skrypt zaczynal od `rm -rf public`, wiec drugi przebieg kasowal katalog
+// dokladnie wtedy, gdy Vercel zbieral z niego pliki wyjsciowe:
+//
+//   ENOENT: no such file or directory, open '.../public/res/sfgame/char/...'
+//
+// Teraz skrypt jest idempotentny: niczego nie usuwa, a powtorne wywolanie
+// konczy sie od razu. Przy okazji oszczedza to drugiego kopiowania 96 MB.
+const marker = resolve(publicDir, '.przygotowane');
+
 await mkdir(publicDir, { recursive: true });
+
+if (await exists(marker)) {
+  console.log('Katalog public/ jest juz przygotowany — pomijam.');
+  process.exit(0);
+}
 
 if (!haveAssets) {
   // Brak zasobow NIE przerywa budowania. Backend i tak sie wdrozy, `/health`
@@ -77,5 +93,7 @@ if (haveAssets) {
 // Strona uruchamiajaca gre.
 await cp(resolve(staticSrc, 'index.html'), resolve(publicDir, 'index.html'));
 console.log('skopiowano index.html');
+
+await writeFile(marker, new Date().toISOString() + '\n', 'utf8');
 
 console.log(`\nKatalog ${publicDir} gotowy.`);
