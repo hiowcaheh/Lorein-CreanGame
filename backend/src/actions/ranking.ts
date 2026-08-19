@@ -35,6 +35,12 @@ interface RankingRow {
 
 export async function ranking(sql: Sql, req: GameRequest): Promise<PhpResponse> {
   const parts = req.extra.split(';');
+
+  // Liczba graczy jest potrzebna zawsze i nie zalezy od niczego innego,
+  // wiec startuje od razu — rownolegle z szukaniem pozycji gracza.
+  // Jedna podroz do bazy zamiast dwoch.
+  const zapytanieLiczba = countPlayers(sql);
+
   let pos: number;
 
   // Klient wysyla albo numer pozycji, albo nazwe gracza, ktorego chce zobaczyc.
@@ -49,7 +55,7 @@ export async function ranking(sql: Sql, req: GameRequest): Promise<PhpResponse> 
     pos = WINDOW_OFFSET;
   }
 
-  const playerCount = await countPlayers(sql);
+  const playerCount = await zapytanieLiczba;
 
   if (pos > playerCount && playerCount > WINDOW_OFFSET) {
     pos = playerCount;
@@ -122,7 +128,9 @@ async function positionOfPlayer(sql: Sql, playerName: string): Promise<number> {
 }
 
 async function countPlayers(sql: Sql): Promise<number> {
-  const rows = await sql<{ total: string }[]>`SELECT COUNT(*) AS total FROM user_data`;
+  // `.execute()` wysyla zapytanie natychmiast. Bez tego postgres.js czeka
+  // z wyslaniem do pierwszego `await` i rownoleglosc znika.
+  const rows = await sql<{ total: string }[]>`SELECT COUNT(*) AS total FROM user_data`.execute();
   return intval(rows[0]?.total ?? 0);
 }
 

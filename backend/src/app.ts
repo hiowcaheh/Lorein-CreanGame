@@ -107,15 +107,34 @@ app.get('/health', async (c) => {
   // Sprawdzamy takze baze — samo "aplikacja wstala" niewiele mowi, gdy
   // najczestsza przyczyna problemow jest zle ustawione DATABASE_URL.
   let database = 'ok';
+  const start = Date.now();
   try {
     await getSql()`SELECT 1`;
   } catch (err) {
     database = err instanceof Error ? err.message : String(err);
   }
+  const pierwszeZapytanie = Date.now() - start;
+
+  // Drugie zapytanie po nawiazanym juz polaczeniu — to jest czysty czas
+  // przelotu do bazy i z powrotem. Jesli backend i baza stoja w tym samym
+  // regionie, powinien byc jednocyfrowy.
+  let kolejneZapytanie = -1;
+  if (database === 'ok') {
+    const start2 = Date.now();
+    try {
+      await getSql()`SELECT 1`;
+      kolejneZapytanie = Date.now() - start2;
+    } catch {
+      kolejneZapytanie = -1;
+    }
+  }
 
   return c.json({
     status: 'ok',
     database,
+    region: process.env['VERCEL_REGION'] ?? '-',
+    czasPierwszegoZapytaniaMs: pierwszeZapytanie,
+    czasKolejnegoZapytaniaMs: kolejneZapytanie,
     ported: Object.keys(handlers).sort(),
     legacyProxy: config.legacyBaseUrl !== '',
   });

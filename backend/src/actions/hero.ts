@@ -29,14 +29,15 @@ export async function hero(sql: Sql, req: GameRequest, ip: string): Promise<PhpR
   }
 
   const res = PhpResponse.filled();
-  await loadDefaultData(sql, res, player, req.ssid);
+
+  // Odswiezenie czasu aktywnosci jedzie razem z pozostalymi zapisami
+  // stanu gracza — jednym zapytaniem zamiast dwoch.
+  await loadDefaultData(sql, res, player, req.ssid, {
+    last_ip: ip,
+    last_activ: String(time()),
+  });
 
   res.prefix(0, ACT.HERO);
-
-  await sql`
-    UPDATE user_data SET last_ip = ${ip}, last_activ = ${String(time())}
-    WHERE ssid = ${req.ssid}
-  `;
 
   let description = '';
   try {

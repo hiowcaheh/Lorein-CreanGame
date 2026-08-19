@@ -71,9 +71,56 @@ export async function loadDefaultData(
   res: PhpResponse,
   player: PlayerRow,
   ssid: string,
+  /**
+   * Dodatkowe kolumny `user_data` do zapisania przy okazji.
+   *
+   * Akcje i tak odswiezaja `last_ip` i `last_activ`. Doklejenie ich tutaj
+   * oszczedza osobna podroz do bazy — zapis i tak idzie jednym zapytaniem.
+   */
+  dodatkoweZapisy: Record<string, number | string> = {},
 ): Promise<PlayerRow> {
   const db = player;
   const now = time();
+
+  /*
+   * Wszystkie odczyty startuja OD RAZU, rownolegle.
+   *
+   * Kazde zapytanie do bazy to jedna podroz przez siec. Oryginal w PHP
+   * wykonywal je po kolei, bo tam i tak nie bylo innej mozliwosci — ale
+   * ekwipunek, pancerz i trzy nagrody w karczmie nie zaleza od siebie
+   * nawzajem ani od niczego, co dzieje sie nizej. Wystarczy je wyslac
+   * naraz i odebrac wyniki dopiero tam, gdzie sa potrzebne: piec podrozy
+   * zamienia sie w jedna.
+   *
+   * `.execute()` jest tu KONIECZNE. Zapytania w postgres.js sa leniwe —
+   * samo zbudowanie `sql\`...\`` niczego nie wysyla, sterownik czeka
+   * z wyslaniem az do `await`. Bez tego wywolania wszystkie piec dalej
+   * czekaloby jedno na drugie, tyle ze w innym miejscu kodu.
+   */
+  const userIdWczesnie = intval(db['user_id'] ?? 0);
+
+  const zapytanieEkwipunek = sql<Record<string, unknown>[]>`
+    SELECT * FROM items WHERE owner_id = ${userIdWczesnie}
+  `.execute();
+  const zapytaniePancerz = sql<{ armor: string | null }[]>`
+    SELECT SUM(dmg_min) AS armor FROM items
+    WHERE owner_id = ${userIdWczesnie} AND slot IN (0, 1, 2, 3, 5)
+  `.execute();
+  const zapytaniaKarczma = [1, 2, 3].map((q) =>
+    sql<Record<string, unknown>[]>`
+      SELECT * FROM items_tavern WHERE owner_id = ${userIdWczesnie} AND quest = ${q}
+    `.execute(),
+  );
+
+  /*
+   * Zapisy zbieraja sie tutaj i ida do bazy JEDNYM zapytaniem na koncu.
+   *
+   * Oryginal wysylal osobny UPDATE na kazda zmiane — regeneracja portalu,
+   * zerowanie salda, dwa medale, trzy mikstury: do osmiu podrozy do bazy,
+   * z ktorych kazda czekala na poprzednia. Miedzy nimi nic z bazy nie jest
+   * odczytywane, wiec stan koncowy jest identyczny, a podroz jest jedna.
+   */
+  const doZapisania: Record<string, number | string> = { ...dodatkoweZapisy };
 
   // Poczatek dzisiejszego dnia — odpowiednik `strtotime('today')`.
   const midnight = new Date(now * 1000);
@@ -97,36 +144,37 @@ export async function loadDefaultData(
     db['portal_regen_time'] = todayStart;
     db['portal_hp'] = hp;
 
-    await sql`UPDATE user_data SET portal_regen_time = ${todayStart}, portal_hp = ${hp} WHERE ssid = ${ssid}`;
+    doZapisania['portal_regen_time'] = todayStart;
+    doZapisania['portal_hp'] = hp;
   }
 
   // --- zerowanie ujemnych sald -------------------------------------------
   if (intval(db['silver'] ?? 0) < 0) {
     db['silver'] = 0;
-    await sql`UPDATE user_data SET silver = 0 WHERE ssid = ${ssid}`;
+    doZapisania['silver'] = 0;
   }
 
   if (intval(db['mushroom'] ?? 0) < 0) {
     db['mushroom'] = 0;
-    await sql`UPDATE user_data SET mushroom = 0 WHERE ssid = ${ssid}`;
+    doZapisania['mushroom'] = 0;
   }
 
   // --- medale sledzace rekordy gracza ------------------------------------
   const silver = intval(db['silver'] ?? 0);
   if (intval(db['medal_commerce'] ?? 0) < silver) {
     db['medal_commerce'] = silver;
-    await sql`UPDATE user_data SET medal_commerce = ${silver} WHERE ssid = ${ssid}`;
+    doZapisania['medal_commerce'] = silver;
   }
 
   if (intval(db['medal_commerce'] ?? 0) > 1_000_000_000) {
     db['medal_commerce'] = 1_000_000_000;
-    await sql`UPDATE user_data SET medal_commerce = 1000000000 WHERE ssid = ${ssid}`;
+    doZapisania['medal_commerce'] = 1_000_000_000;
   }
 
   const honor = intval(db['honor'] ?? 0);
   if (intval(db['medal_bravery'] ?? 0) < honor) {
     db['medal_bravery'] = honor;
-    await sql`UPDATE user_data SET medal_bravery = ${honor} WHERE ssid = ${ssid}`;
+    doZapisania['medal_bravery'] = honor;
   }
 
   // --- wygasanie mikstur --------------------------------------------------
@@ -136,11 +184,17 @@ export async function loadDefaultData(
 
     if (now > potionTime && potionTime !== 0) {
       if (p === 1) {
-        await sql`UPDATE user_data SET potion_id1 = 0, potion_value1 = 0, potion_time1 = 0 WHERE ssid = ${ssid}`;
+        doZapisania['potion_id1'] = 0;
+        doZapisania['potion_value1'] = 0;
+        doZapisania['potion_time1'] = 0;
       } else if (p === 2) {
-        await sql`UPDATE user_data SET potion_id2 = 0, potion_value2 = 0, potion_time2 = 0 WHERE ssid = ${ssid}`;
+        doZapisania['potion_id2'] = 0;
+        doZapisania['potion_value2'] = 0;
+        doZapisania['potion_time2'] = 0;
       } else {
-        await sql`UPDATE user_data SET potion_id3 = 0, potion_value3 = 0, potion_time3 = 0 WHERE ssid = ${ssid}`;
+        doZapisania['potion_id3'] = 0;
+        doZapisania['potion_value3'] = 0;
+        doZapisania['potion_time3'] = 0;
       }
       db[`potion_id${p}`] = 0;
       db[`potion_value${p}`] = 0;
@@ -269,10 +323,8 @@ export async function loadDefaultData(
   res.set(SF.ACHIEVEMENT_DUNG, dungeonSum);
 
   // --- ekwipunek ----------------------------------------------------------
-  const userId = intval(db['user_id'] ?? 0);
-  const items = await sql<Record<string, unknown>[]>`
-    SELECT * FROM items WHERE owner_id = ${userId}
-  `;
+  const userId = userIdWczesnie;
+  const items = await zapytanieEkwipunek;
 
   res.set(SF.DMG_MIN, 1);
   res.set(SF.DMG_MAX, 2);
@@ -422,13 +474,11 @@ export async function loadDefaultData(
   res.set(459, db['dungeon_time'] ?? 0);
   res.set(460, db['arena_time'] ?? 0);
   res.set(457, db['beers'] ?? 0);
-  res.set(447, await getRealArmor(sql, userId));
+  res.set(447, Math.max(0, intval((await zapytaniePancerz)[0]?.armor ?? 0)));
 
   // --- nagrody czekajace w karczmie --------------------------------------
   for (let q = 1; q <= 3; q++) {
-    const tavernItems = await sql<Record<string, unknown>[]>`
-      SELECT * FROM items_tavern WHERE owner_id = ${userId} AND quest = ${q}
-    `;
+    const tavernItems = await zapytaniaKarczma[q - 1]!;
 
     const index = 244 + (q * 12 - 12);
 
@@ -482,15 +532,12 @@ export async function loadDefaultData(
     res.set(bonusField, bonus + (bonus + baseValue) * factor);
   }
 
+  // Jeden UPDATE zamiast osmiu — patrz komentarz przy `doZapisania`.
+  const kolumny = Object.keys(doZapisania);
+  if (kolumny.length > 0) {
+    await sql`UPDATE user_data SET ${sql(doZapisania, ...kolumny)} WHERE ssid = ${ssid}`;
+  }
+
   return db;
 }
 
-/** Suma pancerza z zalozonych czesci zbroi — port `getRealArmor()`. */
-async function getRealArmor(sql: Sql, userId: number): Promise<number> {
-  const rows = await sql<{ armor: string | null }[]>`
-    SELECT SUM(dmg_min) AS armor FROM items
-    WHERE owner_id = ${userId} AND slot IN (0, 1, 2, 3, 5)
-  `;
-
-  return Math.max(0, intval(rows[0]?.armor ?? 0));
-}

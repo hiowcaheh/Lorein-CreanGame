@@ -91,11 +91,34 @@
   .czek { color: #a89578; }
 
   a { color: #f0c042; }
+
+  /* Pasek awaryjny do pisania — pokazuje sie tylko wtedy, gdy gra czeka na
+     tekst, a klawiatura mimo wszystko sie nie otworzyla. */
+  #pisz {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: .9rem 1rem calc(.9rem + env(safe-area-inset-bottom, 0px));
+    background: #1c1710;
+    border-top: 2px solid #6b5426;
+    color: #f0c042;
+    font-size: 1.05rem;
+    text-align: center;
+    z-index: 5;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  #pisz.widoczny { display: block; }
 </style>
 </head>
 <body>
 
 <div id="gra"></div>
+
+<div id="pisz">⌨  Dotknij tutaj, zeby pisac</div>
 
 <div id="panel">
   <h1>Lorein</h1>
@@ -146,6 +169,7 @@
     var gotowe = wiersz(etykieta);
     var limit = limitMs || 12000;
     var rozstrzygniete = false;
+    var start = Date.now();
 
     var licznik = setTimeout(function () {
       if (!rozstrzygniete) {
@@ -161,7 +185,9 @@
           rozstrzygniete = true;
           clearTimeout(licznik);
           var w = walidator(r, tekst);
-          gotowe(w.dobrze, w.opis);
+          // Czas odpowiedzi jest tu najwazniejsza liczba — po nim widac,
+          // czy backend i baza stoja w tym samym regionie.
+          gotowe(w.dobrze, (Date.now() - start) + " ms — " + w.opis);
         });
       })
       .catch(function (e) {
@@ -221,7 +247,10 @@
           var j = JSON.parse(tekst);
           return {
             dobrze: j.database === "ok",
-            opis: "baza: " + j.database
+            opis: "baza: " + j.database +
+                  " | region: " + (j.region || "?") +
+                  " | pierwsze zapytanie: " + j.czasPierwszegoZapytaniaMs + " ms" +
+                  " | kolejne: " + j.czasKolejnegoZapytaniaMs + " ms"
           };
         } catch (e) {
           return { dobrze: false, opis: "odpowiedz nie jest JSON-em: " + tekst.slice(0, 90) };
@@ -244,8 +273,7 @@
   // ------------------------------------------- klawiatura ekranowa --
 
   /**
-   * Odtwarzacz, gdy juz powstanie. Potrzebny poza `uruchom()`, bo od jego
-   * fokusu zalezy, czy na telefonie wyskoczy klawiatura.
+   * Odtwarzacz, gdy juz powstanie.
    */
   var odtwarzacz = null;
 
@@ -253,37 +281,143 @@
    * Dlaczego klawiatura wyskakiwala "raz tak, raz nie".
    *
    * Ruffle rysuje gre na plotnie, wiec pola tekstowe Flasha nie sa polami
-   * HTML i przegladarka sama z siebie klawiatury nie pokaze. Ruffle ma na to
-   * ukryty `<input>` w cieniu odtwarzacza i ustawia na nim fokus, gdy gra
+   * HTML — przegladarka sama z siebie klawiatury nie pokaze. Ruffle ma na to
+   * ukryty `<input id="virtual-keyboard">` w swoim cieniu (shadow DOM, tryb
+   * otwarty, wiec mozemy go dosiegnac) i ustawia na nim fokus, gdy gra
    * zglosi wejscie w pole tekstowe. Jego wlasny kod robi to tak:
    *
    *     if (this.instance?.has_focus()) {
    *         this.virtualKeyboard.focus({ preventScroll: true });   // od razu
    *     } else {
-   *         setTimeout(() => this.virtualKeyboard.focus(...), 0);  // z opoznieniem
+   *         setTimeout(() => this.virtualKeyboard.focus(...), 0);  // pozniej
    *     }
    *
-   * Druga galaz jest zgubna na iOS: Safari otwiera klawiature WYLACZNIE
-   * w bezposredniej reakcji na gest uzytkownika, a `setTimeout` juz nim nie
-   * jest — dotkniecie sie "konczy" i prosba zostaje odrzucona. Wystarczy
-   * wiec zadbac, zeby odtwarzacz mial fokus, zanim gracz dotknie pola.
+   * Obie galezie sa na iOS zawodne. Safari otwiera klawiature WYLACZNIE
+   * w bezposredniej, synchronicznej reakcji na dotkniecie. Tymczasem Ruffle
+   * przekazuje klikniecie do gry dopiero przy nastepnej klatce (gra chodzi
+   * w 25 kl./s, czyli do 40 ms pozniej), wiec zanim gra w ogole zauwazy, ze
+   * gracz trafil w pole tekstowe, gest juz sie skonczyl. Stad losowosc.
    *
-   * Robimy to dwa razy: raz po wczytaniu gry i za kazdym dotknieciem ekranu,
-   * w fazie przechwytywania — czyli ZANIM Ruffle obsluzy to samo dotkniecie.
+   * Dlatego nie polegamy na tej sciezce w ogole. Robimy dwie rzeczy:
+   *
+   *   1. Przy KAZDYM dotknieciu ustawiamy fokus na ukrytym polu Ruffle
+   *      natychmiast, jeszcze w trakcie gestu. Jesli dotkniecie trafilo
+   *      w pole tekstowe — klawiatura jest juz otwarta, zanim gra zdazy
+   *      o nia poprosic. Jesli nie trafilo, po chwili oddajemy fokus
+   *      z powrotem grze i klawiatura znika, zanim zdazy sie pokazac.
+   *
+   *   2. Gdyby mimo wszystko nie wyszlo — a gra CZEKA na tekst — pokazujemy
+   *      na dole pasek "Dotknij tutaj, zeby pisac". Dotkniecie paska jest juz
+   *      zwyklym dotknieciem zwyklego pola HTML, wiec klawiatura otwiera sie
+   *      bez zadnych sztuczek. To droga awaryjna, ktora nie moze zawiesc.
+   *
+   * Wpisane znaki i tak obsluguje Ruffle: nasluchuje `input` na swoim polu
+   * i przepisuje kazda litere do gry jako zdarzenia klawiatury.
    */
-  function przejmijFokus() {
-    if (!odtwarzacz || panel.classList.contains("widoczny")) return;
-    try {
-      odtwarzacz.focus({ preventScroll: true });
-    } catch (e) {
-      // Starsze przegladarki nie znaja opcji — probujemy bez niej.
-      try { odtwarzacz.focus(); } catch (e2) { /* trudno */ }
+
+  var pasekPisania = document.getElementById("pisz");
+
+  function podepnijKlawiature(player) {
+    var cien = player.shadowRoot;
+    if (!cien) return;
+
+    var pole = cien.getElementById("virtual-keyboard");
+    var kontener = cien.getElementById("container");
+    if (!pole) return;
+
+    // Fokus wolany z pominieciem naszej podmiany nizej.
+    function ustawFokus() {
+      try { HTMLElement.prototype.focus.call(pole, { preventScroll: true }); }
+      catch (e) { try { HTMLElement.prototype.focus.call(pole); } catch (e2) { /* trudno */ } }
+    }
+
+    // Podmieniamy `focus` na polu Ruffle, zeby wiedziec, KIEDY gra prosi
+    // o klawiature. To jedyny sygnal, jaki Ruffle wystawia na zewnatrz.
+    var graChceTekstu = false;
+    pole.focus = function (opcje) {
+      graChceTekstu = true;
+      ukryjPasek();
+      try { HTMLElement.prototype.focus.call(pole, opcje); }
+      catch (e) { HTMLElement.prototype.focus.call(pole); }
+    };
+
+    function polejestAktywne() {
+      return cien.activeElement === pole;
+    }
+
+    /** Czy klawiatura systemowa faktycznie sie pokazala. */
+    function klawiaturaOtwarta() {
+      if (!window.visualViewport) return false;
+      return window.visualViewport.height < window.innerHeight * 0.85;
+    }
+
+    function oddajFokusGrze() {
+      if (!polejestAktywne()) return;
+      if (kontener) {
+        try { kontener.focus({ preventScroll: true }); } catch (e) { kontener.focus(); }
+      } else {
+        pole.blur();
+      }
+    }
+
+    function pokazPasek() {
+      if (pasekPisania) pasekPisania.classList.add("widoczny");
+    }
+
+    function ukryjPasek() {
+      if (pasekPisania) pasekPisania.classList.remove("widoczny");
+    }
+
+    document.addEventListener("pointerdown", function (zdarzenie) {
+      if (panel.classList.contains("widoczny")) return;
+      if (pasekPisania && pasekPisania.contains(zdarzenie.target)) return;
+
+      graChceTekstu = false;
+      ustawFokus();
+
+      // Gra rozstrzyga przy nastepnej klatce. Jesli nie poprosila o tekst,
+      // zabieramy fokus — klawiatura nie zdazy sie rozwinac.
+      setTimeout(function () {
+        if (!graChceTekstu) {
+          oddajFokusGrze();
+          ukryjPasek();
+        }
+      }, 120);
+
+      // Ostatnia deska ratunku: gra czeka na tekst, a klawiatury nie ma.
+      setTimeout(function () {
+        if (graChceTekstu && !klawiaturaOtwarta()) pokazPasek();
+      }, 600);
+    }, { capture: true, passive: true });
+
+    // Pasek awaryjny. `pointerdown` + `preventDefault` trzyma gest przy nas,
+    // wiec fokus na polu wypada dokladnie w chwili dotkniecia — a tego
+    // Safari wymaga, zeby otworzyc klawiature.
+    if (pasekPisania) {
+      pasekPisania.addEventListener("pointerdown", function (zdarzenie) {
+        zdarzenie.preventDefault();
+        ustawFokus();
+      });
+    }
+
+    // Gdy gra przestaje czekac na tekst, pasek jest juz niepotrzebny.
+    pole.addEventListener("blur", function () {
+      graChceTekstu = false;
+      ukryjPasek();
+    });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", function () {
+        if (klawiaturaOtwarta()) ukryjPasek();
+      });
     }
   }
 
-  // `capture` i `passive`: nie przechwytujemy dotkniecia, tylko sluchamy go
-  // wczesniej niz Ruffle. Dotkniecie leci dalej do gry bez zmian.
-  document.addEventListener("pointerdown", przejmijFokus, { capture: true, passive: true });
+  /** Wolane po wczytaniu gry. */
+  function przejmijFokus() {
+    if (!odtwarzacz || panel.classList.contains("widoczny")) return;
+    try { odtwarzacz.focus({ preventScroll: true }); } catch (e) { /* trudno */ }
+  }
 
   // ------------------------------------------------- pelny ekran --
 
@@ -385,8 +519,8 @@
       menu: false,
       salign: proporcje ? "t" : ""
     }).then(function () {
-      // Gra jest wczytana — od tej chwili ma trzymac fokus (patrz nizej).
       przejmijFokus();
+      podepnijKlawiature(player);
     }).catch(function (err) {
       pokazBlad("Nie udalo sie wczytac pliku gry <code>" + SWF + "</code>.<br>" +
                 String(err) + "<br><br><a href='?debug=1'>Diagnostyka</a>");

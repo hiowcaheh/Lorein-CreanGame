@@ -36,20 +36,27 @@ const fx: { now: number; cases: RankingCase[] } = JSON.parse(
  * dzialajacego MySQL-a.
  */
 function stubConnection(testCase: RankingCase): Sql {
-  const stub = async (strings: TemplateStringsArray, ...values: unknown[]) => {
+  const stub = (strings: TemplateStringsArray, ...values: unknown[]) => {
     const text = strings.join(' ? ');
 
+    let wynik: unknown;
     if (text.includes('ROW_NUMBER')) {
-      return [{ pos: testCase.lookupPos }];
-    }
-    if (text.includes('COUNT(*)')) {
-      return [{ total: testCase.playerCount }];
+      wynik = [{ pos: testCase.lookupPos }];
+    } else if (text.includes('COUNT(*)')) {
+      wynik = [{ total: testCase.playerCount }];
+    } else {
+      // fetchPage: LIMIT ${PAGE_SIZE} OFFSET ${offset}
+      const limit = Number(values[0] ?? 15);
+      const offset = Number(values[1] ?? 0);
+      wynik = testCase.rows.slice(offset, offset + limit);
     }
 
-    // fetchPage: LIMIT ${PAGE_SIZE} OFFSET ${offset}
-    const limit = Number(values[0] ?? 15);
-    const offset = Number(values[1] ?? 0);
-    return testCase.rows.slice(offset, offset + limit);
+    // Atrapa musi zachowywac sie jak postgres.js, wraz z `.execute()` —
+    // kod produkcyjny wola je tam, gdzie zalezy mu na natychmiastowym
+    // wyslaniu zapytania zamiast czekania na `await`.
+    const obietnica = Promise.resolve(wynik) as Promise<unknown> & { execute: () => unknown };
+    obietnica.execute = () => obietnica;
+    return obietnica;
   };
 
   return stub as unknown as Sql;

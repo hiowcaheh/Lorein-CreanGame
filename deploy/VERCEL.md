@@ -262,6 +262,77 @@ Dopiero taki test odtwarza awarie: `/version` wisi, `/req.php` rzuca
 `TypeError: Cannot read properties of undefined (reading 'length')`
 w routerze Hono.
 
+## Szybkosc odpowiedzi
+
+Przelaczanie zakladek w grze to za kazdym razem jedno zapytanie do backendu.
+Zeby bylo natychmiastowe, licza sie trzy rzeczy — w tej kolejnosci.
+
+### 1. Funkcja i baza w tym samym regionie
+
+To jest najwazniejsze i najtansze. Baza stoi w `eu-west-1` (Irlandia), wiec
+funkcja tez musi — inaczej kazde zapytanie placi za przelot tam i z powrotem.
+Ze Sztokholmu (`arn1`) do Irlandii to okolo 30-40 ms w jedna strone, przy
+kilku zapytaniach na akcje robi sie z tego pol sekundy z samego czekania.
+
+W `vercel.json`:
+
+```json
+"regions": ["dub1"]
+```
+
+`dub1` to Dublin, czyli ten sam region AWS co baza. To samo da sie ustawic
+w panelu: **Settings → Functions → Function Region**. Na planie Hobby wolno
+wskazac jeden region — i tyle wystarczy.
+
+Sprawdzenie po wdrozeniu: `/health` podaje `region` oraz czas dwoch zapytan.
+Drugie zapytanie idzie po nawiazanym juz polaczeniu, wiec to czysty czas
+przelotu do bazy. W tym samym regionie powinien byc **jednocyfrowy**.
+
+### 2. Zapytania, ktore nie zaleza od siebie, ida rownolegle
+
+Ekran postaci potrzebowal siedmiu zapytan **jedno po drugim**. Piec z nich —
+ekwipunek, pancerz i trzy nagrody w karczmie — nie zalezy od siebie nawzajem,
+wiec moga isc naraz. Zostaja trzy podroze zamiast siedmiu.
+
+### 3. `.execute()` — inaczej rownoleglosc jest pozorna
+
+Pulapka, na ktora latwo sie nadziac: **zapytania w postgres.js sa leniwe**.
+
+```ts
+const a = sql`SELECT ...`;   // NIC jeszcze nie poszlo do bazy
+const b = sql`SELECT ...`;   // tez nie
+await a;                     // dopiero teraz leci pierwsze
+await b;                     // a potem drugie — po kolei, jak wczesniej
+```
+
+Samo zbudowanie zapytania niczego nie wysyla; sterownik czeka do `await`.
+Pierwsza wersja tej zmiany wygladala na rownolegla i nie dawala **zadnego**
+przyspieszenia — 502 ms przed i 502 ms po. Dopiero `.execute()` wysyla
+zapytanie od razu:
+
+```ts
+const a = sql`SELECT ...`.execute();
+const b = sql`SELECT ...`.execute();
+```
+
+Zmierzone na kopii bazy za posrednikiem dodajacym 30 ms opoznienia na
+kierunek (model bazy w innym regionie):
+
+```
+przed zmiana:              502 ms
+po zmianie bez .execute(): 502 ms   <- rownoleglosc pozorna
+po zmianie z .execute():   296 ms
+```
+
+Odpowiedz i stan bazy po akcji sa w obu wersjach identyczne co do bajtu.
+
+### Zapisy tez ida jednym zapytaniem
+
+Oryginal wysylal osobny `UPDATE` na kazda zmiane stanu gracza: regeneracja
+portalu, zerowanie ujemnego salda, dwa medale, trzy mikstury, czas
+aktywnosci — do osmiu zapytan pod rzad. Miedzy nimi nic z bazy nie jest
+odczytywane, wiec skladaja sie w jeden `UPDATE` bez zmiany zachowania.
+
 ## Gdy Vercel nie zauwazy wypchnietego commita
 
 Zdarza sie, ze webhook nie zadziala. Kolejnosc dzialan:
