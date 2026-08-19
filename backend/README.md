@@ -71,6 +71,25 @@ te dane nie moga trafic do repozytorium i nie ma ich w zadnym pliku.
 `vercel.json` przekierowuje wszystkie sciezki do jednej funkcji, wiec
 `/req.php?req=...` trafia do tego samego kodu co lokalnie.
 
+### Ktory adres bazy skopiowac
+
+W panelu Supabase (`Project Settings > Database > Connection string`) domyslnie
+widac polaczenie **bezposrednie** — i to jest najczestsza pomylka. Przelacz na
+**Transaction pooler**. Roznice:
+
+| | Bezposrednie | Transaction pooler |
+|---|---|---|
+| user | `postgres` | `postgres.PROJEKT` |
+| host | `db.PROJEKT.supabase.co` | `...pooler.supabase.com` |
+| port | 5432 | **6543** |
+
+Jesli haslo zawiera znaki specjalne (`@`, `/`, `:`, `#`), trzeba je zakodowac
+procentowo — inaczej adres rozjedzie sie przy parsowaniu.
+
+Kod wykrywa tryb serverless po porcie 6543 **albo** po zmiennej `VERCEL`,
+ktora ustawia sama platforma. Dzieki temu wklejenie adresu bezposredniego
+na Vercelu nie konczy sie wyczerpaniem limitu polaczen pod obciazeniem.
+
 **Uzyj poolera Supabase w trybie transakcyjnym** (port 6543):
 
 ```

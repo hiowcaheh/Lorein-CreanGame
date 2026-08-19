@@ -44,9 +44,28 @@ export const config = {
     return required('DATABASE_URL');
   },
 
-  /** Rozpoznane po porcie poolera Supabase — wplywa na ustawienia sterownika. */
+  /**
+   * Czy traktowac polaczenie jak serverless (jedno polaczenie na proces,
+   * bez instrukcji preparowanych).
+   *
+   * Wlacza sie w trzech przypadkach:
+   *   - adres wskazuje pooler Supabase (port 6543),
+   *   - kod dziala na Vercelu (`VERCEL` ustawia platforma),
+   *   - wymuszono recznie przez `DB_USE_POOLER=true`.
+   *
+   * Drugi warunek to zabezpieczenie przed latwa pomylka: w panelu Supabase
+   * domyslnie widac polaczenie BEZPOSREDNIE (port 5432). Wklejone na Vercelu
+   * dziala do czasu, az kilkanascie rownoleglych wywolan funkcji wyczerpie
+   * limit polaczen bazy — a taki blad pojawia sie dopiero pod obciazeniem
+   * i trudno go powiazac z przyczyna. Przy jednym polaczeniu na proces
+   * problem nie wystepuje.
+   */
   get usePooler(): boolean {
-    return this.databaseUrl.includes(':6543') || optional('DB_USE_POOLER', '') === 'true';
+    return (
+      this.databaseUrl.includes(':6543') ||
+      process.env['VERCEL'] === '1' ||
+      optional('DB_USE_POOLER', '') === 'true'
+    );
   },
 
   /**
