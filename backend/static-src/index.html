@@ -2,7 +2,10 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Lorein</title>
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 <style>
@@ -11,19 +14,36 @@
     height: 100%;
     margin: 0;
     padding: 0;
-    background: #14100c;
+    background: #000;
     overflow: hidden;
+    overscroll-behavior: none;
     font-family: Tahoma, Arial, Helvetica, sans-serif;
     color: #e8ddc8;
+    /* Bez podswietlania przy dotknieciu — gra ma wygladac jak aplikacja. */
+    -webkit-tap-highlight-color: transparent;
   }
 
-  #gra { width: 100%; height: 100%; }
-  #gra ruffle-player { width: 100%; height: 100%; }
-
-  #panel {
-    position: absolute;
+  /* `dvh` liczy sie wzgledem realnie widocznej wysokosci, wiec pasek adresu
+     przegladarki na telefonie nie obcina dolu ekranu. */
+  #gra {
+    position: fixed;
     inset: 0;
-    display: flex;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  #gra ruffle-player {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Panel pokazuje sie WYLACZNIE przy bledzie albo w trybie diagnostyki. */
+  #panel {
+    display: none;
+    position: fixed;
+    inset: 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -32,15 +52,15 @@
     padding: 1.5rem;
     overflow-y: auto;
     background: #14100c;
+    z-index: 10;
   }
 
-  #panel.ukryty { display: none; }
+  #panel.widoczny { display: flex; }
 
-  h1 { font-size: 1.7rem; color: #f0c042; margin: 0; letter-spacing: .04em; }
+  h1 { font-size: 1.5rem; color: #f0c042; margin: 0; }
   #stan { margin: 0; color: #a89578; max-width: 34rem; line-height: 1.6; }
 
   #diag {
-    display: none;
     text-align: left;
     font-family: ui-monospace, Consolas, monospace;
     font-size: .82rem;
@@ -53,24 +73,13 @@
     width: 100%;
   }
 
+  #diag:empty { display: none; }
   #diag div { margin-bottom: .3rem; word-break: break-word; }
-  .ok   { color: #7bb661; }
-  .zle  { color: #c85a4a; }
+  .ok { color: #7bb661; }
+  .zle { color: #c85a4a; }
   .czek { color: #a89578; }
 
   a { color: #f0c042; }
-
-  .przycisk {
-    display: inline-block;
-    background: linear-gradient(#3a2e1c, #241c12);
-    border: 1px solid #5a4726;
-    color: #f0c042;
-    text-decoration: none;
-    font-size: .9rem;
-    padding: .55rem 1.2rem;
-    border-radius: 8px;
-    cursor: pointer;
-  }
 </style>
 </head>
 <body>
@@ -79,9 +88,8 @@
 
 <div id="panel">
   <h1>Lorein</h1>
-  <p id="stan">Wczytywanie gry…</p>
+  <p id="stan"></p>
   <div id="diag"></div>
-  <a class="przycisk" id="btn-diag" href="?debug=1">Diagnostyka</a>
 </div>
 
 <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
@@ -92,13 +100,12 @@
   var SWF = "res/sfgame_edit.swf";
 
   var panel = document.getElementById("panel");
-  var stan  = document.getElementById("stan");
-  var diag  = document.getElementById("diag");
-  var btn   = document.getElementById("btn-diag");
+  var stan = document.getElementById("stan");
+  var diag = document.getElementById("diag");
   var debug = new URLSearchParams(location.search).has("debug");
 
   function pokazBlad(text) {
-    panel.classList.remove("ukryty");
+    panel.classList.add("widoczny");
     stan.innerHTML = text;
   }
 
@@ -119,80 +126,104 @@
     return fetch(url, { cache: "no-store" })
       .then(function (r) {
         return r.text().then(function (tekst) {
-          var wynik = walidator(r, tekst);
-          gotowe(wynik.dobrze, wynik.opis);
+          var w = walidator(r, tekst);
+          gotowe(w.dobrze, w.opis);
         });
       })
       .catch(function (e) { gotowe(false, String(e)); });
   }
 
   function uruchomDiagnostyke() {
-    diag.style.display = "block";
-    btn.style.display = "none";
+    panel.classList.add("widoczny");
     stan.textContent = "Sprawdzam, co dziala, a co nie:";
-
     diag.innerHTML = "";
-    var adres = wiersz("adres strony");
-    adres(true, location.origin);
 
-    var r = wiersz("Ruffle (odtwarzacz Flash)");
-    r(!!(window.RufflePlayer && window.RufflePlayer.newest),
-      window.RufflePlayer ? "wczytany z unpkg.com" : "NIE wczytal sie — sprawdz blokade skryptow");
+    wiersz("adres strony")(true, location.origin);
+    wiersz("Ruffle (odtwarzacz Flash)")(
+      !!(window.RufflePlayer && window.RufflePlayer.newest),
+      window.RufflePlayer ? "wczytany" : "NIE wczytal sie z unpkg.com"
+    );
 
     sprawdz("backend /health", "health", function (res, tekst) {
       if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status };
       try {
         var j = JSON.parse(tekst);
-        return { dobrze: j.status === "ok", opis: "akcje: " + (j.ported || []).join(", ") };
-      } catch (e) { return { dobrze: false, opis: "odpowiedz nie jest JSON-em: " + tekst.slice(0, 80) }; }
+        return {
+          dobrze: j.database === "ok",
+          opis: "baza: " + j.database + "; akcje: " + (j.ported || []).join(", ")
+        };
+      } catch (e) {
+        return { dobrze: false, opis: "odpowiedz nie jest JSON-em: " + tekst.slice(0, 90) };
+      }
     })
     .then(function () {
-      return sprawdz("baza danych (/config.php)", "config.php", function (res, tekst) {
-        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — sprawdz DATABASE_URL w Vercelu" };
+      return sprawdz("konfiguracja klienta (/config.php)", "config.php", function (res, tekst) {
+        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — " + tekst.slice(0, 110) };
         var linie = tekst.split("\n").filter(Boolean);
-        var pole25 = linie.filter(function (l) { return l.indexOf("25\t") === 0; })[0];
-        return {
-          dobrze: linie.length > 10 && !!pole25,
-          opis: linie.length + " pol konfiguracji; endpoint gry: " + (pole25 ? pole25.slice(3) : "BRAK")
-        };
+        var p25 = linie.filter(function (l) { return l.indexOf("25\t") === 0; })[0];
+        return { dobrze: linie.length > 10 && !!p25, opis: linie.length + " pol; endpoint: " + (p25 ? p25.slice(3) : "BRAK") };
       });
     })
     .then(function () {
-      return sprawdz("plik gry (" + SWF + ")", SWF, function (res, tekst) {
-        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — zasoby nie trafily na serwer" };
-        var czyFlash = tekst.slice(0, 3);
-        return {
-          dobrze: tekst.length > 100000,
-          opis: Math.round(tekst.length / 1024) + " kB, naglowek: " + JSON.stringify(czyFlash)
-        };
+      return sprawdz("plik gry", SWF, function (res, tekst) {
+        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status };
+        return { dobrze: tekst.length > 100000, opis: Math.round(tekst.length / 1024) + " kB" };
       });
     })
     .then(function () {
-      return sprawdz("grafika postaci", "res/sfgame/scr/fight/monster/monster2.jpg", function (res) {
-        return { dobrze: res.ok, opis: res.ok ? "zasoby graficzne sa dostepne" : "HTTP " + res.status };
+      return sprawdz("grafika", "res/sfgame/scr/fight/monster/monster2.jpg", function (res) {
+        return { dobrze: res.ok, opis: res.ok ? "zasoby dostepne" : "HTTP " + res.status };
       });
     })
     .then(function () {
-      var koniec = wiersz("podsumowanie");
-      koniec(true, "skopiuj powyzsze i wyslij — na tej podstawie widac, co poprawic");
+      wiersz("podsumowanie")(true, "skopiuj powyzsze i wyslij");
     });
   }
 
-  if (debug) {
-    // Diagnostyka zamiast gry.
-    if (window.RufflePlayer) uruchomDiagnostyke();
-    else setTimeout(uruchomDiagnostyke, 2500);
-    return;
+  // ------------------------------------------------- pelny ekran --
+
+  /**
+   * Pelny ekran i blokada orientacji wymagaja gestu uzytkownika — nie da sie
+   * ich wlaczyc automatycznie. Podpinamy sie wiec pod pierwsze dotkniecie,
+   * NIE przechwytujac go: klikniecie leci dalej do gry, a przy okazji
+   * przegladarka chowa paski i blokuje orientacje poziomo.
+   */
+  function pelnyEkranPrzyPierwszymDotknieciu() {
+    function sprobuj() {
+      var el = document.documentElement;
+      var zadanie = el.requestFullscreen || el.webkitRequestFullscreen;
+
+      if (zadanie) {
+        try {
+          var p = zadanie.call(el, { navigationUI: "hide" });
+          if (p && p.then) {
+            p.then(zablokujPoziomo).catch(function () {});
+          } else {
+            zablokujPoziomo();
+          }
+        } catch (e) { /* przegladarka moze odmowic — to nie jest blad krytyczny */ }
+      }
+    }
+
+    function zablokujPoziomo() {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock("landscape").catch(function () {
+          // iOS nie wspiera blokady — gracz obraca telefon sam.
+        });
+      }
+    }
+
+    window.addEventListener("pointerdown", sprobuj, { once: true, passive: true });
   }
 
-  // ---------------------------------------------------------- gra --
+  // ------------------------------------------------------------ gra --
 
   function czekajNaRuffle(proba) {
     if (window.RufflePlayer && window.RufflePlayer.newest) { uruchom(); return; }
-    if (proba > 100) {
+    if (proba > 120) {
       pokazBlad("Nie udalo sie wczytac Ruffle — odtwarzacza uruchamiajacego gre.<br>" +
                 "Sprawdz polaczenie albo blokade skryptow.<br><br>" +
-                "<a href='?debug=1'>Uruchom diagnostyke</a>");
+                "<a href='?debug=1'>Diagnostyka</a>");
       return;
     }
     setTimeout(function () { czekajNaRuffle(proba + 1); }, 100);
@@ -200,47 +231,58 @@
 
   function uruchom() {
     var player;
+
     try {
-      player = window.RufflePlayer.newest().createPlayer();
+      var ruffle = window.RufflePlayer.newest();
+      player = ruffle.createPlayer();
       document.getElementById("gra").appendChild(player);
     } catch (e) {
       pokazBlad("Blad uruchamiania odtwarzacza:<br>" + e);
       return;
     }
 
-    // Ruffle zglasza problemy z samym plikiem przez zdarzenie `error`.
     player.addEventListener("error", function (e) {
-      pokazBlad("Ruffle nie poradzil sobie z plikiem gry.<br>" + (e && e.message ? e.message : "") +
-                "<br><br><a href='?debug=1'>Uruchom diagnostyke</a>");
+      pokazBlad("Ruffle nie poradzil sobie z plikiem gry.<br>" +
+                (e && e.message ? e.message : "") +
+                "<br><br><a href='?debug=1'>Diagnostyka</a>");
     });
 
     player.load({
       url: SWF,
+
+      // Bez tego przegladarka wstrzymuje odtwarzanie i Ruffle pokazuje
+      // wlasny duzy przycisk odtwarzania na czarnym tle. Start wyciszony
+      // jest dozwolony bez gestu uzytkownika, a dzwieku gra i tak nie uzywa
+      // na ekranie logowania.
+      autoplay: "on",
+      unmuteOverlay: "hidden",
+      splashScreen: false,
+
+      // `showAll` zachowuje proporcje obrazu, `letterbox` wypelnia reszte
+      // czernia. Rozciaganie na sile (`exactFit`) znieksztalcaloby postacie.
+      scale: "showAll",
+      letterbox: "on",
+
       allowScriptAccess: true,
       backgroundColor: "#000000",
-      scale: "showAll",
-      quality: "best",
+      quality: "high",
       wmode: "opaque",
-      menu: true,
+      menu: false,
       salign: "t"
-    }).then(function () {
-      // Plik sie wczytal — chowamy komunikat dopiero teraz.
-      panel.classList.add("ukryty");
     }).catch(function (err) {
       pokazBlad("Nie udalo sie wczytac pliku gry <code>" + SWF + "</code>.<br>" +
-                String(err) + "<br><br><a href='?debug=1'>Uruchom diagnostyke</a>");
+                String(err) + "<br><br><a href='?debug=1'>Diagnostyka</a>");
     });
 
-    // Jesli po 20 sekundach nadal jest czarno, pokazujemy droge wyjscia
-    // zamiast zostawiac gracza z pustym ekranem.
-    setTimeout(function () {
-      if (panel.classList.contains("ukryty") && !player.querySelector) {
-        return;
-      }
-    }, 20000);
+    pelnyEkranPrzyPierwszymDotknieciu();
   }
 
-  czekajNaRuffle(0);
+  if (debug) {
+    if (window.RufflePlayer) uruchomDiagnostyke();
+    else setTimeout(uruchomDiagnostyke, 2500);
+  } else {
+    czekajNaRuffle(0);
+  }
 })();
 </script>
 
