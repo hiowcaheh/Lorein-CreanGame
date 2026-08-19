@@ -1,14 +1,13 @@
 /**
  * Aplikacja Hono — niezalezna od runtime'u.
  *
- * Ten sam obiekt uruchamia sie pod Node (`src/index.ts`), pod Deno,
- * pod Supabase Edge Functions i pod Cloudflare Workers. Decyzja o hostingu
- * nie jest tutaj zaszyta i mozna ja zmienic pozniej.
+ * Ten sam obiekt uruchamia sie pod Node (`src/index.ts`), na Vercelu
+ * (`api/index.ts`), pod Deno i pod Bunem. Decyzja o hostingu nie jest
+ * tutaj zaszyta.
  *
- * Sercem migracji jest **przekazywanie do starego backendu**: akcje juz
- * przeniesione obsluguje TypeScript, cala reszta leci do `req.php`. Dzieki
- * temu gra dziala nieprzerwanie, a akcje przenosi sie pojedynczo — zamiast
- * przepisywac 10 370 linii i wlaczac wszystko naraz.
+ * Akcje juz przeniesione obsluguje TypeScript; reszta trafia do starego
+ * `req.php`, o ile wskazano `SF_LEGACY_URL` i oba backendy pracuja na tej
+ * samej bazie.
  */
 
 import { Hono } from 'hono';
@@ -16,44 +15,73 @@ import { parseRequest } from './protocol/request.js';
 import { PhpResponse } from './protocol/response.js';
 import { ACT } from './protocol/constants.js';
 import { ranking } from './actions/ranking.js';
+import { register, login, loginFollowUp } from './actions/account.js';
+import { hero } from './actions/hero.js';
+import { buildClientConfig } from './clientConfig.js';
 import { getSql } from './db/client.js';
 import { config } from './config.js';
+import type { GameRequest } from './protocol/request.js';
+import type { Sql } from './db/client.js';
+
+type Handler = (sql: Sql, req: GameRequest, ip: string) => Promise<PhpResponse>;
 
 /** Akcje obslugiwane juz przez nowy backend. */
-const handlers = {
-  [ACT.RANKING]: ranking,
-} as const;
+const handlers: Record<string, Handler> = {
+  [ACT.REGISTER]: register,
+  [ACT.LOGIN]: login,
+  [ACT.LOGIN_FOLLOW_UP]: (sql, req) => loginFollowUp(sql, req),
+  [ACT.HERO]: hero,
+  [ACT.RANKING]: (sql, req) => ranking(sql, req),
+};
 
 export const app = new Hono();
 
-app.get('/health', (c) => c.json({ status: 'ok', ported: Object.keys(handlers) }));
+app.get('/health', (c) =>
+  c.json({
+    status: 'ok',
+    ported: Object.keys(handlers).sort(),
+    legacyProxy: config.legacyBaseUrl !== '',
+  }),
+);
 
 /**
- * Jedyny endpoint gry. Sciezka jest dowolna — klient bierze ja z pola 25
- * konfiguracji, wiec przestawienie gry na ten backend to zmiana jednej
- * linii w konfiguracji, bez rekompilacji klienta Flash.
+ * Konfiguracja pobierana przez klienta Flash przy starcie.
+ *
+ * Zastepuje `config.php`. Klient bierze stad m.in. adres endpointu gry
+ * (pole 25), wiec to jest miejsce, w ktorym gra dowiaduje sie, gdzie ma
+ * wysylac zapytania.
  */
+app.get('/config.php', async (c) => {
+  const body = await buildClientConfig(getSql(), new URL(c.req.url));
+  return c.body(body, {
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'no-store',
+      'access-control-allow-origin': '*',
+    },
+  });
+});
+
+/** Jedyny endpoint gry. */
 app.get('/req.php', async (c) => {
   const req = parseRequest(c.req.query('req'));
-  const handler = handlers[req.action as keyof typeof handlers];
+  const handler = handlers[req.action];
 
   if (handler) {
-    const response = await handler(getSql(), req);
-    return textResponse(c.body.bind(c), response.toString());
+    const response = await handler(getSql(), req, clientIp(c.req.raw));
+    return gameResponse(response.toString());
   }
 
   if (config.legacyBaseUrl) {
     return proxyToLegacy(c.req.url);
   }
 
-  // Odpowiednik gałęzi `default` w `req.php`.
-  return textResponse(c.body.bind(c), PhpResponse.of('0').toString());
+  // Odpowiednik galezi `default` w `req.php`.
+  return gameResponse(PhpResponse.of('0').toString());
 });
 
-type BodyFn = (data: string, init: { headers: Record<string, string> }) => Response;
-
-function textResponse(body: BodyFn, text: string): Response {
-  return body(text, {
+function gameResponse(text: string): Response {
+  return new Response(text, {
     headers: {
       'content-type': 'text/plain; charset=utf-8',
       'cache-control': 'no-store',
@@ -65,10 +93,20 @@ function textResponse(body: BodyFn, text: string): Response {
 }
 
 /**
- * Przekazuje zapytanie do starego backendu PHP i zwraca jego odpowiedz
- * bez zmian. Query string idzie w calosci — lacznie z `rnd`, ktore klient
- * dokleja jako zabezpieczenie przed cache'owaniem.
+ * Adres IP gracza.
+ *
+ * Za posrednikiem (Vercel, proxy na VPS-ie) prawdziwy adres jest
+ * w naglowku — bez tego wszyscy gracze wygladaliby jak jeden i limit
+ * trzech kont na IP zablokowalby rejestracje po trzecim koncie w ogole.
  */
+function clientIp(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    return forwarded.split(',')[0]!.trim();
+  }
+  return request.headers.get('x-real-ip') ?? '0.0.0.0';
+}
+
 async function proxyToLegacy(originalUrl: string): Promise<Response> {
   const incoming = new URL(originalUrl);
   const target = new URL(config.legacyBaseUrl);
@@ -83,8 +121,6 @@ async function proxyToLegacy(originalUrl: string): Promise<Response> {
       'content-type': 'text/plain; charset=utf-8',
       'cache-control': 'no-store',
       'access-control-allow-origin': '*',
-      // Ulatwia sprawdzenie w narzedziach deweloperskich, ktora akcja
-      // nie zostala jeszcze przeniesiona.
       'x-lorein-backend': 'legacy-php',
     },
   });

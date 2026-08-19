@@ -35,3 +35,4 @@ desktop.ini
 *.sublime-workspace
 nbproject/
 .phpunit.result.cache
+backend/public/

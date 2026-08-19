@@ -11,14 +11,23 @@ Wdrazany na Vercel do testow, docelowo na VPS.
 | Zgodnosc funkcji PHP (`round`, `urlencode`, …) | gotowe — 63 testy |
 | Stale protokolu (89 akcji, 134 pola) | generowane z `req.php` |
 | Schemat bazy dla Postgresa (19 tabel) | gotowe — zastosowany na Postgresie 16 |
+| Akcja `001` — rejestracja | przeniesiona |
+| Akcja `002` — logowanie | przeniesiona |
+| Akcja `004` — ekran postaci | przeniesiona (port `loadDefaultData`, 464 linie) |
 | Akcja `007` — ranking | przeniesiona — 10 testow jednostkowych + 5 integracyjnych |
-| **Pozostale 76 akcji** | **do przeniesienia** |
+| Akcja `503` — gildia po zalogowaniu | przeniesiona |
+| Strona uruchamiajaca gre + `config.php` | gotowe |
+| **Pozostale 72 akcje** | **do przeniesienia** |
 
-150 testow: 145 przechodzi zawsze, 5 integracyjnych uruchamia sie przy
+180 testow: 175 przechodzi zawsze, 5 integracyjnych uruchamia sie przy
 wskazanej bazie testowej.
 
-Gra **nie jest jeszcze grywalna na tym backendzie** — dziala ranking,
-reszta akcji czeka na port.
+**Co juz dziala**: gra sie wczytuje, mozna zalozyc konto, stworzyc postac,
+zalogowac sie i obejrzec swoja karte postaci oraz Sale Chwaly.
+
+**Czego jeszcze nie ma**: karczmy, questow, areny, sklepow, gildii, lochow,
+wiezy i walki. Klient pokaze te zakladki, ale klikniecie nie przyniesie
+odpowiedzi, dopoki akcja nie zostanie przeniesiona.
 
 ## Uruchomienie lokalne
 
@@ -31,7 +40,7 @@ npm run dev
 
 ```bash
 curl localhost:8787/health
-# {"status":"ok","ported":["007"]}
+# {"status":"ok","ported":["001","002","004","007","503"]}
 ```
 
 ## Wdrozenie na Vercel
@@ -39,8 +48,25 @@ curl localhost:8787/health
 1. Zaimportuj repozytorium w panelu Vercela.
 2. **Root Directory** ustaw na `backend` — repozytorium zawiera takze stara
    gre w PHP, ktorej Vercel nie ma budowac.
-3. W `Settings > Environment Variables` dodaj `DATABASE_URL`.
+3. W `Settings > Environment Variables` dodaj `DATABASE_URL` (patrz nizej).
 4. Deploy.
+
+Podczas budowania uruchamia sie `scripts/prepare-static.mjs`, ktory kopiuje
+zasoby gry z `../sf555` do `public/`: 96 MB grafik, 22 jezyki i plik `.swf`.
+Nie sa one duplikowane w repozytorium — Vercel klonuje caly projekt, wiec
+`../sf555` jest dostepne mimo ustawienia Root Directory na `backend`.
+
+### Zmienne srodowiskowe, ktore trzeba wpisac w Vercelu
+
+| Zmienna | Wymagana | Wartosc |
+|---|---|---|
+| `DATABASE_URL` | tak | connection string Supabase, **pooler na porcie 6543** |
+| `SF_IMG_URL` | nie | wlasny CDN z grafikami; domyslnie zasoby spod tego samego adresu |
+| `SF_LEGACY_URL` | nie | adres starego `req.php`; zostaw puste |
+
+`DATABASE_URL` znajdziesz w Supabase: `Project Settings > Database >
+Connection string > Transaction pooler`. Nic wiecej wpisywac nie trzeba —
+te dane nie moga trafic do repozytorium i nie ma ich w zadnym pliku.
 
 `vercel.json` przekierowuje wszystkie sciezki do jednej funkcji, wiec
 `/req.php?req=...` trafia do tego samego kodu co lokalnie.
@@ -99,8 +125,17 @@ src/
 │   ├── constants.ts    # GENEROWANY — nie edytuj recznie
 │   ├── request.ts      # rozbior parametru `req`
 │   └── response.ts     # builder o semantyce tablicy PHP
-├── actions/ranking.ts  # akcja 007
+├── clientConfig.ts     # zamiennik config.php dla klienta Flash
+├── actions/
+│   ├── account.ts      # 001 rejestracja, 002 logowanie, 503 gildia
+│   ├── hero.ts         # 004 ekran postaci
+│   └── ranking.ts      # 007 Sala Chwaly
+├── game/
+│   ├── playerState.ts  # port loadDefaultData — wypelnia wiekszosc pol
+│   └── stats.ts        # statystyki klas i ras
 └── db/client.ts        # postgres.js
+static-src/index.html   # strona uruchamiajaca gre przez Ruffle
+scripts/prepare-static.mjs  # kopiuje zasoby gry do public/ przy budowaniu
 db/schema.sql           # schemat dla Postgresa
 ```
 
@@ -144,7 +179,7 @@ w helperze `insertPlayer` w tescie integracyjnym.
 
 ## Testy roznicowe — jak przenosic kolejne akcje
 
-Wzorzec do powtorzenia przy kazdej z pozostalych 76 akcji:
+Wzorzec do powtorzenia przy kazdej z pozostalych 72 akcji:
 
 1. **Wzorzec z PHP.** Skopiuj logike akcji z `req.php` do skryptu
    w `test/fixtures/`, zastepujac zapytania danymi podanymi wprost.

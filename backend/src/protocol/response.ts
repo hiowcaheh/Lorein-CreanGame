@@ -20,6 +20,8 @@
  * zachowuje kolejnosc wstawiania.
  */
 
+import { toPhpString } from '../compat/php.js';
+
 export class PhpResponse {
   private readonly values = new Map<number, string>();
 
@@ -48,6 +50,29 @@ export class PhpResponse {
   /** Odczyt pola; `undefined` gdy klucz nie istnieje (jak `$ret[$i] ?? null`). */
   get(index: number): string | undefined {
     return this.values.get(index);
+  }
+
+  /**
+   * Odczyt pola jako liczby. Nieistniejace pole daje 0 — tak samo jak
+   * `(int)($ret[$i] ?? 0)` w PHP.
+   */
+  number(index: number): number {
+    const raw = this.values.get(index);
+    if (raw === undefined || raw === '') {
+      return 0;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  /**
+   * Odpowiednik `$ret[$index] += $value`.
+   *
+   * W PHP tablica jest wypelniona napisami `'0'`, ktore przy dodawaniu sa
+   * po cichu rzutowane na liczby. Ta metoda odtwarza to zachowanie.
+   */
+  add(index: number, value: number): this {
+    return this.set(index, this.number(index) + value);
   }
 
   /** Odpowiednik `$ret[] = $value` — dopisanie pod kolejnym kluczem. */
@@ -87,6 +112,10 @@ function stringify(value: unknown): string {
   }
   if (typeof value === 'boolean') {
     return value ? '1' : '';
+  }
+  if (typeof value === 'number') {
+    // PHP formatuje liczby inaczej niz JavaScript — patrz `toPhpString`.
+    return toPhpString(value);
   }
   return String(value);
 }

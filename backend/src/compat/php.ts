@@ -152,3 +152,52 @@ export function implode(separator: string, pieces: readonly unknown[]): string {
 export function time(): number {
   return Math.floor(Date.now() / 1000);
 }
+
+/**
+ * Zamiana liczby na napis wedlug regul PHP.
+ *
+ * PHP formatuje liczby zmiennoprzecinkowe z domyslna precyzja 14 cyfr
+ * znaczacych (`%.14G`), a JavaScript wypisuje najkrotsza reprezentacje
+ * odtwarzajaca wartosc. Roznica jest natychmiast widoczna:
+ *
+ *     PHP:  (string)(0.1 + 0.2)  ->  "0.3"
+ *     JS:   String(0.1 + 0.2)    ->  "0.30000000000000004"
+ *
+ * Skoro odpowiedz protokolu to sklejone napisy, taka roznica trafilaby
+ * wprost do klienta. Dotyczy to zwlaszcza mikstur, gdzie statystyki mnozone
+ * sa przez 0.10, 0.15 i 0.25.
+ */
+export function toPhpString(value: number): string {
+  if (!Number.isFinite(value)) {
+    return Number.isNaN(value) ? 'NAN' : value > 0 ? 'INF' : '-INF';
+  }
+
+  // Wartosci calkowite wypisujemy wprost.
+  //
+  // OGRANICZENIE: PHP rozroznia typ int od float, JavaScript ma jeden typ
+  // liczbowy. PHP wypisze int 100000000000000 jako "100000000000000",
+  // ale float 1.0e14 jako "1.0E+14" — z poziomu JS te dwa przypadki sa
+  // nierozroznialne. Wybieramy wariant calkowity, bo w grze wartosci tej
+  // wielkosci pochodza z kolumn calkowitoliczbowych bazy, a wyniki obliczen
+  // zmiennoprzecinkowych sa ograniczone z gory (np. zloto do 1e9).
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+
+  const PRECISION = 14;
+  const exponent = Math.floor(Math.log10(Math.abs(value)));
+
+  // Format %G przechodzi na notacje wykladnicza, gdy wykladnik jest
+  // mniejszy od -4 albo nie mniejszy od precyzji — tak samo jak w C.
+  if (exponent < -4 || exponent >= PRECISION) {
+    const mantissa = value / 10 ** exponent;
+    let digits = Number(mantissa.toPrecision(PRECISION)).toString();
+    if (!digits.includes('.')) {
+      digits += '.0';
+    }
+    const sign = exponent < 0 ? '-' : '+';
+    return `${digits}E${sign}${Math.abs(exponent)}`;
+  }
+
+  return String(Number(value.toPrecision(PRECISION)));
+}
