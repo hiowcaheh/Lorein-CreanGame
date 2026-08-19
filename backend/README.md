@@ -158,6 +158,21 @@ scripts/prepare-static.mjs  # kopiuje zasoby gry do public/ przy budowaniu
 db/schema.sql           # schemat dla Postgresa
 ```
 
+### Jedna zelazna zasada przy importach
+
+Kazdy import wzgledny konczy sie `.js` — takze wtedy, gdy plik na dysku to `.ts`:
+
+```ts
+import { app } from './app.js';        // tak
+import { app } from './app';           // nie
+```
+
+Vercel nie pakuje kodu w jedna paczke, tylko przepisuje pliki po kolei
+i zostawia rozwiazywanie importow Node'owi. Projekt jest modulem ESM
+(`"type": "module"`), a tam sciezka bez rozszerzenia po prostu nie istnieje.
+TypeScript tego nie zglosi — `tsc --noEmit` i testy przechodza, a funkcja
+na serwerze nie wstaje. Szczegoly: `deploy/VERCEL.md`, pulapka 6.
+
 ### Dlaczego az taka ostroznosc ze zgodnoscia
 
 Trzy rzeczy rozjezdzaja port po cichu, bez bledu w logach:

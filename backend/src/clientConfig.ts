@@ -13,7 +13,7 @@
  * aplikacja dziala lokalnie, na Vercelu i na VPS-ie bez zmiany ustawien.
  */
 
-import type { Sql } from './db/client';
+import type { Sql } from './db/client.js';
 
 async function configValue(sql: Sql, name: string, fallback: string): Promise<string> {
   const rows = await sql<{ value: string }[]>`

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { PhpMtRand } from '../src/compat/rng';
+import { PhpMtRand } from '../src/compat/rng.js';
 
 /**
  * Wzorce w `fixtures/php-mt-rand.json` pochodzia z prawdziwego PHP 8.4

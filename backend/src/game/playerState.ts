@@ -10,12 +10,12 @@
  * i wygasa mikstury. Tak samo jak oryginal.
  */
 
-import { PhpResponse } from '../protocol/response';
-import { SF } from '../protocol/constants';
-import { LEVELS, portalMonsterHp } from '../protocol/gamedata';
-import { intval, round, time } from '../compat/php';
-import { loadDefaultStats, mountMultiplier } from './stats';
-import type { Sql } from '../db/client';
+import { PhpResponse } from '../protocol/response.js';
+import { SF } from '../protocol/constants.js';
+import { LEVELS, portalMonsterHp } from '../protocol/gamedata.js';
+import { intval, round, time } from '../compat/php.js';
+import { loadDefaultStats, mountMultiplier } from './stats.js';
+import type { Sql } from '../db/client.js';
 
 /** Wiersz gracza wraz z danymi doliczanymi podzapytaniami. */
 export interface PlayerRow {

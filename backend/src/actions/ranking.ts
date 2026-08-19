@@ -10,10 +10,10 @@
  * brzegowymi opisanymi nizej.
  */
 
-import { PhpResponse } from '../protocol/response';
-import { ctypeDigit, intval, round, time, urlencode } from '../compat/php';
-import type { GameRequest } from '../protocol/request';
-import type { Sql } from '../db/client';
+import { PhpResponse } from '../protocol/response.js';
+import { ctypeDigit, intval, round, time, urlencode } from '../compat/php.js';
+import type { GameRequest } from '../protocol/request.js';
+import type { Sql } from '../db/client.js';
 
 /** Ile sekund bez aktywnosci oznacza, ze gracz jest juz offline. */
 const ONLINE_WINDOW_SECONDS = 900;

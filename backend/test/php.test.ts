@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { ceil, ctypeDigit, explode, floor, implode, intval, round, urlencode } from '../src/compat/php';
+import { ceil, ctypeDigit, explode, floor, implode, intval, round, urlencode } from '../src/compat/php.js';
 
 /**
  * Wzorce wygenerowane przez prawdziwe PHP (`test/fixtures/generate-php-funcs.php`).

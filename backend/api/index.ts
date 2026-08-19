@@ -7,7 +7,7 @@
  */
 
 import { handle } from 'hono/vercel';
-import { app } from '../src/app';
+import { app } from '../src/app.js';
 
 // Sterownik Postgresa uzywa gniazd TCP, ktorych srodowisko Edge nie udostepnia.
 export const config = { runtime: 'nodejs' };

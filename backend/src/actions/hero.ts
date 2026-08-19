@@ -5,12 +5,12 @@
  * ta akcja dokłada tylko odswiezenie czasu aktywnosci i opis postaci.
  */
 
-import { PhpResponse } from '../protocol/response';
-import { ACT } from '../protocol/constants';
-import { time } from '../compat/php';
-import { fetchPlayerBySsid, loadDefaultData } from '../game/playerState';
-import type { GameRequest } from '../protocol/request';
-import type { Sql } from '../db/client';
+import { PhpResponse } from '../protocol/response.js';
+import { ACT } from '../protocol/constants.js';
+import { time } from '../compat/php.js';
+import { fetchPlayerBySsid, loadDefaultData } from '../game/playerState.js';
+import type { GameRequest } from '../protocol/request.js';
+import type { Sql } from '../db/client.js';
 
 /**
  * Odpowiednik `fixSpecialChars(urldecode(...))` — ukosnik i srednik

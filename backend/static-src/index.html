@@ -186,6 +186,11 @@
         return { dobrze: true, opis: tekst.slice(0, 60) };
       }, 15000),
 
+      sprawdz("funkcja wprost (/api/index)", "api/index?probe=1", function (res, tekst) {
+        if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — " + tekst.slice(0, 80) };
+        return { dobrze: true, opis: "funkcja startuje" };
+      }, 15000),
+
       sprawdz("funkcja zyje (/version)", "version", function (res, tekst) {
         if (!res.ok) return { dobrze: false, opis: "HTTP " + res.status + " — " + tekst.slice(0, 90) };
         return { dobrze: true, opis: tekst.replace(/\n/g, " | ") };

@@ -36,3 +36,6 @@ desktop.ini
 nbproject/
 .phpunit.result.cache
 backend/public/
+
+# --- Wynik lokalnego "vercel build" ---
+.vercel/

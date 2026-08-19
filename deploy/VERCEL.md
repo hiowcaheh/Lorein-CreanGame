@@ -23,10 +23,15 @@ sie na nie wpadnie po raz drugi.
 Trzy adresy, w tej kolejnosci — kazdy odcina inna warstwe problemow:
 
 ```
+/api/index   czy funkcja w ogole startuje (z pominieciem przepisania sciezek)
 /version     kim jestem: commit, region, czy jest DATABASE_URL i na jaki port
 /health      czy backend dogaduje sie z baza
 /?debug=1    pelny raport: Ruffle, zasoby, funkcja, baza, konfiguracja klienta
 ```
+
+`/api/index` to adres funkcji **wprost**, bez posrednictwa regul z
+`vercel.json`. Gdy on odpowiada, a `/version` nie — zepsute jest przepisanie
+sciezek, nie kod.
 
 `/version` nie dotyka bazy. Jesli odpowiada, a `/health` nie — problem jest
 wylacznie w polaczeniu z Postgresem. Jesli nie odpowiada nawet `/version` —
@@ -105,6 +110,88 @@ ubijal proces, a kolejne zapytania trafialy na martwa instancje.
 Pula polaczen musi miec nasluch bledow. Bez niego jeden problem z baza
 wyglada jak trzy rozne awarie.
 
+### 6. Import bez rozszerzenia `.js` wywracal cala funkcje
+
+To byla prawdziwa przyczyna tego, ze **zaden** adres funkcji nie odpowiadal,
+podczas gdy pliki statyczne schodzily normalnie.
+
+Vercel **nie pakuje** kodu w jedna paczke. Bierze kazdy plik `.ts` osobno,
+przepisuje go na `.js` i zostawia rozwiazywanie importow Node'owi. A projekt
+ma `"type": "module"`, wiec Node dziala w trybie ESM — a tam sciezka wzgledna
+musi miec **pelne rozszerzenie**:
+
+```js
+import { app } from '../src/app';      // ERR_MODULE_NOT_FOUND — funkcja nie wstaje
+import { app } from '../src/app.js';   // dziala
+```
+
+TypeScript przy `moduleResolution: "bundler"` przyjmuje obie postacie bez
+slowa skargi, wiec `tsc --noEmit` i testy przechodza — blad widac dopiero
+w uruchomionej funkcji.
+
+**Zasada: kazdy import wzgledny w `src/`, `api/` i `test/` konczy sie `.js`,**
+nawet jesli plik na dysku to `.ts`.
+
+### 7. Przepisanie sciezek moglo wskazywac samo na siebie
+
+Wczesniejsza regula lapala wszystko poza `/api/`:
+
+```json
+{ "source": "/((?!api/).*)", "destination": "/api" }
+```
+
+Sciezka `/api` (bez ukosnika na koncu) **pasuje do tego wzorca** — negatywne
+sprawdzenie dotyczy `api/`, nie `api`. Adres docelowy trafial wiec z powrotem
+w te sama regule.
+
+Teraz przepisywane sa tylko cztery konkretne adresy, a celem jest sciezka,
+ktora na pewno istnieje w wyniku budowania (`functions/api/index.func`):
+
+```json
+{ "source": "/req.php",    "destination": "/api/index" },
+{ "source": "/config.php", "destination": "/api/index" },
+{ "source": "/health",     "destination": "/api/index" },
+{ "source": "/version",    "destination": "/api/index" }
+```
+
+Kosztem jest jedna linijka wiecej przy dodawaniu adresu do backendu. Zyskiem —
+brak reguly, ktora moze zapetlic sie sama na sobie, i zero konkurencji miedzy
+funkcja a plikami statycznymi.
+
+## Jak sprawdzic wdrozenie BEZ wdrazania
+
+Najwazniejsza rzecz z calej tej sekcji: to samo, co robi Vercel, da sie
+uruchomic lokalnie i obejrzec wynik.
+
+```bash
+npm i -g vercel
+cd backend
+mkdir -p .vercel
+echo '{"projectId":"x","orgId":"y","settings":{"framework":null,"rootDirectory":null}}' \
+  > .vercel/project.json          # atrapa — logowanie niepotrzebne
+vercel build
+```
+
+W `.vercel/output/` lezy dokladnie to, co pojedzie na serwer:
+
+- `config.json` — **gotowe reguly trasowania**, juz przetlumaczone z `vercel.json`.
+  Tu widac, czy przepisanie sciezek robi to, co mialo robic.
+- `functions/api/index.func/` — funkcja wraz z zaleznosciami.
+
+A funkcje mozna po prostu wywolac:
+
+```bash
+cd .vercel/output/functions/api/index.func
+node -e "import('./api/index.js').then(async m => {
+  const r = await m.default(new Request('https://x.test/version'));
+  console.log(r.status, await r.text());
+})"
+```
+
+Jesli to wypisze `ERR_MODULE_NOT_FOUND`, wdrozenie nie ma prawa zadzialac —
+i wiadomo o tym przed wypchnieciem zmian, a nie po dwudziestu minutach
+zgadywania. `vercel dev` wymaga zalogowania, `vercel build` nie.
+
 ## Gdy Vercel nie zauwazy wypchnietego commita
 
 Zdarza sie, ze webhook nie zadziala. Kolejnosc dzialan:
@@ -127,10 +214,11 @@ Gdy cos nie dziala, warto isc od zewnatrz do srodka — kazdy krok wyklucza
 cala warstwe:
 
 1. **Czy wdrozony jest wlasciwy commit?** → `?debug=1`, pierwsza linijka
-2. **Czy funkcja zyje?** → `/version`
-3. **Czy jest baza?** → `/health`
-4. **Czy klient dostaje konfiguracje?** → `/config.php`
-5. **Czy sa zasoby?** → `/res/sfgame_edit.swf`
+2. **Czy funkcja startuje?** → `/api/index`
+3. **Czy dziala przepisanie sciezek?** → `/version`
+4. **Czy jest baza?** → `/health`
+5. **Czy klient dostaje konfiguracje?** → `/config.php`
+6. **Czy sa zasoby?** → `/res/sfgame_edit.swf`
 
 Czarny ekran w grze nie mowi nic sam z siebie — moze pochodzic z kazdej
-z tych piatki warstw. Dlatego powstala strona `?debug=1`.
+z tych szesciu warstw. Dlatego powstala strona `?debug=1`.

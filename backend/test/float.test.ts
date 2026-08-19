@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { toPhpString } from '../src/compat/php';
+import { toPhpString } from '../src/compat/php.js';
 
 /**
  * Zamiana liczb na napisy musi byc identyczna jak w PHP — odpowiedz
