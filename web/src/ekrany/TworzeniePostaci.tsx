@@ -280,10 +280,10 @@ function RzadRegulacji({
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.4rem' }}>
       <span style={{ flex: 1, fontSize: '.9rem' }}>{nazwa}</span>
-      <button type="button" className="przycisk drugi" style={{ width: '3rem' }} onClick={onMniej}>
+      <button type="button" className="przycisk maly" onClick={onMniej} aria-label={`${nazwa}: poprzedni`}>
         ‹
       </button>
-      <button type="button" className="przycisk drugi" style={{ width: '3rem' }} onClick={onWiecej}>
+      <button type="button" className="przycisk maly" onClick={onWiecej} aria-label={`${nazwa}: następny`}>
         ›
       </button>
     </div>

@@ -1,11 +1,15 @@
 /*
  * Oprawa gry.
  *
- * Grafika jest oryginalna — portrety, przyciski ras i klas, tla ekranow
- * pochodza z paczki gry. Nowa jest tylko rama: zamiast sztywnej sceny
- * 1280x800 mamy uklad, ktory sam dopasowuje sie do ekranu. Na telefonie
- * w pionie menu chowa sie pod przycisk, w poziomie i na duzym ekranie
- * stoi z boku.
+ * Grafika jest oryginalna — i to CALA oprawa, nie tylko portrety. Ozdobna
+ * ramka, kamienne przyciski z glowami smokow, pas z tytulem: te obrazy leza
+ * w srodku pliku SWF, nie w katalogu `res/`. Wyciaga je stamtad skrypt
+ * `backend/scripts/wyciagnij-grafike-swf.py` do `res/ui/`.
+ *
+ * Nowe jest to, ze ramki sa rozciagliwe. Oryginal mial sztywna scene
+ * 1280x800 i obrazki w stalych rozmiarach. Tutaj kazda ramka idzie przez
+ * `border-image`: rogi zostaja ostre, a boki rozciagaja sie na dowolny
+ * ekran. Dzieki temu ta sama grafika obsluguje telefon w pionie i monitor.
  */
 
 :root {
@@ -13,16 +17,23 @@
   --zloto-ciemne: #a8842c;
   --pergamin: #e8ddc8;
   --przygaszony: #a89578;
-  --tlo: #14100c;
-  --tlo-panel: #1c1710;
-  --tlo-pole: #0f0c08;
-  --obwodka: #3a2e20;
+  --tlo: #0b0d14;
+  --tlo-panel: #16202c;
+  --tlo-pole: #0d151d;
+  --obwodka: #2b3a4a;
   --obwodka-jasna: #6b5426;
   --dobry: #7bb661;
   --zly: #c85a4a;
 
-  --pasek-menu: 13rem;
+  --pasek-menu: 15rem;
   --promien: 10px;
+
+  /* Grubosc ozdobnych ramek. Na telefonie mniejsza, zeby nie zjadala ekranu. */
+  --ramka-grubosc: 22px;
+}
+
+@media (min-width: 900px) {
+  :root { --ramka-grubosc: 30px; }
 }
 
 * { box-sizing: border-box; }
@@ -56,24 +67,46 @@ img { max-width: 100%; }
            env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
 }
 
+/*
+ * Pas z tytulem to oryginalny obraz 1280x100 — gory z lawa po lewej,
+ * zamek po prawej, glowy smokow na koncach. Na waskim ekranie pokazujemy
+ * jego srodek w pelnej wysokosci zamiast sciskac calosc do paska.
+ */
 .gora {
   display: flex;
   align-items: center;
   gap: .75rem;
-  padding: .5rem .75rem;
-  background: linear-gradient(#241d14, #171208);
-  border-bottom: 2px solid var(--obwodka-jasna);
+  padding: 0 .75rem;
+  height: 60px;
+  background: #0b0d14 url('/res/ui/baner.png') center / auto 100% no-repeat;
+  border-bottom: 1px solid #000;
+  position: relative;
 }
 
+@media (min-width: 1280px) {
+  .gora { background-size: 100% 100%; height: 76px; }
+}
+
+/* Tytul gry jest juz namalowany na banerze — nasz naglowek zostaje tylko
+   dla czytnikow ekranu. */
 .gora h1 {
-  margin: 0;
-  font-size: 1.15rem;
-  letter-spacing: .06em;
-  color: var(--zloto);
-  text-shadow: 0 2px 0 #000;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
-.zasoby { margin-left: auto; display: flex; gap: .9rem; font-size: .95rem; }
+.zasoby {
+  margin-left: auto;
+  display: flex;
+  gap: .9rem;
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--zloto);
+  /* Baner jest kolorowy — bez obrysu liczby gina w tle. */
+  text-shadow: 0 0 4px #000, 0 0 8px #000, 0 1px 0 #000;
+}
 .zasoby span { display: flex; align-items: center; gap: .3rem; }
 .zasoby img { width: 18px; height: 18px; }
 
@@ -96,71 +129,127 @@ img { max-width: 100%; }
 
 /* ------------------------------------------------------------- menu -- */
 
+/*
+ * Tlo menu to oryginalny panel 280x700 z ozdobna ramka. Przez `border-image`
+ * rozciaga sie na dowolna wysokosc — rogi zostaja ostre, boki sie ciagna.
+ */
 .menu {
   overflow-y: auto;
-  padding: .6rem;
-  background: linear-gradient(#1e1810, #141009);
-  border-right: 2px solid var(--obwodka);
+  overflow-x: hidden;
+  padding: .8rem .5rem;
   display: flex;
   flex-direction: column;
-  gap: .3rem;
+  gap: .35rem;
+
+  background: #16202c;
+  border: 20px solid transparent;
+  border-image: url('/res/ui/panel-boczny.png') 30 fill / 20px stretch;
 }
 
+/*
+ * Przycisk menu: kamienny pas z oryginalu plus glowa smoka z prawej.
+ * Pas ma nieregularne konce, wiec 9-slice tnie go tak, zeby zostaly
+ * nietkniete, a rozciagal sie tylko srodek.
+ */
 .menu button {
   appearance: none;
+  position: relative;
   width: 100%;
-  padding: .6rem .7rem;
+  min-height: 42px;
+  padding: .55rem 2.9rem .55rem 1rem;
   text-align: left;
   font: inherit;
-  font-size: .92rem;
-  letter-spacing: .05em;
-  color: var(--pergamin);
-  background: linear-gradient(#2b2318, #1d1710);
-  border: 1px solid var(--obwodka);
-  border-radius: 7px;
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--zloto);
+  text-shadow: 0 1px 2px #000;
+  background: none;
+  border: 14px solid transparent;
+  border-image: url('/res/ui/pasek.png') 14 44 14 44 fill / 14px 44px 14px 44px stretch;
   cursor: pointer;
-  transition: background .12s, border-color .12s, transform .06s;
 }
 
-.menu button:hover { border-color: var(--obwodka-jasna); }
-.menu button:active { transform: translateY(1px); }
+.menu button:hover:not(:disabled) {
+  border-image-source: url('/res/ui/pasek-najazd.png');
+}
 
 .menu button[aria-current='true'] {
-  color: var(--zloto);
-  border-color: var(--zloto-ciemne);
-  background: linear-gradient(#3a2e1a, #241c10);
+  border-image-source: url('/res/ui/pasek-najazd.png');
+  color: #fff8dc;
 }
 
-.menu button:disabled { opacity: .38; cursor: default; }
+.menu button:active:not(:disabled) { transform: translateY(1px); }
+
+.menu button:disabled { opacity: .45; cursor: default; }
+
+/* Glowa smoka przy kazdym przycisku — jak w oryginale. */
+.menu button::after {
+  content: '';
+  position: absolute;
+  right: -16px;
+  top: 50%;
+  width: 44px;
+  height: 38px;
+  transform: translateY(-50%);
+  background: url('/res/ui/smok1.png') center / contain no-repeat;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .7));
+  pointer-events: none;
+}
+
+.menu li:nth-child(4n + 2) button::after { background-image: url('/res/ui/smok2.png'); }
+.menu li:nth-child(4n + 3) button::after { background-image: url('/res/ui/smok3.png'); }
+.menu li:nth-child(4n + 4) button::after { background-image: url('/res/ui/smok4.png'); }
+
+.menu ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
 
 .menu .rozdzial {
-  margin: .5rem 0 .1rem;
-  font-size: .7rem;
-  letter-spacing: .14em;
-  color: var(--przygaszony);
+  margin: .6rem 0 .1rem;
+  font-size: .68rem;
+  letter-spacing: .18em;
+  color: var(--zloto-ciemne);
   text-transform: uppercase;
+  text-align: center;
 }
 
 /* ------------------------------------------------------------ tresc -- */
 
+/*
+ * Obszar tresci lezy w ozdobnej ramce z oryginalu (1000x700, srodek
+ * przezroczysty). `border-image` rozciaga ja na kazdy rozmiar, a pod spodem
+ * idzie granatowa poswiata — jak w oryginalnym oknie gry.
+ */
 .tresc {
   overflow-y: auto;
-  padding: 1rem;
   min-height: 0;
+  padding: 1rem;
+
+  /* Granatowa poswiata jak w oryginalnym oknie gry — jasna w srodku,
+     ciemniejaca ku brzegom. */
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 40%,
+      #4a7fc4 0%, #27538c 26%, #16304f 55%, #0b1626 85%);
+  border: var(--ramka-grubosc) solid transparent;
+  border-image: url('/res/ui/ramka.png') 34 / var(--ramka-grubosc) stretch;
 }
 
 .tresc h2 {
   margin: 0 0 1rem;
-  font-size: 1.3rem;
+  font-size: 1.35rem;
   color: var(--zloto);
   text-align: center;
-  letter-spacing: .04em;
+  letter-spacing: .05em;
+  font-style: italic;
+  text-shadow: 0 2px 3px #000;
 }
 
+/* Kafelek tresci — pol-przezroczysty, zeby poswiata tla byla widoczna. */
 .karta {
-  background: linear-gradient(#211a12, #171207);
-  border: 1px solid var(--obwodka);
+  background: linear-gradient(rgba(12, 22, 36, .78), rgba(8, 14, 24, .88));
+  border: 1px solid rgba(120, 150, 190, .28);
   border-radius: var(--promien);
+  box-shadow: inset 0 1px 0 rgba(200, 220, 255, .07), 0 2px 10px rgba(0, 0, 0, .5);
   padding: 1rem;
 }
 
@@ -174,10 +263,11 @@ img { max-width: 100%; }
      i nie zostawia czarnych pasow. */
   aspect-ratio: 1;
   margin: 0 auto;
-  border-radius: 8px;
   overflow: hidden;
   background: #0b0906;
-  border: 1px solid var(--obwodka);
+  /* Oryginalna zlota rama obrazu z ekranu postaci (264x264, srodek pusty). */
+  border: 18px solid transparent;
+  border-image: url('/res/sfgame/scr/char/gold_frame.png') 34 / 18px stretch;
 }
 
 .portret img {
@@ -192,16 +282,17 @@ img { max-width: 100%; }
 /* -------------------------------------------------------- formularz -- */
 
 .pole { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .8rem; }
-.pole label { font-size: .85rem; color: var(--przygaszony); }
+.pole label { font-size: .85rem; color: var(--zloto-ciemne); letter-spacing: .04em; }
 
 .pole input {
   font: inherit;
   font-size: 1rem;
   padding: .65rem .7rem;
   color: var(--pergamin);
-  background: var(--tlo-pole);
+  background: rgba(8, 16, 26, .85);
   border: 1px solid var(--obwodka-jasna);
-  border-radius: 8px;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .6);
 }
 
 .pole input:focus {
@@ -210,29 +301,43 @@ img { max-width: 100%; }
   box-shadow: 0 0 0 2px rgba(240, 192, 66, .18);
 }
 
+/* Przycisk to oryginalny kamienny guzik 180x50, rozciagany 9-slice'em. */
 .przycisk {
   appearance: none;
   font: inherit;
   font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: .04em;
-  padding: .7rem 1.2rem;
-  color: #201804;
-  background: linear-gradient(#f5cf5f, #c79a25);
-  border: 1px solid #7a5c14;
-  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  padding: .5rem 1rem;
+  min-height: 46px;
+  color: var(--zloto);
+  text-shadow: 0 1px 2px #000;
+  background: none;
+  border: 12px solid transparent;
+  border-image: url('/res/ui/guzik.png') 12 20 12 20 fill / 12px 20px 12px 20px stretch;
   cursor: pointer;
   width: 100%;
 }
 
-.przycisk:active { transform: translateY(1px); }
-.przycisk:disabled { opacity: .5; cursor: default; }
+.przycisk:hover:not(:disabled) { border-image-source: url('/res/ui/guzik-najazd.png'); }
+.przycisk:active:not(:disabled) { transform: translateY(1px); }
+.przycisk:disabled { border-image-source: url('/res/ui/guzik-wylaczony.png'); opacity: .6; cursor: default; }
 
-.przycisk.drugi {
-  color: var(--pergamin);
-  background: linear-gradient(#2b2318, #1d1710);
-  border-color: var(--obwodka-jasna);
+.przycisk.drugi { font-weight: 600; letter-spacing: .03em; }
+
+/* Male kwadratowe przyciski — strzalki przy regulacji wygladu. */
+.przycisk.maly {
+  width: 42px;
+  min-height: 38px;
+  flex: 0 0 auto;
+  padding: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  border-width: 10px;
+  border-image: url('/res/ui/guzik-maly.png') 12 22 12 22 fill / 10px 14px 10px 14px stretch;
 }
+
+.przycisk.maly:hover:not(:disabled) { border-image-source: url('/res/ui/guzik-maly-najazd.png'); }
 
 .blad {
   color: var(--zly);

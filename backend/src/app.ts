@@ -21,6 +21,7 @@ import { buildClientConfig } from './clientConfig.js';
 import { getSql } from './db/client.js';
 import { config } from './config.js';
 import { konto } from './api/konto.js';
+import { karczma } from './api/karczma.js';
 import type { GameRequest } from './protocol/request.js';
 import type { Sql } from './db/client.js';
 
@@ -63,6 +64,7 @@ app.onError((err, c) => {
  * gry moga chodzic rownolegle, dopoki nowa nie przejmie wszystkiego.
  */
 app.route('/api', konto);
+app.route('/api', karczma);
 
 /**
  * Najprostszy mozliwy dowod zycia — bez bazy, bez zadnej pracy.

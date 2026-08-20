@@ -103,11 +103,11 @@ opisz('API konta', () => {
 
     const poImieniu = await wyslij('/api/register', { ...NOWY, email: 'inny@example.com' });
     expect(poImieniu.status).toBe(409);
-    expect((await poImieniu.json()).blad).toContain('imię');
+    expect(((await poImieniu.json()) as { blad: string }).blad).toContain('imię');
 
     const poAdresie = await wyslij('/api/register', { ...NOWY, nick: 'Ktos' });
     expect(poAdresie.status).toBe(409);
-    expect((await poAdresie.json()).blad).toContain('adres');
+    expect(((await poAdresie.json()) as { blad: string }).blad).toContain('adres');
   });
 
   it('pilnuje limitu kont na jeden adres IP', async () => {
@@ -120,8 +120,10 @@ opisz('API konta', () => {
   });
 
   it('logowanie daje za kazdym razem nowy token', async () => {
-    const pierwszy = (await (await wyslij('/api/register', NOWY)).json()).token;
-    const drugi = (await (await wyslij('/api/login', { nick: 'Lorein', haslo: 'tajne123' })).json()).token;
+    const { token: pierwszy } = (await (await wyslij('/api/register', NOWY)).json()) as { token: string };
+    const { token: drugi } = (await (
+      await wyslij('/api/login', { nick: 'Lorein', haslo: 'tajne123' })
+    ).json()) as { token: string };
 
     expect(drugi).toMatch(/^[0-9a-f]{32}$/);
     expect(drugi).not.toBe(pierwszy);
@@ -135,7 +137,9 @@ opisz('API konta', () => {
 
     expect(zleHaslo.status).toBe(401);
     expect(brakKonta.status).toBe(401);
-    expect((await zleHaslo.json()).blad).toBe((await brakKonta.json()).blad);
+    expect(((await zleHaslo.json()) as { blad: string }).blad).toBe(
+      ((await brakKonta.json()) as { blad: string }).blad,
+    );
   });
 
   it('konto ze starym haszem MD5 loguje sie i przechodzi na scrypt', async () => {
@@ -182,7 +186,7 @@ opisz('API konta', () => {
 
     const moje = await wyslij('/api/me', undefined, token);
     expect(moje.status).toBe(200);
-    expect((await moje.json()).gracz.nick).toBe('Lorein');
+    expect(((await moje.json()) as { gracz: { nick: string } }).gracz.nick).toBe('Lorein');
   });
 
   it('odrzuca dane, ktore nie trzymaja sie zasad', async () => {

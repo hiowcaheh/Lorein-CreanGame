@@ -150,28 +150,32 @@ export function App() {
     <Rama gracz={gracz} menuOtwarte={menuOtwarte} onPrzelaczMenu={() => setMenuOtwarte((o) => !o)}>
       <div className="srodek">
         <nav className={`menu${menuOtwarte ? ' otwarte' : ''}`}>
-          {MENU.map((poz) => {
-            const naglowek = poz.grupa !== grupa ? ((grupa = poz.grupa), poz.grupa) : null;
-            return (
-              <div key={poz.klucz}>
-                {naglowek && <div className="rozdzial">{naglowek}</div>}
-                <button
-                  aria-current={zakladka === poz.klucz}
-                  disabled={!GOTOWE.includes(poz.klucz)}
-                  title={GOTOWE.includes(poz.klucz) ? undefined : 'Jeszcze nie gotowe'}
-                  onClick={() => {
-                    setZakladka(poz.klucz);
-                    setMenuOtwarte(false);
-                  }}
-                >
-                  {poz.nazwa}
-                </button>
-              </div>
-            );
-          })}
+          <ul>
+            {MENU.map((poz) => {
+              const naglowek = poz.grupa !== grupa ? ((grupa = poz.grupa), poz.grupa) : null;
+              return (
+                <li key={poz.klucz}>
+                  {naglowek && <div className="rozdzial">{naglowek}</div>}
+                  <button
+                    aria-current={zakladka === poz.klucz}
+                    disabled={!GOTOWE.includes(poz.klucz)}
+                    title={GOTOWE.includes(poz.klucz) ? undefined : 'Jeszcze nie gotowe'}
+                    onClick={() => {
+                      setZakladka(poz.klucz);
+                      setMenuOtwarte(false);
+                    }}
+                  >
+                    {poz.nazwa}
+                  </button>
+                </li>
+              );
+            })}
 
-          <div className="rozdzial">Konto</div>
-          <button onClick={wyloguj}>Wyloguj</button>
+            <li>
+              <div className="rozdzial">Konto</div>
+              <button onClick={wyloguj}>Wyloguj</button>
+            </li>
+          </ul>
         </nav>
 
         <main className="tresc">{zakladka === 'bohater' && <Bohater gracz={gracz} />}</main>

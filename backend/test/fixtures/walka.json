@@ -1,0 +1,802 @@
+[
+    {
+        "nazwa": "wojownik z bronia",
+        "ziarno": 1,
+        "wejscie": {
+            "class": 1,
+            "lvl": 10,
+            "str": 100,
+            "agi": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "weapon": [
+                10,
+                20
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 2750,
+            "str": 100,
+            "dex": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "bronMin": 110,
+            "bronMax": 220
+        },
+        "potwor": {
+            "lvl": 11,
+            "class": 3,
+            "hp": 612,
+            "str": 11,
+            "dex": 34,
+            "int": 2,
+            "wit": 17,
+            "luck": 12,
+            "bronMin": 23,
+            "bronMax": 45
+        }
+    },
+    {
+        "nazwa": "wojownik z bronia",
+        "ziarno": 7,
+        "wejscie": {
+            "class": 1,
+            "lvl": 10,
+            "str": 100,
+            "agi": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "weapon": [
+                10,
+                20
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 2750,
+            "str": 100,
+            "dex": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "bronMin": 110,
+            "bronMax": 220
+        },
+        "potwor": {
+            "lvl": 10,
+            "class": 2,
+            "hp": 396,
+            "str": 12,
+            "dex": 2,
+            "int": 36,
+            "wit": 18,
+            "luck": 13,
+            "bronMin": 25,
+            "bronMax": 50
+        }
+    },
+    {
+        "nazwa": "wojownik z bronia",
+        "ziarno": 42,
+        "wejscie": {
+            "class": 1,
+            "lvl": 10,
+            "str": 100,
+            "agi": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "weapon": [
+                10,
+                20
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 2750,
+            "str": 100,
+            "dex": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "bronMin": 110,
+            "bronMax": 220
+        },
+        "potwor": {
+            "lvl": 10,
+            "class": 3,
+            "hp": 759,
+            "str": 9,
+            "dex": 40,
+            "int": 3,
+            "wit": 23,
+            "luck": 15,
+            "bronMin": 23,
+            "bronMax": 45
+        }
+    },
+    {
+        "nazwa": "wojownik z bronia",
+        "ziarno": 1234,
+        "wejscie": {
+            "class": 1,
+            "lvl": 10,
+            "str": 100,
+            "agi": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "weapon": [
+                10,
+                20
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 2750,
+            "str": 100,
+            "dex": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "bronMin": 110,
+            "bronMax": 220
+        },
+        "potwor": {
+            "lvl": 10,
+            "class": 1,
+            "hp": 880,
+            "str": 35,
+            "dex": 2,
+            "int": 2,
+            "wit": 20,
+            "luck": 15,
+            "bronMin": 20,
+            "bronMax": 40
+        }
+    },
+    {
+        "nazwa": "wojownik z bronia",
+        "ziarno": 99999,
+        "wejscie": {
+            "class": 1,
+            "lvl": 10,
+            "str": 100,
+            "agi": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "weapon": [
+                10,
+                20
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 2750,
+            "str": 100,
+            "dex": 20,
+            "int": 20,
+            "wit": 50,
+            "luck": 30,
+            "bronMin": 110,
+            "bronMax": 220
+        },
+        "potwor": {
+            "lvl": 10,
+            "class": 2,
+            "hp": 506,
+            "str": 12,
+            "dex": 2,
+            "int": 42,
+            "wit": 23,
+            "luck": 14,
+            "bronMin": 25,
+            "bronMax": 50
+        }
+    },
+    {
+        "nazwa": "mag",
+        "ziarno": 1,
+        "wejscie": {
+            "class": 2,
+            "lvl": 25,
+            "str": 30,
+            "agi": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "weapon": [
+                30,
+                60
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 4160,
+            "str": 30,
+            "dex": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "bronMin": 630,
+            "bronMax": 1260
+        },
+        "potwor": {
+            "lvl": 26,
+            "class": 3,
+            "hp": 2268,
+            "str": 4,
+            "dex": 67,
+            "int": 17,
+            "wit": 28,
+            "luck": 23,
+            "bronMin": 134,
+            "bronMax": 267
+        }
+    },
+    {
+        "nazwa": "mag",
+        "ziarno": 7,
+        "wejscie": {
+            "class": 2,
+            "lvl": 25,
+            "str": 30,
+            "agi": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "weapon": [
+                30,
+                60
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 4160,
+            "str": 30,
+            "dex": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "bronMin": 630,
+            "bronMax": 1260
+        },
+        "potwor": {
+            "lvl": 25,
+            "class": 2,
+            "hp": 1508,
+            "str": 4,
+            "dex": 3,
+            "int": 71,
+            "wit": 29,
+            "luck": 25,
+            "bronMin": 150,
+            "bronMax": 300
+        }
+    },
+    {
+        "nazwa": "mag",
+        "ziarno": 42,
+        "wejscie": {
+            "class": 2,
+            "lvl": 25,
+            "str": 30,
+            "agi": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "weapon": [
+                30,
+                60
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 4160,
+            "str": 30,
+            "dex": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "bronMin": 630,
+            "bronMax": 1260
+        },
+        "potwor": {
+            "lvl": 25,
+            "class": 3,
+            "hp": 2886,
+            "str": 3,
+            "dex": 79,
+            "int": 25,
+            "wit": 37,
+            "luck": 29,
+            "bronMin": 134,
+            "bronMax": 267
+        }
+    },
+    {
+        "nazwa": "mag",
+        "ziarno": 1234,
+        "wejscie": {
+            "class": 2,
+            "lvl": 25,
+            "str": 30,
+            "agi": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "weapon": [
+                30,
+                60
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 4160,
+            "str": 30,
+            "dex": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "bronMin": 630,
+            "bronMax": 1260
+        },
+        "potwor": {
+            "lvl": 25,
+            "class": 1,
+            "hp": 3328,
+            "str": 70,
+            "dex": 3,
+            "int": 17,
+            "wit": 32,
+            "luck": 29,
+            "bronMin": 120,
+            "bronMax": 240
+        }
+    },
+    {
+        "nazwa": "mag",
+        "ziarno": 99999,
+        "wejscie": {
+            "class": 2,
+            "lvl": 25,
+            "str": 30,
+            "agi": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "weapon": [
+                30,
+                60
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 4160,
+            "str": 30,
+            "dex": 30,
+            "int": 200,
+            "wit": 80,
+            "luck": 60,
+            "bronMin": 630,
+            "bronMax": 1260
+        },
+        "potwor": {
+            "lvl": 25,
+            "class": 2,
+            "hp": 1924,
+            "str": 4,
+            "dex": 3,
+            "int": 84,
+            "wit": 37,
+            "luck": 28,
+            "bronMin": 150,
+            "bronMax": 300
+        }
+    },
+    {
+        "nazwa": "lowca w zbroi",
+        "ziarno": 1,
+        "wejscie": {
+            "class": 3,
+            "lvl": 40,
+            "str": 50,
+            "agi": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "weapon": [
+                50,
+                90
+            ],
+            "armor": 800
+        },
+        "gracz": {
+            "hp": 19680,
+            "str": 50,
+            "dex": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "bronMin": 1550,
+            "bronMax": 2790
+        },
+        "potwor": {
+            "lvl": 41,
+            "class": 3,
+            "hp": 5166,
+            "str": 6,
+            "dex": 100,
+            "int": 4,
+            "wit": 41,
+            "luck": 34,
+            "bronMin": 334,
+            "bronMax": 600
+        }
+    },
+    {
+        "nazwa": "lowca w zbroi",
+        "ziarno": 7,
+        "wejscie": {
+            "class": 3,
+            "lvl": 40,
+            "str": 50,
+            "agi": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "weapon": [
+                50,
+                90
+            ],
+            "armor": 800
+        },
+        "gracz": {
+            "hp": 19680,
+            "str": 50,
+            "dex": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "bronMin": 1550,
+            "bronMax": 2790
+        },
+        "potwor": {
+            "lvl": 40,
+            "class": 2,
+            "hp": 3608,
+            "str": 6,
+            "dex": 28,
+            "int": 107,
+            "wit": 44,
+            "luck": 37,
+            "bronMin": 375,
+            "bronMax": 675
+        }
+    },
+    {
+        "nazwa": "lowca w zbroi",
+        "ziarno": 42,
+        "wejscie": {
+            "class": 3,
+            "lvl": 40,
+            "str": 50,
+            "agi": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "weapon": [
+                50,
+                90
+            ],
+            "armor": 800
+        },
+        "gracz": {
+            "hp": 19680,
+            "str": 50,
+            "dex": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "bronMin": 1550,
+            "bronMax": 2790
+        },
+        "potwor": {
+            "lvl": 40,
+            "class": 3,
+            "hp": 6765,
+            "str": 5,
+            "dex": 118,
+            "int": 5,
+            "wit": 55,
+            "luck": 43,
+            "bronMin": 334,
+            "bronMax": 600
+        }
+    },
+    {
+        "nazwa": "lowca w zbroi",
+        "ziarno": 1234,
+        "wejscie": {
+            "class": 3,
+            "lvl": 40,
+            "str": 50,
+            "agi": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "weapon": [
+                50,
+                90
+            ],
+            "armor": 800
+        },
+        "gracz": {
+            "hp": 19680,
+            "str": 50,
+            "dex": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "bronMin": 1550,
+            "bronMax": 2790
+        },
+        "potwor": {
+            "lvl": 40,
+            "class": 1,
+            "hp": 7708,
+            "str": 105,
+            "dex": 30,
+            "int": 4,
+            "wit": 47,
+            "luck": 44,
+            "bronMin": 300,
+            "bronMax": 540
+        }
+    },
+    {
+        "nazwa": "lowca w zbroi",
+        "ziarno": 99999,
+        "wejscie": {
+            "class": 3,
+            "lvl": 40,
+            "str": 50,
+            "agi": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "weapon": [
+                50,
+                90
+            ],
+            "armor": 800
+        },
+        "gracz": {
+            "hp": 19680,
+            "str": 50,
+            "dex": 300,
+            "int": 40,
+            "wit": 120,
+            "luck": 90,
+            "bronMin": 1550,
+            "bronMax": 2790
+        },
+        "potwor": {
+            "lvl": 40,
+            "class": 2,
+            "hp": 4510,
+            "str": 6,
+            "dex": 27,
+            "int": 126,
+            "wit": 55,
+            "luck": 41,
+            "bronMin": 375,
+            "bronMax": 675
+        }
+    },
+    {
+        "nazwa": "poczatkujacy",
+        "ziarno": 1,
+        "wejscie": {
+            "class": 1,
+            "lvl": 1,
+            "str": 17,
+            "agi": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "weapon": [
+                4,
+                8
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 150,
+            "str": 17,
+            "dex": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "bronMin": 10.8,
+            "bronMax": 21.6
+        },
+        "potwor": {
+            "lvl": 2,
+            "class": 3,
+            "hp": 54,
+            "str": 2,
+            "dex": 6,
+            "int": 1,
+            "wit": 6,
+            "luck": 4,
+            "bronMin": 2,
+            "bronMax": 4
+        }
+    },
+    {
+        "nazwa": "poczatkujacy",
+        "ziarno": 7,
+        "wejscie": {
+            "class": 1,
+            "lvl": 1,
+            "str": 17,
+            "agi": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "weapon": [
+                4,
+                8
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 150,
+            "str": 17,
+            "dex": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "bronMin": 10.8,
+            "bronMax": 21.6
+        },
+        "potwor": {
+            "lvl": 1,
+            "class": 2,
+            "hp": 24,
+            "str": 2,
+            "dex": 2,
+            "int": 7,
+            "wit": 6,
+            "luck": 5,
+            "bronMin": 2,
+            "bronMax": 4
+        }
+    },
+    {
+        "nazwa": "poczatkujacy",
+        "ziarno": 42,
+        "wejscie": {
+            "class": 1,
+            "lvl": 1,
+            "str": 17,
+            "agi": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "weapon": [
+                4,
+                8
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 150,
+            "str": 17,
+            "dex": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "bronMin": 10.8,
+            "bronMax": 21.6
+        },
+        "potwor": {
+            "lvl": 1,
+            "class": 3,
+            "hp": 42,
+            "str": 2,
+            "dex": 7,
+            "int": 2,
+            "wit": 7,
+            "luck": 5,
+            "bronMin": 2,
+            "bronMax": 4
+        }
+    },
+    {
+        "nazwa": "poczatkujacy",
+        "ziarno": 1234,
+        "wejscie": {
+            "class": 1,
+            "lvl": 1,
+            "str": 17,
+            "agi": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "weapon": [
+                4,
+                8
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 150,
+            "str": 17,
+            "dex": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "bronMin": 10.8,
+            "bronMax": 21.6
+        },
+        "potwor": {
+            "lvl": 1,
+            "class": 1,
+            "hp": 48,
+            "str": 6,
+            "dex": 2,
+            "int": 1,
+            "wit": 6,
+            "luck": 5,
+            "bronMin": 2,
+            "bronMax": 3
+        }
+    },
+    {
+        "nazwa": "poczatkujacy",
+        "ziarno": 99999,
+        "wejscie": {
+            "class": 1,
+            "lvl": 1,
+            "str": 17,
+            "agi": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "weapon": [
+                4,
+                8
+            ],
+            "armor": 0
+        },
+        "gracz": {
+            "hp": 150,
+            "str": 17,
+            "dex": 13,
+            "int": 10,
+            "wit": 15,
+            "luck": 10,
+            "bronMin": 10.8,
+            "bronMax": 21.6
+        },
+        "potwor": {
+            "lvl": 1,
+            "class": 2,
+            "hp": 28,
+            "str": 2,
+            "dex": 2,
+            "int": 8,
+            "wit": 7,
+            "luck": 5,
+            "bronMin": 2,
+            "bronMax": 4
+        }
+    }
+]

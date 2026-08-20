@@ -41,11 +41,13 @@ export interface Gracz {
 /**
  * Ile doswiadczenia trzeba na kolejny poziom.
  *
- * `LEVELS` to progi z `req.php`. Gracz na ostatnim poziomie tabeli nie
- * awansuje juz nigdzie — wtedy zwracamy jego wlasny prog, zeby pasek
- * pokazywal pelne wypelnienie zamiast dzielenia przez zero.
+ * UWAGA na pulapke: kolumna `exp` NIE jest sumaryczna. Przy awansie
+ * oryginal odejmuje od niej prog (`exp -= LEVELS[lvl]; lvl++`), wiec
+ * trzyma postep W OBREBIE biezacego poziomu. Liczenie procentu jako
+ * `(exp - prog_poprzedni) / (prog - prog_poprzedni)` dawaloby wynik
+ * poprawny tylko na pierwszym poziomie, gdzie prog poprzedni wynosi zero.
  */
-function progPoziomu(poziom: number): number {
+export function progPoziomu(poziom: number): number {
   return LEVELS[poziom] ?? LEVELS[LEVELS.length - 1] ?? 0;
 }
 
@@ -62,9 +64,7 @@ export function zbudujGracza(wiersz: Record<string, unknown>): Gracz {
   const poziom = intval(wiersz['lvl'] ?? 1);
   const doswiadczenie = intval(wiersz['exp'] ?? 0);
 
-  const progObecny = progPoziomu(poziom - 1);
-  const progNastepny = progPoziomu(poziom);
-  const zakres = Math.max(1, progNastepny - progObecny);
+  const progNastepny = Math.max(1, progPoziomu(poziom));
 
   const wytrzymalosc = intval(wiersz['attr_wit'] ?? 10);
   const klasa = intval(wiersz['class'] ?? 1);
@@ -84,7 +84,7 @@ export function zbudujGracza(wiersz: Record<string, unknown>): Gracz {
 
     doswiadczenie,
     doNastepnegoPoziomu: progNastepny,
-    postepPoziomu: Math.min(1, Math.max(0, (doswiadczenie - progObecny) / zakres)),
+    postepPoziomu: Math.min(1, Math.max(0, doswiadczenie / progNastepny)),
 
     cechy: {
       sila: intval(wiersz['attr_str'] ?? 10),
