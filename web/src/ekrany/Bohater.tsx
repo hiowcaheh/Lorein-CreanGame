@@ -11,7 +11,8 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { Portret } from '../gra/Portret';
 import { NAZWY_KLAS, NAZWY_RAS } from '../gra/portret';
-import { nazwaPrzedmiotu } from '../gra/przedmioty';
+import { PIERWSZY_SLOT_PLECAKA, nazwaPrzedmiotu, slotDlaRodzaju } from '../gra/przedmioty';
+import { usePrzeciaganie } from '../gra/usePrzeciaganie';
 import {
   BOK_PLUSA,
   HONOR,
@@ -52,6 +53,12 @@ const NAZWY_WIERZCHOWCOW = ['brak', 'Osioł', 'Koń', 'Tygrys', 'Smok'];
  */
 const ZACHETA_DO_OPISU = 'W tym miejscu możesz opisać swoją postać.';
 
+/** Miejsce na przedmiot ma 90x90, tak jak same obrazki. */
+const BOK_MIEJSCA = 90;
+
+/** Miejsce na bron — jego sylwetka zalezy od klasy. */
+const SLOT_BRONI = 8;
+
 function styl(r: Ramka): React.CSSProperties {
   return { left: r.lewo, top: r.gora, width: r.szerokosc, height: r.wysokosc };
 }
@@ -61,9 +68,60 @@ function wiersz(i: number): number {
   return WIERSZ_CECHY_Y - 100 + i * ODSTEP_WIERSZA;
 }
 
-export function Bohater({ gracz, onZapiszOpis }: { gracz: Gracz; onZapiszOpis: (opis: string) => void }) {
-  const wPlecaku = gracz.ekwipunek.filter((p) => p.slot >= 10);
+export function Bohater({
+  gracz,
+  onZapiszOpis,
+  onPrzenies,
+}: {
+  gracz: Gracz;
+  onZapiszOpis: (opis: string) => void;
+  /** `cel === null` znaczy „zaloz na wlasciwe miejsce". */
+  onPrzenies: (zrodlo: number, cel: number | null) => void;
+}) {
   const [pokazany, setPokazany] = useState<Przedmiot | null>(null);
+  const ekran = useRef<HTMLDivElement>(null);
+
+  const przeciaganie = usePrzeciaganie({
+    ekran,
+    onKlik: (przedmiot) => setPokazany((p) => (p?.slot === przedmiot.slot ? null : przedmiot)),
+    onUpusc: (przedmiot, cel) => {
+      setPokazany(null);
+      onPrzenies(przedmiot.slot, cel);
+    },
+  });
+
+  const ciagniety = przeciaganie.ciagnie ? przeciaganie.stan : null;
+
+  /*
+   * Klikniecie obok zamyka podpowiedz.
+   *
+   * Klikniecia w same miejsca i w podpowiedz omijamy — tam React ma
+   * wlasna obsluge, ktora przelacza podpowiedz. Bez tego wyjatku
+   * ponowne stukniecie w ten sam przedmiot najpierw zamykaloby
+   * podpowiedz tutaj, a zaraz potem otwieralo ja z powrotem.
+   */
+  useEffect(() => {
+    if (!pokazany) return;
+
+    const zamknij = (e: PointerEvent) => {
+      const cel = e.target as Element | null;
+      if (cel?.closest('[data-slot]') || cel?.closest('.podpowiedz')) return;
+      setPokazany(null);
+    };
+
+    document.addEventListener('pointerdown', zamknij);
+    return () => document.removeEventListener('pointerdown', zamknij);
+  }, [pokazany]);
+
+  /*
+   * Miejsce, ktore oryginal podswietla przy zlapaniu przedmiotu
+   * (`IMG_SLOT_SUGGESTION`): to, w ktorym rzecz ma prawo lezec.
+   * Przedmiot juz zalozony nie ma czego sugerowac.
+   */
+  const sugerowane =
+    ciagniety && ciagniety.przedmiot.slot >= PIERWSZY_SLOT_PLECAKA
+      ? slotDlaRodzaju(ciagniety.przedmiot.typ)
+      : null;
 
   const cechy = [
     { nazwa: 'Siła', wartosc: String(gracz.cechy.sila) },
@@ -84,33 +142,35 @@ export function Bohater({ gracz, onZapiszOpis }: { gracz: Gracz; onZapiszOpis: (
   ];
 
   return (
-    <div className="postac">
+    <div className="postac" ref={ekran}>
       <img className="postac-tlo lewe" src={TLO_LEWE} alt="" />
       <img className="postac-tlo prawe" src={TLO_PRAWE} alt="" />
 
       {/* --- miejsca na przedmioty --- */}
-      {MIEJSCA.map((m) => {
-        const przedmiot = gracz.ekwipunek.find((p) => p.slot === m.slot);
-        const pusty = m.slot === 8 ? pustaBron(gracz.klasa) : m.pusty;
-        return (
-          <Miejsce
-            key={m.slot}
-            nazwa={m.nazwa}
-            ramka={m.ramka}
-            pusty={pusty}
-            przedmiot={przedmiot}
-            onPokaz={setPokazany}
-          />
-        );
-      })}
+      {MIEJSCA.map((m) => (
+        <Miejsce
+          key={m.slot}
+          slot={m.slot}
+          nazwa={m.nazwa}
+          ramka={m.ramka}
+          pusty={m.slot === SLOT_BRONI ? pustaBron(gracz.klasa) : m.pusty}
+          przedmiot={gracz.ekwipunek.find((p) => p.slot === m.slot)}
+          ciagniety={ciagniety?.przedmiot}
+          sugerowane={sugerowane === m.slot}
+          uchwyty={przeciaganie.uchwyty}
+        />
+      ))}
 
       {PLECAK.map((r, i) => (
         <Miejsce
           key={`plecak${i}`}
+          slot={PIERWSZY_SLOT_PLECAKA + i}
           nazwa={`Plecak ${i + 1}`}
           ramka={r}
-          przedmiot={wPlecaku[i]}
-          onPokaz={setPokazany}
+          przedmiot={gracz.ekwipunek.find((p) => p.slot === PIERWSZY_SLOT_PLECAKA + i)}
+          ciagniety={ciagniety?.przedmiot}
+          sugerowane={false}
+          uchwyty={przeciaganie.uchwyty}
         />
       ))}
 
@@ -227,8 +287,18 @@ export function Bohater({ gracz, onZapiszOpis }: { gracz: Gracz; onZapiszOpis: (
       {pokazany && (
         <PodpowiedzPrzedmiotu
           przedmiot={pokazany}
-          miejsce={srodekMiejsca(pokazany, gracz)}
+          miejsce={srodekMiejsca(pokazany)}
           onZamknij={() => setPokazany(null)}
+        />
+      )}
+
+      {/* Przedmiot w locie — leci za palcem i niczego nie zaslania klikom. */}
+      {ciagniety && (
+        <img
+          className="postac-ciagniety"
+          src={ciagniety.przedmiot.obrazek}
+          alt=""
+          style={{ left: ciagniety.x - BOK_MIEJSCA / 2, top: ciagniety.y - BOK_MIEJSCA / 2 }}
         />
       )}
     </div>
@@ -239,11 +309,10 @@ export function Bohater({ gracz, onZapiszOpis }: { gracz: Gracz; onZapiszOpis: (
  * Gdzie stoi miejsce, w ktorym lezy przedmiot — podpowiedz ma sie pokazac
  * nad nim, a nie w przypadkowym rogu.
  */
-function srodekMiejsca(przedmiot: Przedmiot, gracz: Gracz): { x: number; y: number } {
-  const wPlecaku = gracz.ekwipunek.filter((p) => p.slot >= 10);
+function srodekMiejsca(przedmiot: Przedmiot): { x: number; y: number } {
   const ramka =
     MIEJSCA.find((m) => m.slot === przedmiot.slot)?.ramka ??
-    PLECAK[wPlecaku.indexOf(przedmiot)] ??
+    PLECAK[przedmiot.slot - PIERWSZY_SLOT_PLECAKA] ??
     PLECAK[0]!;
 
   return {
@@ -305,24 +374,45 @@ function Opis({ wartosc, onZapisz }: { wartosc: string; onZapisz: (opis: string)
   );
 }
 
+/**
+ * Jedno miejsce na przedmiot.
+ *
+ * `data-slot` jest tu po to, zeby przeciaganie moglo odczytac numer
+ * miejsca wprost z elementu pod palcem — inaczej trzeba by trzymac osobna
+ * mape wspolrzednych i pilnowac, zeby nie rozjechala sie z ukladem.
+ */
 function Miejsce({
+  slot,
   nazwa,
   ramka,
   pusty,
   przedmiot,
-  onPokaz,
+  ciagniety,
+  sugerowane,
+  uchwyty,
 }: {
+  slot: number;
   nazwa: string;
   ramka: Ramka;
   pusty?: string | undefined;
   przedmiot?: Przedmiot | undefined;
-  onPokaz: (przedmiot: Przedmiot | null) => void;
+  ciagniety?: Przedmiot | undefined;
+  sugerowane: boolean;
+  uchwyty: (przedmiot: Przedmiot) => Record<string, unknown>;
 }) {
+  const klasy = ['postac-slot'];
+  if (sugerowane) klasy.push('sugerowane');
+
+  const sugestia = sugerowane ? (
+    <img className="podpowiedz-miejsca" src={`${KATALOG_SLOTOW}slot_suggestion.png`} alt="" />
+  ) : null;
+
   // Puste miejsce nie ma czego pokazywac, wiec zostaje zwyklym kafelkiem.
   if (!przedmiot) {
     return (
-      <div className="postac-slot" style={styl(ramka)} title={nazwa}>
+      <div className={klasy.join(' ')} style={styl(ramka)} title={nazwa} data-slot={slot}>
         {pusty && <img className="pusty" src={KATALOG_SLOTOW + pusty} alt="" />}
+        {sugestia}
       </div>
     );
   }
@@ -330,18 +420,29 @@ function Miejsce({
   return (
     <button
       type="button"
-      className="postac-slot"
+      className={klasy.join(' ')}
       style={styl(ramka)}
       title={nazwaPrzedmiotu(przedmiot)}
-      onClick={() => onPokaz(przedmiot)}
+      data-slot={slot}
+      {...uchwyty(przedmiot)}
     >
       <img
+        // Przedmiot w locie znika ze swojego miejsca — leci za palcem.
+        style={ciagniety?.slot === slot ? { visibility: 'hidden' } : undefined}
         src={przedmiot.obrazek}
         alt={nazwa}
+        /*
+         * Bez tego przegladarka zaczyna WLASNE przeciaganie obrazka
+         * (to od upuszczania plików), a ono natychmiast przerywa nasze
+         * zdarzenia wskaznika zdarzeniem `pointercancel`. Przedmiot
+         * podnosil sie i w tej samej chwili wracal na miejsce.
+         */
+        draggable={false}
         onError={(e) => {
           e.currentTarget.style.display = 'none';
         }}
       />
+      {sugestia}
     </button>
   );
 }

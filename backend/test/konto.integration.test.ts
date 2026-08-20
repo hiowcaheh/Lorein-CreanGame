@@ -224,6 +224,149 @@ opisz('API konta', () => {
     expect((await wyslij('/api/opis', { opis: 'cokolwiek' }, 'f'.repeat(32))).status).toBe(401);
   });
 
+  // ------------------------------------------------------ ekwipunek --
+
+  /*
+   * Numer przedmiotu przeznaczonego dla KLASY TESTOWEGO GRACZA.
+   *
+   * `NOWY` zaklada maga, a klasa siedzi w tysiacach numeru przedmiotu:
+   * 1003 to trzeci przedmiot maga. Przedmiot z numerem 3 nalezalby do
+   * wojownika i zaden test zakladania by nie przeszedl.
+   */
+  const NUMER_DLA_MAGA = 1003;
+
+  /** Wklada przedmiot wprost do bazy — sklepow jeszcze nie ma. */
+  async function dajPrzedmiot(
+    wlasciciel: number,
+    czesci: { typ: number; numer?: number; slot: number; cecha?: number; wartosc?: number; pancerz?: number },
+  ) {
+    const [wiersz] = await sql<{ id: number }[]>`
+      INSERT INTO items (item_type, item_id, dmg_min, dmg_max,
+                         atr_type_1, atr_type_2, atr_type_3,
+                         atr_val_1, atr_val_2, atr_val_3,
+                         gold, mush, slot, owner_id)
+      VALUES (${czesci.typ}, ${czesci.numer ?? NUMER_DLA_MAGA}, ${czesci.pancerz ?? 0}, 0,
+              ${czesci.cecha ?? 0}, 0, 0,
+              ${czesci.wartosc ?? 0}, 0, 0,
+              100, 0, ${czesci.slot}, ${wlasciciel})
+      RETURNING id
+    `;
+    return wiersz!.id;
+  }
+
+  async function zaloz() {
+    const odp = await wyslij('/api/register', NOWY);
+    const { token, gracz } = (await odp.json()) as { token: string; gracz: { id: number } };
+    return { token, id: gracz.id };
+  }
+
+  it('zaklada przedmiot z plecaka na wlasciwe miejsce i dolicza cechy', async () => {
+    const { token, id } = await zaloz();
+    // Typ 6 to helm, jego miejsce to slot 0. Kladziemy go w plecaku.
+    await dajPrzedmiot(id, { typ: 6, slot: 11, cecha: 1, wartosc: 7, pancerz: 5 });
+
+    const przed = (await (await wyslij('/api/me', undefined, token)).json()) as {
+      gracz: { cechy: { sila: number }; bonusy: { sila: number }; pancerz: number };
+    };
+
+    // W plecaku przedmiot nie daje nic.
+    expect(przed.gracz.bonusy.sila).toBe(0);
+    expect(przed.gracz.pancerz).toBe(0);
+    const silaBazowa = przed.gracz.cechy.sila;
+
+    // `cel: null` znaczy „zaloz na wlasciwe miejsce".
+    const odp = await wyslij('/api/ekwipunek', { zrodlo: 11, cel: null }, token);
+    expect(odp.status).toBe(200);
+
+    const { gracz } = (await odp.json()) as {
+      gracz: {
+        cechy: { sila: number };
+        bonusy: { sila: number };
+        pancerz: number;
+        ekwipunek: { slot: number }[];
+      };
+    };
+
+    expect(gracz.ekwipunek.find((p) => p.slot === 0)).toBeDefined();
+    expect(gracz.bonusy.sila).toBe(7);
+    expect(gracz.cechy.sila).toBe(silaBazowa + 7);
+    expect(gracz.pancerz).toBe(5);
+  });
+
+  it('zdjecie przedmiotu odbiera cechy z powrotem', async () => {
+    const { token, id } = await zaloz();
+    await dajPrzedmiot(id, { typ: 6, slot: 0, cecha: 1, wartosc: 7, pancerz: 5 });
+
+    const zdjete = await wyslij('/api/ekwipunek', { zrodlo: 0, cel: 11 }, token);
+    expect(zdjete.status).toBe(200);
+
+    const { gracz } = (await zdjete.json()) as {
+      gracz: { bonusy: { sila: number }; pancerz: number; ekwipunek: { slot: number }[] };
+    };
+    // Rejestracja daje bron startowa w slocie 8 — szukamy naszego helmu.
+    expect(gracz.ekwipunek.some((p) => p.slot === 11)).toBe(true);
+    expect(gracz.ekwipunek.some((p) => p.slot === 0)).toBe(false);
+    expect(gracz.bonusy.sila).toBe(0);
+    expect(gracz.pancerz).toBe(0);
+  });
+
+  it('zamienia przedmiot zalozony z tym z plecaka', async () => {
+    const { token, id } = await zaloz();
+    const slaby = await dajPrzedmiot(id, { typ: 6, slot: 0, cecha: 1, wartosc: 2 });
+    const mocny = await dajPrzedmiot(id, { typ: 6, slot: 12, cecha: 1, wartosc: 9 });
+
+    const odp = await wyslij('/api/ekwipunek', { zrodlo: 12, cel: null }, token);
+    expect(odp.status).toBe(200);
+
+    const w = await sql<{ id: number; slot: number }[]>`
+      SELECT id, slot FROM items WHERE owner_id = ${id} ORDER BY id
+    `;
+    expect(w.find((r) => r.id === mocny)!.slot).toBe(0);
+    expect(w.find((r) => r.id === slaby)!.slot).toBe(12);
+
+    const { gracz } = (await odp.json()) as { gracz: { bonusy: { sila: number } } };
+    expect(gracz.bonusy.sila).toBe(9);
+  });
+
+  it('nie zaklada przedmiotu w zle miejsce ani z innej klasy', async () => {
+    const { token, id } = await zaloz();
+    await dajPrzedmiot(id, { typ: 6, slot: 11 });
+
+    // Helm na miejsce butow (slot 3).
+    const zle = await wyslij('/api/ekwipunek', { zrodlo: 11, cel: 3 }, token);
+    expect(zle.status).toBe(409);
+
+    // Ten sam helm, ale wojownika — a gracz jest magiem.
+    await dajPrzedmiot(id, { typ: 6, numer: 3, slot: 12 });
+    const obcy = await wyslij('/api/ekwipunek', { zrodlo: 12, cel: null }, token);
+    expect(obcy.status).toBe(409);
+
+    // Nic sie nie ruszylo (slot 8 to bron ze startu).
+    const w = await sql<{ slot: number }[]>`SELECT slot FROM items WHERE owner_id = ${id} ORDER BY slot`;
+    expect(w.map((r) => r.slot)).toEqual([8, 11, 12]);
+  });
+
+  it('odrzuca miejsca spoza planszy i puste zrodlo', async () => {
+    const { token, id } = await zaloz();
+    await dajPrzedmiot(id, { typ: 6, slot: 11 });
+
+    expect((await wyslij('/api/ekwipunek', { zrodlo: 11, cel: 99 }, token)).status).toBe(400);
+    expect((await wyslij('/api/ekwipunek', { zrodlo: 13, cel: null }, token)).status).toBe(400);
+    expect((await wyslij('/api/ekwipunek', { zrodlo: 11, cel: null })).status).toBe(401);
+  });
+
+  it('przeklada w plecaku bez pytania o rodzaj', async () => {
+    const { token, id } = await zaloz();
+    // Bron wojownika w plecaku — do innego miejsca w plecaku wolno zawsze.
+    const bron = await dajPrzedmiot(id, { typ: 1, slot: 10 });
+
+    const odp = await wyslij('/api/ekwipunek', { zrodlo: 10, cel: 14 }, token);
+    expect(odp.status).toBe(200);
+
+    const [w] = await sql<{ slot: number }[]>`SELECT slot FROM items WHERE id = ${bron}`;
+    expect(w!.slot).toBe(14);
+  });
+
   it('przycina rase, klase i wyglad do dozwolonego zakresu', async () => {
     const odp = await wyslij('/api/register', { ...NOWY, rasa: 99, klasa: -5, wyglad: [1e9, -3] });
     expect(odp.status).toBe(201);

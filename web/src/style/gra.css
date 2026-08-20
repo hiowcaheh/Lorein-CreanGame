@@ -603,16 +603,58 @@ img { max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Zajete miejsce jest przyciskiem — po klikNIECIU pokazuje podpowiedz. */
+  /* Zajete miejsce jest przyciskiem — klikniecie pokazuje podpowiedz,
+     przeciagniecie przeklada przedmiot. */
   padding: 0;
   border: none;
   background: none;
   font: inherit;
+  /*
+   * Bez tego przeciagniecie PALCEM po przedmiocie przewija strone
+   * zamiast go przenosic — przegladarka uznaje ruch za gest przewijania,
+   * zanim zdarzenia wskaznika w ogole do nas dojda.
+   */
+  touch-action: none;
+  /* Ciagniecie nie ma zaznaczac tekstu ani podnosic obrazka. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-button.postac-slot { cursor: pointer; }
+.postac-slot img { -webkit-user-drag: none; }
+
+button.postac-slot { cursor: grab; }
+button.postac-slot:active { cursor: grabbing; }
 button.postac-slot:hover img { filter: brightness(1.15); }
+
 .postac-slot img { width: 100%; height: 100%; object-fit: contain; }
+
+/*
+ * Podpowiedz miejsca (`slot_suggestion.png`) — oryginal podswietla nia
+ * to miejsce, w ktorym zlapany przedmiot ma prawo lezec.
+ */
+.postac-slot .podpowiedz-miejsca {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: miejsce-pulsuje 1.1s ease-in-out infinite;
+}
+
+@keyframes miejsce-pulsuje {
+  0%, 100% { opacity: .55; }
+  50% { opacity: 1; }
+}
+
+/* Przedmiot w locie: leci za palcem i nie przechwytuje zdarzen — inaczej
+   zaslanialby miejsce, na ktore go upuszczamy. */
+.postac-ciagniety {
+  position: absolute;
+  z-index: 20;
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .7));
+}
 
 /* Sylwetka pustego miejsca jest przygaszona — ma podpowiadac, nie krzyczec. */
 .postac-slot img.pusty { opacity: .55; }
@@ -787,6 +829,35 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 
 .podpowiedz .cena { color: var(--pergamin); }
 .podpowiedz .cena img { width: 24px; height: 20px; margin: 0 4px 0 2px; vertical-align: -3px; }
+
+/* ------------------------------------------------------ komunikat -- */
+
+/*
+ * Krotka wiadomosc na dole ekranu gry — na przyklad dlaczego przedmiotu
+ * nie da sie tam zalozyc. Sama znika po chwili.
+ */
+.komunikat {
+  position: absolute;
+  left: 280px;
+  right: 0;
+  bottom: 40px;
+  z-index: 30;
+  margin: 0 auto;
+  width: max-content;
+  max-width: 900px;
+  padding: 10px 24px;
+  text-align: center;
+  color: var(--zloto);
+  background: rgba(0, 0, 0, .8);
+  border: 1px solid var(--zloto);
+  pointer-events: none;
+  animation: komunikat-wchodzi .18s ease-out;
+}
+
+@keyframes komunikat-wchodzi {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
 
 /* -------------------------------------------------- obroc telefon -- */
 

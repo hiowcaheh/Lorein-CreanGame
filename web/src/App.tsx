@@ -110,6 +110,21 @@ export function App() {
     });
   }
 
+  /**
+   * Przelozenie przedmiotu.
+   *
+   * Stan przychodzi z SERWERA, a nie jest zgadywany na miejscu: to serwer
+   * decyduje, czy przedmiot wolno gdzies polozyc, i to on przelicza cechy,
+   * pancerz i obrazenia. Zgadywanie skonczyloby sie tym, ze ekran
+   * pokazuje co innego niz baza.
+   */
+  function przeniesPrzedmiot(zrodlo: number, cel: number | null) {
+    setBlad(null);
+    void zapytaj<{ gracz: Gracz }>('/ekwipunek', { zrodlo, cel })
+      .then(({ gracz: g }) => setGracz(g))
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się przełożyć przedmiotu.'));
+  }
+
   function wyloguj() {
     zapomnijToken();
     setGracz(null);
@@ -182,7 +197,7 @@ export function App() {
   let grupa = '';
 
   return (
-    <Rama maMenu onWyloguj={wyloguj}>
+    <Rama maMenu onWyloguj={wyloguj} blad={blad} onZamknijBlad={() => setBlad(null)}>
       <nav className="menu">
         {/*
           Zasoby u gory panelu — w kolejnosci z oryginalu: najpierw LICZBA,
@@ -227,7 +242,9 @@ export function App() {
 
       <main className={`tresc${zakladka === 'miasto' || zakladka === 'bohater' ? ' pelny' : ''}`}>
         {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
-        {zakladka === 'bohater' && <Bohater gracz={gracz} onZapiszOpis={zapiszOpis} />}
+        {zakladka === 'bohater' && (
+          <Bohater gracz={gracz} onZapiszOpis={zapiszOpis} onPrzenies={przeniesPrzedmiot} />
+        )}
 
         {/*
           Krzyzyk zamykajacy ekran — POS_IF_EXIT = (1220, 120), czyli
@@ -244,6 +261,26 @@ export function App() {
         )}
       </main>
     </Rama>
+  );
+}
+
+/**
+ * Krotki komunikat na dole ekranu gry.
+ *
+ * Oryginal przy odmowie po prostu odsylal niezmieniony stan i przedmiot
+ * wracal na miejsce — gracz musial sam sie domyslic, dlaczego. Skoro
+ * serwer i tak podaje powod, szkoda go chowac.
+ */
+function Komunikat({ tresc, onZnika }: { tresc: string; onZnika?: (() => void) | undefined }) {
+  useEffect(() => {
+    const licznik = setTimeout(() => onZnika?.(), 3500);
+    return () => clearTimeout(licznik);
+  }, [tresc, onZnika]);
+
+  return (
+    <div className="komunikat" role="status">
+      {tresc}
+    </div>
   );
 }
 
@@ -280,10 +317,14 @@ function Rama({
   children,
   maMenu,
   onWyloguj,
+  blad,
+  onZamknijBlad,
 }: {
   children: React.ReactNode;
   maMenu: boolean;
   onWyloguj?: () => void;
+  blad?: string | null;
+  onZamknijBlad?: () => void;
 }) {
   const pionowo = useZapytanieMedia(PIONOWO);
   const [mimoTo, setMimoTo] = useState(false);
@@ -306,6 +347,8 @@ function Rama({
         </header>
 
         {children}
+
+        {blad && <Komunikat tresc={blad} onZnika={onZamknijBlad} />}
       </div>
 
       {pionowo && !mimoTo && (

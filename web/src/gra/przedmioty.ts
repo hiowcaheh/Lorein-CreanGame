@@ -167,6 +167,33 @@ export function wierszeOpisu(p: Przedmiot): WierszOpisu[] {
   return wiersze;
 }
 
+/**
+ * Ktore miejsce nalezy sie danemu rodzajowi przedmiotu.
+ *
+ * Ta sama tablica, co `getSlotIndex()` w oryginalnym `req.php` i co
+ * `slotDlaRodzaju()` po stronie serwera. Klientowi jest potrzebna
+ * wylacznie do PODPOWIEDZI — zeby przy przeciaganiu podswietlic wlasciwe
+ * miejsce. O tym, czy przedmiot da sie zalozyc, decyduje i tak serwer.
+ */
+export function slotDlaRodzaju(rodzaj: number): number {
+  switch (rodzaj) {
+    case 1: return 8;    // bron
+    case 2: return 9;    // tarcza
+    case 3: return 1;    // zbroja
+    case 4: return 3;    // buty
+    case 5: return 2;    // rekawice
+    case 6: return 0;    // helm
+    case 7: return 5;    // pas
+    case 8: return 4;    // amulet
+    case 9: return 6;    // pierscien
+    case 10: return 7;   // talizman
+    default: return 10;  // reszta ida do plecaka
+  }
+}
+
+/** Pierwszy slot plecaka. Nizsze numery to miejsca na zalozone rzeczy. */
+export const PIERWSZY_SLOT_PLECAKA = 10;
+
 /** Cena w zlocie i srebrze — sto srebra to jedno zloto, jak w oryginale. */
 export function cenaPrzedmiotu(p: Przedmiot): { zloto: number; srebro: number; grzyby: number } {
   return {

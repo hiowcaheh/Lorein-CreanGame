@@ -10,6 +10,11 @@ import { getSql } from '../db/client.js';
 import { zapiszWDzienniku } from '../db/dziennik.js';
 import { loadDefaultStats } from '../game/stats.js';
 import { time } from '../compat/php.js';
+import {
+  OSTATNI_SLOT_PLECAKA,
+  zaplanujPrzeniesienie,
+  type PrzedmiotWBazie,
+} from '../game/ekwipunek.js';
 import { wczytajGracza, zakodujOpis } from './gracz.js';
 import { czyStaryHash, hasloPasuje, nowyToken, zahashujHaslo } from './sesja.js';
 import type { Context } from 'hono';
@@ -259,6 +264,110 @@ konto.post('/opis', async (c) => {
   }
 
   return c.json({ opis });
+});
+
+// ----------------------------------------------------- ekwipunek --
+
+/**
+ * Powody odmowy w jezyku gracza.
+ *
+ * Oryginal nie tlumaczyl niczego — po prostu odsylal niezmieniony stan
+ * i przedmiot wracal na miejsce. Nowy klient moze powiedziec, o co
+ * chodzilo.
+ */
+/**
+ * Numer miejsca w ekwipunku, albo `null` gdy to nie jest zaden z nich.
+ *
+ * Tu NIE przycinamy do zakresu, jak przy rejestracji: przy zaokraglaniu
+ * do najblizszego dozwolonego slotu przedmiot ladowalby w przypadkowym
+ * miejscu zamiast po prostu wrocic tam, skad przyszedl.
+ */
+function slot(wartosc: unknown): number | null {
+  const n = typeof wartosc === 'number' ? wartosc : Number(wartosc);
+  if (!Number.isInteger(n) || n < 0 || n > OSTATNI_SLOT_PLECAKA) return null;
+  return n;
+}
+
+const POWODY: Record<string, string> = {
+  'zle-miejsce': 'Tego przedmiotu nie nosi się w tym miejscu.',
+  'inna-klasa': 'Ten przedmiot jest dla innej klasy.',
+  'poza-zakresem': 'Nie ma takiego miejsca.',
+};
+
+/**
+ * Przeniesienie przedmiotu miedzy miejscami.
+ *
+ * Odpowiednik akcji 504 (`$ACT_USE_ITEM`) starego serwera, ograniczony do
+ * tego, co robi sie na ekranie postaci: zakladanie, zdejmowanie
+ * i przekladanie w plecaku. Sprzedaz i sklepy przyjda razem ze
+ * zbrojownia.
+ *
+ * `cel` rowne `null` znaczy „zaloz na wlasciwe miejsce". Oryginal
+ * zachowuje sie tak samo: przy upuszczeniu na postac NADPISUJE wskazany
+ * slot wynikiem `getSlotIndex()`, wiec nie da sie zalozyc butow na glowe
+ * nawet celujac.
+ */
+konto.post('/ekwipunek', async (c) => {
+  const token = tokenZNaglowka(c);
+  if (!token) return c.json({ blad: 'Brak tokenu sesji.' }, 401);
+
+  const dane = (await c.req.json().catch(() => ({}))) as { zrodlo?: unknown; cel?: unknown };
+
+  const zrodlo = slot(dane.zrodlo);
+  if (zrodlo === null) return c.json({ blad: 'Nie ma takiego miejsca.' }, 400);
+
+  // Brak celu znaczy „zaloz na wlasciwe miejsce", ale bledny numer to blad.
+  const cel = dane.cel === null || dane.cel === undefined ? null : slot(dane.cel);
+  if (dane.cel !== null && dane.cel !== undefined && cel === null) {
+    return c.json({ blad: 'Nie ma takiego miejsca.' }, 400);
+  }
+
+  const sql = getSql();
+  const [gracz] = await sql<Record<string, unknown>[]>`
+    SELECT * FROM user_data WHERE ssid = ${token} LIMIT 1
+  `;
+  if (!gracz) return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
+
+  const wlasciciel = Number(gracz['user_id']);
+  const przedmioty = await sql<PrzedmiotWBazie[]>`
+    SELECT id, item_type, item_id, slot FROM items WHERE owner_id = ${wlasciciel}
+  `;
+
+  const wZrodle = przedmioty.find((p) => p.slot === zrodlo);
+  if (!wZrodle) return c.json({ blad: 'W tym miejscu nic nie leży.' }, 400);
+
+  const plan = zaplanujPrzeniesienie(
+    wZrodle,
+    przedmioty.find((p) => p.slot === (cel ?? -1)) ?? null,
+    cel,
+    Number(gracz['class']),
+  );
+
+  if (typeof plan === 'string') {
+    return c.json({ blad: POWODY[plan] ?? 'Nie da się tego tam położyć.' }, 409);
+  }
+
+  if (plan.cel !== plan.zrodlo) {
+    /*
+     * Zamiana jest obustronna, wiec musi isc jednym zapytaniem — inaczej
+     * po pierwszym UPDATE dwa przedmioty stalyby przez chwile w tym samym
+     * miejscu. Oryginal robil to dwoma zapytaniami i przy zamianie
+     * z plecakiem wychodzil mu z tego przedmiot wracajacy tam, skad
+     * przyszedl; tutaj obie strony zmieniaja miejsce naraz.
+     */
+    await sql`
+      UPDATE items SET slot = CASE slot
+        WHEN ${plan.zrodlo}::smallint THEN ${plan.cel}::smallint
+        ELSE ${plan.zrodlo}::smallint
+      END
+      WHERE owner_id = ${wlasciciel} AND slot IN (${plan.zrodlo}, ${plan.cel})
+    `;
+  }
+
+  const [swiezy] = await sql<Record<string, unknown>[]>`
+    SELECT * FROM user_data WHERE ssid = ${token} LIMIT 1
+  `;
+  return c.json({ gracz: await wczytajGracza(sql, swiezy ?? gracz) });
 });
 
 export function tokenZNaglowka(c: Context): string | null {

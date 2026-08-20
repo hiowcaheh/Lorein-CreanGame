@@ -6,6 +6,7 @@
  * wiec nie ma powodu tego powtarzac — idzie zwykly JSON z nazwami.
  */
 
+import { bonusyZPrzedmiotow } from '../game/ekwipunek.js';
 import { LEVELS } from '../protocol/gamedata.js';
 import { intval } from '../compat/php.js';
 import type { Sql } from '../db/client.js';
@@ -28,7 +29,23 @@ export interface Gracz {
   doNastepnegoPoziomu: number;
   postepPoziomu: number;
 
+  /** Cechy razem z tym, co dokladaja ZALOZONE przedmioty. */
   cechy: {
+    sila: number;
+    zrecznosc: number;
+    intelekt: number;
+    wytrzymalosc: number;
+    szczescie: number;
+  };
+
+  /**
+   * Ile z powyzszych cech pochodzi z zalozonych przedmiotow.
+   *
+   * Oryginal wysyla to osobnymi polami (30..34 to cechy wlasne postaci,
+   * 35..39 dokladka z przedmiotow), zeby klient mogl pokazac, co gracz
+   * zyska albo straci po zmianie ekwipunku.
+   */
+  bonusy: {
     sila: number;
     zrecznosc: number;
     intelekt: number;
@@ -185,15 +202,30 @@ export function zbudujGracza(
 
   const progNastepny = Math.max(1, progPoziomu(poziom));
 
-  const wytrzymalosc = intval(wiersz['attr_wit'] ?? 10);
   const klasa = intval(wiersz['class'] ?? 1);
 
+  /*
+   * Cechy to suma tego, co ma sama postac, i tego, co dokladaja
+   * ZALOZONE przedmioty. Przedmioty w plecaku nie licza sie do niczego —
+   * w oryginale odpowiada temu warunek `slot < 168` przy skladaniu
+   * odpowiedzi w `req.php`.
+   */
+  const [bs, bz, bi, bw, bsz] = bonusyZPrzedmiotow(ekwipunek);
+
+  const bonusy = {
+    sila: bs,
+    zrecznosc: bz,
+    intelekt: bi,
+    wytrzymalosc: bw,
+    szczescie: bsz,
+  };
+
   const cechy = {
-    sila: intval(wiersz['attr_str'] ?? 10),
-    zrecznosc: intval(wiersz['attr_agi'] ?? 10),
-    intelekt: intval(wiersz['attr_int'] ?? 10),
-    wytrzymalosc,
-    szczescie: intval(wiersz['attr_luck'] ?? 10),
+    sila: intval(wiersz['attr_str'] ?? 10) + bonusy.sila,
+    zrecznosc: intval(wiersz['attr_agi'] ?? 10) + bonusy.zrecznosc,
+    intelekt: intval(wiersz['attr_int'] ?? 10) + bonusy.intelekt,
+    wytrzymalosc: intval(wiersz['attr_wit'] ?? 10) + bonusy.wytrzymalosc,
+    szczescie: intval(wiersz['attr_luck'] ?? 10) + bonusy.szczescie,
   };
 
   return {
@@ -214,8 +246,9 @@ export function zbudujGracza(
     postepPoziomu: Math.min(1, Math.max(0, doswiadczenie / progNastepny)),
 
     cechy,
+    bonusy,
 
-    zycie: policzZycie(klasa, wytrzymalosc, poziom),
+    zycie: policzZycie(klasa, cechy.wytrzymalosc, poziom),
 
     opis: odkodujOpis(String(wiersz['user_desc'] ?? '')),
 
