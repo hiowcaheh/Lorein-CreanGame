@@ -6,18 +6,25 @@
  * w srodku pliku SWF, nie w katalogu `res/`. Wyciaga je stamtad skrypt
  * `backend/scripts/wyciagnij-grafike-swf.py` do `res/ui/`.
  *
- * Nowe jest to, ze ramki sa rozciagliwe. Oryginal mial sztywna scene
- * 1280x800 i obrazki w stalych rozmiarach. Tutaj kazda ramka idzie przez
- * `border-image`: rogi zostaja ostre, a boki rozciagaja sie na dowolny
- * ekran. Dzieki temu ta sama grafika obsluguje telefon w pionie i monitor.
+ * UKLAD JEST W PIKSELACH ORYGINALU.
+ *
+ * Oryginal to sztywna scena 1280x800:
+ *
+ *     pas z tytulem      (0,   0) 1280x100
+ *     panel menu         (0, 100)  280x700
+ *     ekran gry        (280, 100) 1000x700
+ *
+ * Odtwarzamy ja doslownie — kazde `left`, `top`, `width` i `font-size`
+ * ponizej to piksel oryginalu — a do okna dopasowuje ja jedno
+ * `transform: scale(var(--sx), var(--sy))` z `useSkalaSceny`.
+ *
+ * To bylo trzecie podejscie i jedyne, ktore trzyma sie kupy. Procenty
+ * liczyly sie raz od szerokosci ekranu, raz od szerokosci siatki, raz od
+ * wysokosci rodzica; progi `@media` patrzyly wylacznie na szerokosc okna
+ * i nie wiedzialy nic o jego wysokosci. Piksel oryginalu nie ma tych wad:
+ * jest dokladnie tym, co widac w kodzie klienta Flash.
  */
 
-/*
- * Czcionka gry — Komika Text, wyciagnieta z pliku SWF przez
- * `backend/scripts/wyciagnij-czcionke-swf.py`. Jest osadzona w kliencie
- * Flash i nie ma jej w zadnym katalogu z zasobami; bez niej napisy nigdy
- * nie wygladaja jak w oryginale.
- */
 @font-face {
   font-family: 'Komika Text';
   src: url('/res/ui/komika.woff') format('woff');
@@ -26,34 +33,27 @@
 
 :root {
   --czcionka: 'Komika Text', 'Trebuchet MS', 'Segoe UI', Tahoma, sans-serif;
+
+  /*
+   * CLR_SFORANGE = 0xf0c042 — kolor calego pisma w grze. W kliencie Flash
+   * ma go `FontFormat_Default` (20 px) i `FontFormat_Attrib` (19 px),
+   * a wiec praktycznie kazdy napis: menu, zasoby, cechy, opis postaci.
+   */
   --zloto: #f0c042;
   --zloto-ciemne: #a8842c;
   --pergamin: #e8ddc8;
   --przygaszony: #a89578;
-  --tlo: #0b0d14;
-  --tlo-panel: #16202c;
-  --tlo-pole: #0d151d;
+  --tlo: #05070b;
   --obwodka: #2b3a4a;
   --obwodka-jasna: #6b5426;
   --dobry: #7bb661;
   --zly: #c85a4a;
 
-  /*
-   * MNOZNIK SCENY.
-   *
-   * Oryginal to sztywna scena 1280x800: panel menu 280x700 w punkcie
-   * (0,100), ekran gry 1000x700 w punkcie (280,100). Kazde polozenie
-   * w tym pliku jest podane w TYCH pikselach i przemnozone przez
-   * `--skala` — dzieki temu uklad jest doslownie ten sam co w oryginale,
-   * tylko wiekszy albo mniejszy.
-   *
-   * Wartosc liczy `useSkalaSceny` w przegladarce: bierze prawdziwy rozmiar
-   * miejsca na gre i dobiera taki mnoznik, zeby scena zmiescila sie
-   * w calosci. Przedtem robily to progi `@media` — i nigdy nie trafialy,
-   * bo zaleza od samej szerokosci okna, a scena musi sie zmiescic takze
-   * na wysokosc.
-   */
-  --skala: 1;
+  /* FontFormat_Default = sizeMod + 20, przy osadzonej Komice sizeMod = 0. */
+  --pismo: 20px;
+  /* FontFormat_Attrib = sizeMod + 19. */
+  --pismo-cechy: 19px;
+
   --promien: 10px;
 }
 
@@ -67,50 +67,74 @@ html, body, #korzen {
 
 body {
   background: var(--tlo);
-  color: var(--pergamin);
+  color: var(--zloto);
   font-family: var(--czcionka);
+  font-size: var(--pismo);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }
 
 img { max-width: 100%; }
 
-/* ---------------------------------------------------------- rama gry -- */
+/* ------------------------------------------------------------ scena -- */
 
+/*
+ * Okno gry. Nic sie tu nie przewija: scena zawsze jest dopasowana.
+ */
 .gra {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  height: 100dvh;
-  /* Scena zawsze miesci sie w oknie, wiec przewijac nie ma czego —
-     a bez tego jeden piksel zaokraglenia potrafi wystawic pasek. */
+  position: fixed;
+  inset: 0;
   overflow: hidden;
+  background: var(--tlo);
   /* Po dodaniu do ekranu poczatkowego iOS oddaje cala powierzchnie —
-     razem z pasem pod wyciecie aparatu. W przegladarce te marginesy
-     sa zerowe, wiec nic nie zabieraja. */
+     razem z pasem pod wyciecie aparatu. */
   padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
            env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
 }
 
 /*
- * Pas z tytulem to oryginalny obraz 1280x100 — gory z lawa po lewej,
- * zamek po prawej, glowy smokow na koncach. Na waskim ekranie pokazujemy
- * jego srodek w pelnej wysokosci zamiast sciskac calosc do paska.
+ * Scena w naturalnym rozmiarze oryginalu, przeskalowana do okna.
+ *
+ * Skalowanie jest nierownomierne — dokladnie tak, jak zachowywal sie
+ * odtwarzacz Flasha rozciagniety na okno przegladarki. Granice rozjazdu
+ * proporcji pilnuje `useSkalaSceny`.
  */
-.gora {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  padding: 0 .75rem;
-  height: 60px;
-  /* Pas rozciaga sie na CALA szerokosc okna. Wczesniej byl pokazywany
-     w naturalnych proporcjach i po bokach zostawaly czarne pola. */
-  background: #0b0d14 url('/res/ui/baner.png') center / 100% 100% no-repeat;
-  border-bottom: 1px solid #000;
-  position: relative;
+/*
+ * Wysrodkowanie idzie przez `left/top: 50%` i `translate(-50%, -50%)`,
+ * a nie przez `place-items: center` rodzica. Siatka CSS nie wysrodkowuje
+ * elementu WIEKSZEGO niz ona sama — cofa sie wtedy do wyrownania do
+ * poczatku, a scena 1280x800 prawie zawsze jest wieksza od okna, zanim
+ * zadziala `scale()`. Efekt byl taki, ze na telefonie w poziomie gora
+ * sceny wyjezdzala poza ekran.
+ */
+.scena {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1280px;
+  height: 800px;
+  transform: translate(-50%, -50%) scale(var(--sx, 1), var(--sy, 1));
 }
 
-@media (min-width: 1280px) {
-  .gora { height: 76px; }
+/* Ekrany przed zalogowaniem nie maja panelu menu — obszar gry stoi wtedy
+   na srodku sceny. Zostaje przy swoich 1000x700, zeby ozdobna rama miala
+   wlasciwe proporcje. */
+.scena.bez-menu .tresc { left: 140px; }
+
+/* ------------------------------------------------------- pas z tytulem -- */
+
+/*
+ * Pas ma dokladnie 1280x100 — tyle, ile `baner.png`. Skoro scena skaluje
+ * sie w calosci, obraz idzie w swoim naturalnym rozmiarze i nie trzeba go
+ * niczym rozciagac.
+ */
+.gora {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1280px;
+  height: 100px;
+  background: url('/res/ui/baner.png') 0 0 / 1280px 100px no-repeat;
 }
 
 /* Napisy po bokach pasa — ItemShop z lewej, wyjscie z prawej. */
@@ -118,26 +142,19 @@ img { max-width: 100%; }
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  font-size: .95rem;
-  font-weight: 700;
-  letter-spacing: .03em;
-  color: var(--pergamin);
-  text-shadow: 0 0 5px #000, 0 0 9px #000, 0 1px 0 #000;
+  font: inherit;
+  font-size: 24px;
+  color: #fff;
+  text-shadow: 0 0 6px #000, 0 0 12px #000, 0 2px 0 #000;
   background: none;
   border: none;
-  padding: .3rem .4rem;
-  font-family: inherit;
+  padding: 4px 6px;
   cursor: pointer;
 }
 
 .link-gory:hover { color: var(--zloto); }
-.link-gory.lewy { left: 12%; cursor: default; }
-.link-gory.prawy { right: 12%; }
-
-@media (max-width: 640px) {
-  .link-gory.lewy { display: none; }
-  .link-gory.prawy { right: .6rem; font-size: .82rem; }
-}
+.link-gory.lewy { left: 105px; cursor: default; }
+.link-gory.prawy { right: 105px; }
 
 /* Tytul gry jest juz namalowany na banerze — nasz naglowek zostaje tylko
    dla czytnikow ekranu. */
@@ -149,10 +166,32 @@ img { max-width: 100%; }
   clip-path: inset(50%);
 }
 
+/* ------------------------------------------------------------- menu -- */
+
 /*
- * Zasoby u gory panelu menu — co do piksela jak w oryginale.
+ * Panel menu ma 280x700 i lezy w punkcie (0,100) — dokladnie tyle, ile
+ * `panel-boczny.png`. Uklad przyciskow ze stalych klienta Flash:
  *
- * Klient Flash ustawia je tak (`MainTimeline.as`, uklad od lewej do prawej):
+ *   POS_IF_BTN_X = 20    przycisk zaczyna sie 20 px od lewej krawedzi
+ *   POS_IF_BTN_Y = 180   pierwszy przycisk na wysokosci 180 (80 od gory panelu)
+ *   REL_IF_BTN_1 = 44    kolejne co 44 px, przy wysokosci przycisku 50
+ *   REL_IF_BTN_2 = 20    dodatkowa przerwa miedzy grupami
+ *   REL_DRAGON_X = 180   glowa smoka tuz za prawa krawedzia przycisku
+ *   REL_DRAGON_Y = -10   i 10 px ponad jego gora
+ */
+.menu {
+  position: absolute;
+  left: 0;
+  top: 100px;
+  width: 280px;
+  height: 700px;
+  background: url('/res/ui/panel-boczny.png') 0 0 / 280px 700px no-repeat;
+}
+
+/*
+ * Zasoby u gory panelu.
+ *
+ * Klient ustawia je tak (uklad od lewej do prawej):
  *
  *   POS_IF_LBL_GOLDPILZE_X = 230   prawa krawedz, do ktorej wszystko rowna
  *   POS_IF_LBL_GOLD_Y      = 115   wiersz ze zlotem i srebrem
@@ -162,128 +201,51 @@ img { max-width: 100%; }
  *   LBL_IF_SILBER.x = 230 - szerokosc napisu - 10
  *   IMG_IF_GOLD.x   = LBL_IF_SILBER.x - 24 - 10
  *   LBL_IF_GOLD.x   = IMG_IF_GOLD.x - szerokosc napisu - 10
- *   IMG_IF_PILZE.x  = 230
- *   LBL_IF_PILZE.x  = 230 - szerokosc napisu - 10
  *
- * Czyli: LICZBA, odstep 10, IKONA — dwa razy w pierwszym wierszu (zloto,
- * srebro) i raz w drugim (grzyby), a calosc wyrownana do PRAWEJ, nie do
- * srodka. Ikony maja swoje wlasne rozmiary: zloto i srebro 24x20,
- * grzyb 25x24 — rozciaganie ich do kwadratu wygladalo obco.
+ * Czyli LICZBA, odstep 10, IKONA — dwa razy w pierwszym wierszu i raz
+ * w drugim, a calosc wyrownana do PRAWEJ. Ikony maja swoje wlasne
+ * rozmiary: zloto i srebro 24x20, grzyb 25x24.
  */
-.zasoby {
+.zasoby .linia {
   position: absolute;
-  left: 0;
-  /* Panel zaczyna sie na y=100, wiersz ze zlotem na y=115. */
-  top: calc(15px * var(--skala));
-  /* Prawa krawedz ikony srebra: 230 + 24. */
-  width: calc(254px * var(--skala));
-
+  /* 280 - (230 + 24) = 26 px od prawej krawedzi panelu. */
+  right: 26px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  /* 145 - 115 - 24 = 6 px miedzy wierszami. */
-  gap: calc(6px * var(--skala));
-
-  font-size: calc(16px * var(--skala));
+  align-items: center;
+  gap: 10px;
+  height: 24px;
+  font-size: var(--pismo);
   line-height: 1;
-  color: #fff;
-  text-shadow: 0 1px 2px #000, 0 0 4px #000;
+  color: var(--zloto);
+  text-shadow: 0 2px 3px #000;
   white-space: nowrap;
 }
 
-.zasoby .linia {
-  display: flex;
-  align-items: center;
-  gap: calc(10px * var(--skala));
-  height: calc(24px * var(--skala));
-}
+/* Wiersze na wysokosci 115 i 145, czyli 15 i 45 od gory panelu. */
+.zasoby .linia:nth-child(1) { top: 15px; }
+.zasoby .linia:nth-child(2) { top: 45px; }
 
-.zasoby img { width: calc(24px * var(--skala)); height: calc(20px * var(--skala)); }
-.zasoby img.grzyb { width: calc(25px * var(--skala)); height: calc(24px * var(--skala)); }
-
-.przelacznik-menu {
-  display: none;
-  background: none;
-  border: 1px solid var(--obwodka-jasna);
-  border-radius: 8px;
-  color: var(--zloto);
-  font-size: 1.2rem;
-  padding: .25rem .6rem;
-  cursor: pointer;
-}
-
-/*
- * Miejsce na scene.
- *
- * Scena — panel menu i ekran gry obok siebie — ma stale proporcje i jest
- * wysrodkowana. Wczesniej ekran gry dostawal `1fr`, czyli CALA reszte
- * szerokosci, a obraz o proporcjach 1000x700 lezal w jego srodku: dookola
- * zostawal wielki ciemny prostokat WEWNATRZ ozdobnej ramy i wygladalo to
- * jak zepsuty panel. Teraz rama obejmuje dokladnie ekran gry, a to, co
- * zostaje po bokach, jest zwyklym tlem strony — tak jak w oryginale,
- * gdzie plik SWF 1280x800 lezal na czarnej stronie.
- */
-.srodek {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  background: radial-gradient(ellipse 90% 90% at 50% 45%, #10151f 0%, #05070b 100%);
-}
-
-/* ------------------------------------------------------------- menu -- */
-
-/*
- * Uklad menu jest przepisany ze stalych klienta Flash:
- *
- *   panel_boczny.png     ma dokladnie 280x700 i lezy w punkcie (0,100)
- *   POS_IF_BTN_X = 20    przycisk zaczyna sie 20 px od lewej krawedzi panelu
- *   POS_IF_BTN_Y = 180   pierwszy przycisk na wysokosci 180 (czyli 80 od gory
- *                        panelu)
- *   REL_IF_BTN_1 = 44    kolejne co 44 px — przy wysokosci 50 px przyciski
- *                        lekko na siebie nachodza
- *   REL_IF_BTN_2 = 20    dodatkowa przerwa miedzy grupami
- *   REL_DRAGON_X = 180   glowa smoka zaczyna sie tam, gdzie konczy sie
- *                        przycisk — nie zachodzi na napis
- *   REL_DRAGON_Y = -10   i wystaje 10 px ponad gora przycisku
- *
- * Przycisk 180x50, smok 70x60, wiec smok konczy sie na 20+180+70 = 270,
- * czyli 10 px przed prawa krawedzia panelu.
- *
- * Panel jest tlem rozciagnietym na 100% x 100%, a nie ramka `border-image`.
- * To wazne: skoro cala scena skaluje sie rownomiernie, obraz 280x700
- * rozciagniety do 280*skala x 700*skala jest odwzorowany DOKLADNIE, bez
- * zadnego znieksztalcenia rogow.
- */
-.menu {
-  position: relative;
-  flex: 0 0 auto;
-  width: calc(280px * var(--skala));
-  height: calc(700px * var(--skala));
-  background: url('/res/ui/panel-boczny.png') 0 0 / 100% 100% no-repeat;
-}
+.zasoby img { width: 24px; height: 20px; }
+.zasoby img.grzyb { width: 25px; height: 24px; }
 
 /*
  * Lista przyciskow.
  *
- * Zaczyna sie 10 px nad pierwszym przyciskiem, zeby bylo gdzie zmiescic
- * wystajaca glowe smoka, i konczy sie na 250 px szerokosci — dokladnie
- * tam, gdzie konczy sie smok. Dzieki temu `overflow-x: hidden`, potrzebne
- * do przewijania w pionie, niczego nie obcina.
+ * Zaczyna sie 10 px nad pierwszym przyciskiem, zeby zmiescila sie
+ * wystajaca glowa smoka, i ma 250 px szerokosci — dokladnie tyle, ile
+ * zajmuje przycisk razem ze smokiem (20 + 180 + 70 = 270 od lewej
+ * krawedzi panelu). Dzieki temu `overflow-x: hidden`, potrzebne do
+ * przewijania w pionie, niczego nie obcina.
  */
 .menu ul {
   position: absolute;
-  left: calc(20px * var(--skala));
-  top: calc(70px * var(--skala));
-  bottom: calc(20px * var(--skala));
-  width: calc(250px * var(--skala));
-  padding: calc(10px * var(--skala)) 0 0;
-
-  list-style: none;
+  left: 20px;
+  top: 70px;
+  bottom: 20px;
+  width: 250px;
+  padding: 10px 0 0;
   margin: 0;
+  list-style: none;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
@@ -294,8 +256,8 @@ img { max-width: 100%; }
 /* 50 px wysokosci przy kroku 44 — kolejny przycisk wchodzi 6 px na poprzedni. */
 .menu li {
   position: relative;
-  height: calc(50px * var(--skala));
-  margin-bottom: calc(-6px * var(--skala));
+  height: 50px;
+  margin-bottom: -6px;
 }
 
 .menu button {
@@ -304,29 +266,21 @@ img { max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(180px * var(--skala));
-  height: calc(50px * var(--skala));
-  /*
-   * Napis jest wysrodkowany na przycisku i przesuniety o 5 px w prawo —
-   * `offs = 5` dla `btnClassInterface` w oryginale. Przy wysrodkowaniu
-   * daje to lewy margines 10 px.
-   */
-  padding: 0 0 0 calc(10px * var(--skala));
-  text-align: center;
+  width: 180px;
+  height: 50px;
+  /* Napis jest wysrodkowany i przesuniety o 5 px w prawo — `offs = 5`
+     dla `btnClassInterface` w oryginale. */
+  padding: 0 0 0 10px;
   font: inherit;
-  font-size: calc(15px * var(--skala));
-  /* Oryginalne napisy w pliku jezykowym sa WERSALIKAMI ("KARCZMA",
-     "GABINET MAGII") — bez tego czcionka wyglada inaczej niz w grze. */
+  font-size: var(--pismo);
+  /* Oryginalne napisy w pliku jezykowym sa wersalikami: "KARCZMA",
+     "GABINET MAGII". Bez tego czcionka wyglada inaczej niz w grze. */
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--zloto);
   text-shadow: 0 1px 2px #000;
-  background: none;
-  /*
-   * Kamien przycisku tez idzie w calosci, a nie 9-slice'em: obraz ma
-   * dokladnie 180x50 i skaluje sie razem ze scena.
-   */
-  background: url('/res/ui/guzik.png') 0 0 / 100% 100% no-repeat;
+  /* Kamien przycisku ma dokladnie 180x50 i idzie w naturalnym rozmiarze. */
+  background: url('/res/ui/guzik.png') 0 0 / 180px 50px no-repeat;
   border: none;
   cursor: pointer;
 }
@@ -336,40 +290,30 @@ img { max-width: 100%; }
   background-image: url('/res/ui/guzik-najazd.png');
 }
 
-.menu button[aria-current='true'] { color: #fff8dc; }
 .menu button:active:not(:disabled) { transform: translateY(1px); }
 
 /*
  * Zakladka jeszcze nie przeniesiona.
  *
- * Kamien zostaje TEN SAM — w oryginale wszystkie trzynascie przyciskow jest
- * jednakowych i tak ma wygladac menu. Wyszarzony wariant `guzik-wylaczony`
- * ma fioletowy odcien i w rzedzie jedenastu takich przyciskow menu
- * wygladalo na zepsute; przygaszanie calosci przezroczystoscia tak samo.
- * Roznice robi wiec sam napis.
+ * Kamien i kolor pisma zostaja TE SAME — w oryginale wszystkie trzynascie
+ * przyciskow jest jednakowych, zlotych, i tak ma wygladac menu. Roznice
+ * robi tylko lekkie przygaszenie napisu.
  */
-.menu button:disabled {
-  color: #9aa4b4;
-  text-shadow: 0 1px 2px #000;
-  cursor: default;
-}
+.menu button:disabled { cursor: default; }
 
 /*
- * Glowa smoka stoi TUZ ZA prawa krawedzia przycisku (REL_DRAGON_X = 180,
- * czyli dokladnie szerokosc przycisku) i wystaje 10 px ponad jego gore
- * (REL_DRAGON_Y = -10). Obraz ma 70x60 i idzie w naturalnym rozmiarze
- * przemnozonym przez skale — bez `contain`, ktore wczesniej zostawialo
- * przezroczysty margines i smok wygladal, jakby zjezdzal z przycisku.
- * Szesc odmian, przydzielanych po kolei.
+ * Glowa smoka stoi tuz za prawa krawedzia przycisku (REL_DRAGON_X = 180,
+ * czyli szerokosc przycisku) i wystaje 10 px ponad jego gore
+ * (REL_DRAGON_Y = -10). Obraz ma 70x60. Szesc odmian po kolei.
  */
 .menu li::after {
   content: '';
   position: absolute;
-  left: calc(180px * var(--skala));
-  top: calc(-10px * var(--skala));
-  width: calc(70px * var(--skala));
-  height: calc(60px * var(--skala));
-  background: url('/res/ui/smok1.png') 0 0 / 100% 100% no-repeat;
+  left: 180px;
+  top: -10px;
+  width: 70px;
+  height: 60px;
+  background: url('/res/ui/smok1.png') 0 0 / 70px 60px no-repeat;
   pointer-events: none;
 }
 
@@ -380,40 +324,32 @@ img { max-width: 100%; }
 .menu li:nth-child(6n)::after { background-image: url('/res/ui/smok6.png'); }
 
 /* Oryginal nie ma naglowkow grup — tylko przerwa (REL_IF_BTN_2 = 20). */
-.menu .przerwa { height: calc(20px * var(--skala)); }
-/* Przerwa miedzy grupami nie moze byc zjadana przez ujemny margines wiersza. */
-.menu li:has(> .przerwa) { height: calc(70px * var(--skala)); }
-/* ...a smok tej pozycji zjezdza razem z przyciskiem. */
-.menu li:has(> .przerwa)::after { top: calc(10px * var(--skala)); }
+.menu .przerwa { height: 20px; }
+.menu li:has(> .przerwa) { height: 70px; }
+.menu li:has(> .przerwa)::after { top: 10px; }
 
 /* ------------------------------------------------------------ tresc -- */
 
 /*
- * Ekran gry.
- *
- * Ma dokladnie 1000x700 pikseli sceny — tyle, ile obszar gry w oryginale
- * (punkt (280,100), rozmiar 1000x700) i tyle, ile ma plik `ramka.png`.
- * Dlatego ramka nie jest juz `border-image`: lezy NA WIERZCHU jako obraz
- * rozciagniety na 100% x 100%, czyli w swoich wlasnych proporcjach.
- * Rozciaganie 9-slice'em zawsze troche znieksztalcalo ozdoby, a przy
- * szerokim oknie robilo z ramy dlugi prostokat wokol pustki.
+ * Ekran gry: 1000x700 w punkcie (280,100) — tyle samo, ile `ramka.png`,
+ * miasto i ekran postaci. Rama nie jest wiec `border-image`, tylko lezy
+ * NA WIERZCHU jako obraz w swoim rozmiarze. Zadnego rozciagania rogow.
  */
 .tresc {
-  position: relative;
-  flex: 0 0 auto;
-  width: calc(1000px * var(--skala));
-  height: calc(700px * var(--skala));
-  padding: calc(30px * var(--skala));
+  position: absolute;
+  left: 280px;
+  top: 100px;
+  width: 1000px;
+  height: 700px;
+  padding: 40px;
   overflow: auto;
 
-  /* Granatowa poswiata jak w oryginalnym oknie gry — jasna w srodku,
-     ciemniejaca ku brzegom. */
+  /* Granatowa poswiata jak w oryginalnym oknie gry. */
   background:
     radial-gradient(ellipse 70% 60% at 50% 40%,
       #4a7fc4 0%, #27538c 26%, #16304f 55%, #0b1626 85%);
 }
 
-/* Ozdobna rama lezy na wierzchu i nie przechwytuje klikniec. */
 .tresc::after {
   content: '';
   position: absolute;
@@ -422,12 +358,36 @@ img { max-width: 100%; }
   pointer-events: none;
 }
 
+/* Ekran gry wypelnia rame w calosci — bez marginesow i bez przewijania. */
+.tresc.pelny { padding: 0; overflow: hidden; background: #0a1018; }
+.tresc.pelny > *:not(.wyjscie) { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/*
+ * Krzyzyk zamykajacy ekran: POS_IF_EXIT = (1220, 120), czyli (940, 20)
+ * wzgledem obszaru gry. Obraz ma 62x42 — razem z lancuchem, na ktorym
+ * krzyzyk wisi.
+ */
+.wyjscie {
+  position: absolute;
+  left: 940px;
+  top: 20px;
+  width: 62px;
+  height: 42px;
+  padding: 0;
+  border: none;
+  background: url('/res/ui/wyjscie.png') 0 0 / 100% 100% no-repeat;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.wyjscie:hover { background-image: url('/res/ui/wyjscie-najazd.png'); }
+.wyjscie:active { background-image: url('/res/ui/wyjscie-wcisniety.png'); }
+
 .tresc h2 {
-  margin: 0 0 1rem;
-  font-size: 1.35rem;
+  margin: 0 0 20px;
+  font-size: 28px;
   color: var(--zloto);
   text-align: center;
-  letter-spacing: .05em;
   font-style: italic;
   text-shadow: 0 2px 3px #000;
 }
@@ -438,25 +398,24 @@ img { max-width: 100%; }
   border: 1px solid rgba(120, 150, 190, .28);
   border-radius: var(--promien);
   box-shadow: inset 0 1px 0 rgba(200, 220, 255, .07), 0 2px 10px rgba(0, 0, 0, .5);
-  padding: 1rem;
+  padding: 20px;
 }
 
 /* --------------------------------------------------------- portret -- */
 
+/*
+ * Portret jest kwadratem — warstwy twarzy maja po 300x300. Na ekranie
+ * postaci wypelnia swoje pole co do piksela, a przy tworzeniu bohatera
+ * dopasowuje sie do szerokosci kolumny.
+ */
 .portret {
   position: relative;
   width: 100%;
-  max-width: 260px;
-  /* Wszystkie warstwy portretu maja 300x300 — kwadrat trzyma je w rejestrze
-     i nie zostawia czarnych pasow. */
   aspect-ratio: 1;
-  margin: 0 auto;
   overflow: hidden;
-  background: #0b0906;
-  /* Oryginalna zlota rama obrazu z ekranu postaci (264x264, srodek pusty). */
-  border: 18px solid transparent;
-  border-image: url('/res/sfgame/scr/char/gold_frame.png') 34 / 18px stretch;
 }
+
+.postac-portret .portret { height: 100%; aspect-ratio: auto; }
 
 .portret img {
   position: absolute;
@@ -464,18 +423,17 @@ img { max-width: 100%; }
   width: 100%;
   height: 100%;
   object-fit: contain;
-  image-rendering: auto;
 }
 
 /* -------------------------------------------------------- formularz -- */
 
-.pole { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .8rem; }
-.pole label { font-size: .85rem; color: var(--zloto-ciemne); letter-spacing: .04em; }
+.pole { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.pole label { font-size: var(--pismo); color: var(--zloto-ciemne); }
 
 .pole input {
   font: inherit;
-  font-size: 1rem;
-  padding: .65rem .7rem;
+  font-size: var(--pismo);
+  padding: 12px 14px;
   color: var(--pergamin);
   background: rgba(8, 16, 26, .85);
   border: 1px solid var(--obwodka-jasna);
@@ -489,57 +447,49 @@ img { max-width: 100%; }
   box-shadow: 0 0 0 2px rgba(240, 192, 66, .18);
 }
 
-/* Przycisk to oryginalny kamienny guzik 180x50, rozciagany 9-slice'em. */
+/* Przycisk to oryginalny kamienny guzik 180x50. */
 .przycisk {
   appearance: none;
   font: inherit;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: .05em;
-  padding: .5rem 1rem;
-  min-height: 46px;
+  font-size: var(--pismo);
+  padding: 10px 20px;
+  min-height: 50px;
   color: var(--zloto);
   text-shadow: 0 1px 2px #000;
-  background: none;
-  border: 12px solid transparent;
-  border-image: url('/res/ui/guzik.png') 12 20 12 20 fill / 12px 20px 12px 20px stretch;
+  background: url('/res/ui/guzik.png') 0 0 / 100% 100% no-repeat;
+  border: none;
   cursor: pointer;
   width: 100%;
 }
 
-.przycisk:hover:not(:disabled) { border-image-source: url('/res/ui/guzik-najazd.png'); }
+.przycisk:hover:not(:disabled) { background-image: url('/res/ui/guzik-najazd.png'); }
 .przycisk:active:not(:disabled) { transform: translateY(1px); }
-.przycisk:disabled { border-image-source: url('/res/ui/guzik-wylaczony.png'); opacity: .6; cursor: default; }
-
-.przycisk.drugi { font-weight: 600; letter-spacing: .03em; }
+.przycisk:disabled { background-image: url('/res/ui/guzik-wylaczony.png'); opacity: .7; cursor: default; }
 
 /* Male kwadratowe przyciski — strzalki przy regulacji wygladu. */
 .przycisk.maly {
-  width: 42px;
-  min-height: 38px;
+  width: 50px;
+  min-height: 44px;
   flex: 0 0 auto;
   padding: 0;
-  font-size: 1.2rem;
-  line-height: 1;
-  border-width: 10px;
-  border-image: url('/res/ui/guzik-maly.png') 12 22 12 22 fill / 10px 14px 10px 14px stretch;
+  background-image: url('/res/ui/guzik-maly.png');
 }
 
-.przycisk.maly:hover:not(:disabled) { border-image-source: url('/res/ui/guzik-maly-najazd.png'); }
+.przycisk.maly:hover:not(:disabled) { background-image: url('/res/ui/guzik-maly-najazd.png'); }
 
 .blad {
   color: var(--zly);
   background: rgba(200, 90, 74, .1);
   border: 1px solid rgba(200, 90, 74, .35);
   border-radius: 8px;
-  padding: .6rem .7rem;
-  margin-bottom: .8rem;
-  font-size: .9rem;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: var(--pismo-cechy);
 }
 
 /* ------------------------------------------------- wybor obrazkowy -- */
 
-.wybor { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; }
+.wybor { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 
 .wybor button {
   padding: 0;
@@ -551,157 +501,24 @@ img { max-width: 100%; }
   overflow: hidden;
 }
 
-.wybor button img { width: 56px; height: 56px; object-fit: cover; display: block; }
+.wybor button img { width: 72px; height: 72px; object-fit: cover; display: block; }
 .wybor button[aria-pressed='true'] { border-color: var(--zloto); }
 
-.podpis { text-align: center; font-size: .8rem; color: var(--przygaszony); margin: .35rem 0 .8rem; }
+.podpis { text-align: center; font-size: var(--pismo-cechy); color: var(--przygaszony); margin: 6px 0 16px; }
 
-/* --------------------------------------------------------- telefon -- */
-
-/*
- * Waski ekran: panel menu nie miesci sie obok gry, wiec wjezdza na nia
- * z lewej po dotknieciu przycisku. Zachowuje swoje prawdziwe proporcje —
- * to ten sam panel, tylko na wierzchu.
- */
-@media (max-width: 640px) {
-  .przelacznik-menu { display: block; }
-
-  .menu {
-    display: none;
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 20;
-    box-shadow: 0 0 40px rgba(0, 0, 0, .8);
-  }
-
-  .menu.otwarte { display: block; }
-}
-
-/* ------------------------------------------------- niski ekran -- */
-
-/*
- * Telefon w poziomie: szeroko, ale bardzo nisko (iPhone to okolo 390 px
- * wysokosci). Wszystko musi sie sciesnic, inaczej gracz oglada sam
- * naglowek i skrawek portretu.
- */
-/*
- * Progow `@media` dla skali juz nie ma — mnoznik liczy `useSkalaSceny`
- * z prawdziwego rozmiaru miejsca na gre. Progi zalezaly tylko od
- * szerokosci okna i na telefonie w poziomie (szeroko, ale bardzo nisko)
- * dawaly scene wyzsza niz ekran.
- */
-@media (max-height: 540px) {
-  .gora { padding: .3rem .6rem; height: 46px; }
-
-  .tresc h2 { font-size: 1.05rem; margin-bottom: .6rem; }
-  .karta { padding: .6rem; }
-  .portret { max-width: 150px; }
-  .wybor button img { width: 44px; height: 44px; }
-  .podpis { margin: .25rem 0 .5rem; }
-}
-
-/* ------------------------------------------------ szeroki ekran -- */
-
-/*
- * Powyzej 900 px jest miejsce, zeby portret staly obok ustawien zamiast
- * nad nimi — mniej przewijania i wszystko widac naraz.
- */
-.kolumny { display: grid; gap: 1rem; }
-
-/* Telefon w poziomie ma juz na to miejsce — portret obok ustawien. */
-@media (min-width: 700px) {
-  .kolumny { grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); align-items: start; }
-  .kolumny > .lewa { position: sticky; top: 0; }
-}
-
-@media (min-width: 1100px) {
-  .kolumny { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); }
-}
-
-/* --------------------------------------------------------- cechy -- */
-
-.cechy {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: .3rem .8rem;
-  margin: 0;
-}
-
-.cechy dt { color: var(--przygaszony); font-size: .92rem; }
-.cechy dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-.cechy .glowna { color: var(--zloto); font-weight: 600; }
-
-/* ---------------------------------------------- pasek doswiadczenia -- */
-
-.pasek {
-  position: relative;
-  height: 1.6rem;
-  border-radius: 999px;
-  background: var(--tlo-pole);
-  border: 1px solid var(--obwodka-jasna);
-  overflow: hidden;
-}
-
-.pasek-wypelnienie {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: linear-gradient(90deg, #6b4f12, #f0c042);
-  transition: width .4s ease;
-}
-
-.pasek-opis {
-  position: relative;
-  display: block;
-  line-height: 1.6rem;
-  text-align: center;
-  font-size: .78rem;
-  text-shadow: 0 1px 2px #000;
-}
+.kolumny { display: grid; gap: 20px; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); align-items: start; }
 
 /* ------------------------------------------------------------ miasto -- */
 
 /*
- * Miasto ma stale proporcje 1000x700 — takie jak oryginalny obraz. Wszystko,
- * co na nim lezy, jest ustawione w PROCENTACH, wiec caly plac skaluje sie
- * razem z oknem i nic sie nie rozjezdza.
+ * Miasto ma dokladnie 1000x700 — tyle, ile obszar gry. Wszystko, co na nim
+ * lezy, jest ustawione w procentach tego obszaru.
  */
-.miasto {
-  position: relative;
-  aspect-ratio: 1000 / 700;
-  overflow: hidden;
-  background: #10141f;
-}
-
-/*
- * Ekran gry wypelnia rame CALA — bez marginesow, bez przewijania i bez
- * ciemnych pasow po bokach.
- *
- * Jest to teraz proste, bo `.tresc` ma dokladnie proporcje 1000x700, czyli
- * te same, co miasto i ekran postaci. Wczesniej rama dostawala cala wolna
- * szerokosc, obraz o wlasnych proporcjach lezal w jej srodku i dookola
- * zostawal wielki ciemny prostokat.
- */
-.tresc.pelny {
-  padding: 0;
-  overflow: hidden;
-  background: #0a1018;
-}
-
-.tresc.pelny > * {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-
+.miasto { position: relative; overflow: hidden; background: #10141f; }
 
 .miasto img {
   position: absolute;
   display: block;
-  image-rendering: auto;
   pointer-events: none;
 }
 
@@ -737,17 +554,13 @@ img { max-width: 100%; }
 .miasto-budynek:hover img,
 .miasto-budynek:focus-visible img { opacity: 1; }
 
-/* Nazwa budynku pojawia sie pod kursorem — na telefonie nie ma najezdzania,
-   wiec podpis jest widoczny od razu. */
 .miasto-budynek span {
   position: absolute;
   left: 50%;
-  bottom: -1.6rem;
+  bottom: -32px;
   transform: translateX(-50%);
-  padding: .12rem .5rem;
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .04em;
+  padding: 2px 10px;
+  font-size: 16px;
   white-space: nowrap;
   color: var(--zloto);
   background: rgba(6, 10, 16, .82);
@@ -762,39 +575,27 @@ img { max-width: 100%; }
 .miasto-budynek:hover span,
 .miasto-budynek:focus-visible span { opacity: 1; }
 
-/*
- * Na dotyku nie ma najezdzania kursorem, wiec podpowiedz musi byc widoczna
- * od razu — ale przygaszona, zeby nie zaslaniac miasta.
- */
+/* Na dotyku nie ma najezdzania kursorem, wiec podpowiedz jest widoczna
+   od razu — ale przygaszona, zeby nie zaslaniac miasta. */
 @media (hover: none) {
   .miasto-budynek img { opacity: .35; }
-  .miasto-budynek span { opacity: .75; font-size: .62rem; bottom: -1.2rem; }
+  .miasto-budynek span { opacity: .75; }
 }
 
 /* ----------------------------------------------------------- postac -- */
 
 /*
- * Ekran postaci ma stale proporcje 1000x700 — takie jak dwa oryginalne
- * obrazy tla po 500x700. Wszystko, co na nich lezy, jest pozycjonowane
- * w procentach, wiec caly uklad skaluje sie razem z oknem.
+ * Ekran postaci ma 1000x700 — dwa oryginalne obrazy tla po 500x700 obok
+ * siebie. Wszystko, co na nich lezy, stoi w pikselach oryginalu
+ * (patrz `gra/ekranPostaci.ts`).
  */
-/*
- * Rozmiar pisma ustawia `useSkalaPisma` — mierzy prawdziwa szerokosc
- * elementu i liczy z niej 1,55%, czyli 15,5 px przy scenie 1000 px, tak jak
- * w oryginale. Jednostki kontenerowe okazaly sie tu zawodne, szczegoly
- * w komentarzu tamtego pliku.
- */
-.postac {
-  position: relative;
-  aspect-ratio: 1000 / 700;
-  overflow: hidden;
-}
+.postac { position: relative; overflow: hidden; font-size: var(--pismo); }
 
 .postac > * { position: absolute; }
 
-.postac-tlo { top: 0; width: 50%; height: 100%; }
+.postac-tlo { top: 0; width: 500px; height: 700px; }
 .postac-tlo.lewe { left: 0; }
-.postac-tlo.prawe { left: 50%; }
+.postac-tlo.prawe { left: 500px; }
 
 /* --- miejsca na przedmioty --- */
 
@@ -808,13 +609,6 @@ img { max-width: 100%; }
 
 /* Tlo ma juz narysowana ramke pola, wiec portret wchodzi bez wlasnej. */
 .postac-portret { display: flex; align-items: center; justify-content: center; }
-.postac-portret .portret {
-  max-width: 100%;
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: none;
-}
 
 /* --- imie i doswiadczenie --- */
 
@@ -822,7 +616,7 @@ img { max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1em;
+  font-size: var(--pismo);
   color: var(--zloto);
   text-shadow: 0 2px 3px #000;
 }
@@ -831,82 +625,57 @@ img { max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(180, 200, 230, .3);
-  border-radius: 3px;
-  background: rgba(6, 12, 20, .6);
   overflow: hidden;
 }
 
+/* Wypelnienie to oryginalny kafelek `experience.jpg`, rozciagniety na
+   wysokosc paska. */
 .postac-pasek .wypelnienie {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  background: linear-gradient(#6fa8dc, #2b5f9e);
+  background-size: auto 100%;
+  background-repeat: repeat-x;
 }
 
 .postac-pasek span {
   position: relative;
-  font-size: .85em;
-  color: var(--pergamin);
-  text-shadow: 0 1px 2px #000;
+  /* FontFormat_LifeBar = 20 px, CLR_WHITE. */
+  font-size: 20px;
+  color: #fff;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000;
 }
 
 /* --- cechy --- */
 
 /*
- * Jedna siatka na cechy i wartosci pochodne, o kolumnach z oryginalu.
- * Dwa osobne bloki obok siebie rozjezdzaly sie, bo kazdy dobieral
- * szerokosci po swojemu.
+ * Kazdy napis stoi w swojej kolumnie, wyrownany do lewej — tak jak
+ * `DefineLbl` w oryginale stawia pola tekstowe w punktach
+ * POS_CHAR_PROP_COLUMN_*. Siatka CSS okazala sie tu tylko zrodlem klopotow:
+ * sama dobierala szerokosci kolumn i napisy sie rozjezdzaly.
  */
-.postac-cechy {
-  display: grid;
-  align-items: center;
-}
-
-.postac-cechy .nazwa {
-  color: var(--pergamin);
-  text-shadow: 0 1px 2px #000;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.postac-cechy .wartosc {
+.postac-cecha {
+  font-size: var(--pismo-cechy);
+  line-height: 1;
   color: var(--zloto);
   text-shadow: 0 1px 2px #000;
-  text-align: right;
-  padding-right: .6em;
-  font-weight: 400;
+  white-space: nowrap;
 }
 
-/*
- * Przycisk dodania punktu cechy — oryginalny zloty krzyzyk.
- *
- * `font: inherit` jest tu KONIECZNE. Przyciski nie dziedzicza pisma po
- * rodzicu, wiec `em` liczylo sie od domyslnych 13 px przegladarki: przy
- * wierszu wysokim na 12 px przycisk mial 25 px i rozpychal cala siatke,
- * przez co nazwy cech zamienialy sie w "Zre..." i "Obra...".
- */
-.postac-cechy .plus {
-  font: inherit;
-  /* Wiersz ma 32 px przy scenie 700 px wysokiej, czyli okolo 2 razy tyle,
-     co pismo. Przycisk musi zmiescic sie w tej wysokosci, inaczej rozpycha
-     siatke i nazwy cech sie ucinaja. */
-  width: 1.4em;
-  height: 1.4em;
-  justify-self: center;
+/* Przycisk dodania punktu cechy — oryginalny zloty krzyzyk 33x33. */
+.postac-plus {
   padding: 0;
   border: none;
-  background: url('/res/ui/plus.png') center / contain no-repeat;
+  background: url('/res/ui/plus.png') 0 0 / 100% 100% no-repeat;
   cursor: pointer;
 }
 
-.postac-cechy .plus:hover:not(:disabled) { background-image: url('/res/ui/plus-najazd.png'); }
-.postac-cechy .plus:active:not(:disabled) { background-image: url('/res/ui/plus-wcisniety.png'); }
+.postac-plus:hover:not(:disabled) { background-image: url('/res/ui/plus-najazd.png'); }
+.postac-plus:active:not(:disabled) { background-image: url('/res/ui/plus-wcisniety.png'); }
 
 /* Dopoki rozdawanie punktow nie jest przeniesione, przycisk jest przygaszony. */
-.postac-cechy .plus:disabled { opacity: .45; cursor: default; }
+.postac-plus:disabled { opacity: .45; cursor: default; }
 
 /* --- prawa polowa --- */
 
@@ -915,44 +684,35 @@ img { max-width: 100%; }
 .postac-wierzchowiec {
   display: flex;
   align-items: center;
-  gap: .5em;
-  color: var(--pergamin);
+  gap: 24px;
+  font-size: var(--pismo);
+  color: var(--zloto);
   text-shadow: 0 1px 3px #000, 0 0 6px #000;
 }
 
-.postac-honor img,
-.postac-pancerz img { width: 1.7em; height: 1.7em; object-fit: contain; }
-
 /*
  * Opis lezy na krajobrazie, wiec bez podkladu tekst gubi sie w trawie.
- *
- * Oryginal kladzie tam `black_square_neutral` — CIEMNY, przydymiony
- * prostokat 440x200, a pole tekstowe 10 px do srodka. Wczesniej bylo tu
- * jasnoniebieskie mleko, przez ktore prawa polowa ekranu wygladala jak
- * wielka pusta tablica.
+ * Oryginal kladzie tam `black_square_neutral` 440x200 z przezroczystoscia
+ * 0,65, a samo pole tekstowe 10 px do srodka.
  */
 .postac-opis {
-  /* REL_GILDEEHRE = 10 — tyle wynosi margines pola tekstowego. */
-  padding: calc(10 / 440 * 100%);
+  padding: 10px;
   overflow: auto;
-  color: var(--pergamin);
-  font-size: 1em;
-  line-height: 1.35;
-  background: rgba(4, 8, 14, .55);
-  border: 1px solid rgba(160, 190, 225, .22);
+  font-size: var(--pismo);
+  line-height: 1.3;
+  color: var(--zloto);
+  text-shadow: 0 1px 3px #000;
+  background: rgba(0, 0, 0, .65);
 }
 
-/*
- * Osiem odznak 50x67 co 55 px (POS_SCR_CHAR_ACH + REL_SCR_CHAR_ACH_X).
- * Blok ma 7*55+50 = 435 px, wiec ikona to 50/435, a przerwa 5/435.
- */
-.postac-osiagniecia { display: flex; align-items: center; gap: calc(5 / 435 * 100%); }
-.postac-osiagniecia img { width: calc(50 / 435 * 100%); height: 100%; }
+/* Osiem odznak 50x67 co 55 px (POS_SCR_CHAR_ACH + REL_SCR_CHAR_ACH_X). */
+.postac-osiagniecia { display: flex; align-items: center; gap: 5px; }
+.postac-osiagniecia img { width: 50px; height: 67px; }
 
 /* -------------------------------------------------- obroc telefon -- */
 
 /*
- * Gra jest pozioma — scena ma 1000x700. Na telefonie trzymanym pionowo
+ * Gra jest pozioma — scena ma 1280x800. Na telefonie trzymanym pionowo
  * miescilaby sie jako waski pasek na srodku ekranu, wiec zamiast tego
  * prosimy o obrot. Kto woli, gra mimo to.
  */
@@ -972,7 +732,7 @@ img { max-width: 100%; }
 
 .obroc p { margin: 0; font-size: 1.05rem; color: var(--zloto); }
 .obroc .podpis { color: var(--przygaszony); font-size: .85rem; }
-.obroc .przycisk { width: auto; margin-top: 1.2rem; }
+.obroc .przycisk { width: auto; margin-top: 1.2rem; min-height: 44px; font-size: 1rem; }
 
 .obroc-ikona {
   font-size: 3rem;
@@ -989,10 +749,10 @@ img { max-width: 100%; }
 
 /* ------------------------------------------------------- diagnostyka -- */
 
-.diag { font-size: .85rem; line-height: 1.5; }
-.diag > div { padding: .4rem 0; border-bottom: 1px solid rgba(120, 150, 190, .18); }
+.diag { font-size: 17px; line-height: 1.5; color: var(--pergamin); }
+.diag > div { padding: 8px 0; border-bottom: 1px solid rgba(120, 150, 190, .18); }
 .diag > div:last-child { border-bottom: none; }
-.diag > div > div { color: var(--przygaszony); word-break: break-word; font-size: .8rem; }
+.diag > div > div { color: var(--przygaszony); word-break: break-word; font-size: 15px; }
 .diag .ok b { color: var(--dobry); }
 .diag .blad b { color: var(--zly); }
 .diag .czekam b { color: var(--przygaszony); }
@@ -1000,11 +760,11 @@ img { max-width: 100%; }
 .diag-tekst {
   width: 100%;
   font-family: ui-monospace, Consolas, monospace;
-  font-size: .75rem;
+  font-size: 14px;
   color: var(--pergamin);
   background: rgba(8, 16, 26, .85);
   border: 1px solid var(--obwodka-jasna);
   border-radius: 6px;
-  padding: .6rem;
+  padding: 12px;
   resize: vertical;
 }

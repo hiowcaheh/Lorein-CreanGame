@@ -22,8 +22,14 @@ type Zakladka =
   | 'karczma' | 'arena' | 'warta' | 'zbrojownia' | 'magia' | 'stajnia' | 'grzybiarz'
   | 'bohater' | 'poczta' | 'gildia' | 'sala' | 'lochy' | 'opcje';
 
+/*
+ * Trzynascie przyciskow, dokladnie tyle i w tej kolejnosci, co w oryginale
+ * (`DefiniereInterfaceButton` w kliencie Flash). Miasta NIE ma na liscie —
+ * wraca sie do niego krzyzykiem w prawym gornym rogu ekranu, tak jak
+ * w grze. Czternasty przycisk nie zmiescilby sie zreszta w panelu: przy
+ * kroku 44 px lista siegalaby 722 px, a panel ma 700.
+ */
 const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
-  { klucz: 'miasto', nazwa: 'Miasto', grupa: 'a' },
   { klucz: 'karczma', nazwa: 'Karczma', grupa: 'a' },
   { klucz: 'arena', nazwa: 'Arena', grupa: 'a' },
   { klucz: 'warta', nazwa: 'Warta', grupa: 'a' },
@@ -49,7 +55,6 @@ export function App() {
   const [gracz, setGracz] = useState<Gracz | null>(null);
   const [brama, setBrama] = useState<Brama>(() => (token() ? 'sprawdzam' : 'logowanie'));
   const [zakladka, setZakladka] = useState<Zakladka>('miasto');
-  const [menuOtwarte, setMenuOtwarte] = useState(false);
   const [pracuje, setPracuje] = useState(false);
   const [blad, setBlad] = useState<string | null>(null);
 
@@ -95,7 +100,6 @@ export function App() {
     zapomnijToken();
     setGracz(null);
     setBlad(null);
-    setMenuOtwarte(false);   // inaczej menu zostaje otwarte pod ekranem logowania
     setBrama('logowanie');
   }
 
@@ -164,13 +168,8 @@ export function App() {
   let grupa = '';
 
   return (
-    <Rama
-      maMenu
-      menuOtwarte={menuOtwarte}
-      onPrzelaczMenu={() => setMenuOtwarte((o) => !o)}
-      onWyloguj={wyloguj}
-    >
-      <nav className={`menu${menuOtwarte ? ' otwarte' : ''}`}>
+    <Rama maMenu onWyloguj={wyloguj}>
+      <nav className="menu">
         {/*
           Zasoby u gory panelu — w kolejnosci z oryginalu: najpierw LICZBA,
           potem ikona, a calosc wyrownana do prawej krawedzi panelu.
@@ -202,10 +201,7 @@ export function App() {
                   aria-current={zakladka === poz.klucz}
                   disabled={!GOTOWE.includes(poz.klucz)}
                   title={GOTOWE.includes(poz.klucz) ? undefined : 'Jeszcze nie gotowe'}
-                  onClick={() => {
-                    setZakladka(poz.klucz);
-                    setMenuOtwarte(false);
-                  }}
+                  onClick={() => setZakladka(poz.klucz)}
                 >
                   {poz.nazwa}
                 </button>
@@ -218,16 +214,24 @@ export function App() {
       <main className={`tresc${zakladka === 'miasto' || zakladka === 'bohater' ? ' pelny' : ''}`}>
         {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
         {zakladka === 'bohater' && <Bohater gracz={gracz} />}
+
+        {/*
+          Krzyzyk zamykajacy ekran — POS_IF_EXIT = (1220, 120), czyli
+          (940, 20) wzgledem obszaru gry. W oryginale wraca nim sie
+          z kazdego ekranu na plac miasta.
+        */}
+        {zakladka !== 'miasto' && (
+          <button
+            className="wyjscie"
+            title="Wróć do miasta"
+            aria-label="Wróć do miasta"
+            onClick={() => setZakladka('miasto')}
+          />
+        )}
       </main>
     </Rama>
   );
 }
-
-/*
- * Ponizej tej szerokosci panel menu nie miesci sie obok gry i wjezdza na nia
- * jako nakladka. Ten sam prog co w arkuszu stylow.
- */
-const WASKI = '(max-width: 640px)';
 
 /*
  * Telefon trzymany pionowo. Scena gry ma proporcje 1000x700 — polozona na
@@ -261,48 +265,32 @@ function useZapytanieMedia(zapytanie: string): boolean {
 function Rama({
   children,
   maMenu,
-  menuOtwarte,
-  onPrzelaczMenu,
   onWyloguj,
 }: {
   children: React.ReactNode;
   maMenu: boolean;
-  menuOtwarte?: boolean;
-  onPrzelaczMenu?: () => void;
   onWyloguj?: () => void;
 }) {
-  const waski = useZapytanieMedia(WASKI);
   const pionowo = useZapytanieMedia(PIONOWO);
   const [mimoTo, setMimoTo] = useState(false);
-  const scena = useSkalaSceny<HTMLDivElement>(maMenu && !waski);
+  const scena = useSkalaSceny<HTMLDivElement>();
 
   return (
     <div className="gra">
-      <header className="gora">
-        {onPrzelaczMenu && (
-          <button
-            className="przelacznik-menu"
-            onClick={onPrzelaczMenu}
-            aria-label="Menu"
-            aria-expanded={menuOtwarte ?? false}
-          >
-            ☰
-          </button>
-        )}
+      <div className={`scena${maMenu ? '' : ' bez-menu'}`} ref={scena}>
+        <header className="gora">
+          <h1>Lorein</h1>
 
-        <h1>Lorein</h1>
+          {onWyloguj && (
+            <>
+              <span className="link-gory lewy">ItemShop</span>
+              <button className="link-gory prawy" onClick={onWyloguj}>
+                Wyloguj
+              </button>
+            </>
+          )}
+        </header>
 
-        {onWyloguj && (
-          <>
-            <span className="link-gory lewy">ItemShop</span>
-            <button className="link-gory prawy" onClick={onWyloguj}>
-              Wyloguj
-            </button>
-          </>
-        )}
-      </header>
-
-      <div className="srodek" ref={scena}>
         {children}
       </div>
 

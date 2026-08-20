@@ -106,9 +106,12 @@ NAZWANE = {
     54: 'smok4',
     57: 'smok5',
     60: 'smok6',
-    194: 'krazek',            # okragly guzik, stan zwykly
-    197: 'krazek-najazd',
-    199: 'krazek-wybrany',
+    # Krzyzyk zamykajacy ekran (BTN_IF_EXIT, klasa `btnClassExitScreen`).
+    # Wczesniej byly opisane jako "krazek" — to pomylka: 194 to zupelnie
+    # inna ikona, a trzy stany krzyzyka to 197, 199 i 201.
+    197: 'wyjscie-najazd',
+    199: 'wyjscie-wcisniety',
+    201: 'wyjscie',
     293: 'ptaszek',           # znacznik wyboru
     254: 'plus',              # przycisk dodawania punktu cechy
     256: 'plus-najazd',

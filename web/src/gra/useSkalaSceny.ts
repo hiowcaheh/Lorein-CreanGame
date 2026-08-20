@@ -1,59 +1,67 @@
 /**
- * Mnoznik sceny.
+ * Dopasowanie sceny do okna.
  *
- * Oryginal to sztywna scena 1280x800: panel menu 280x700 w punkcie (0,100)
- * i ekran gry 1000x700 tuz obok. Odtwarzamy ten uklad co do piksela, ale
- * na ekranach kazdego rozmiaru — wiec kazde polozenie w CSS jest podane
- * w pikselach ORYGINALU i przemnozone przez `--skala`.
+ * Oryginal to sztywna scena 1280x800: pas z tytulem 1280x100 u gory, panel
+ * menu 280x700 pod nim po lewej i ekran gry 1000x700 obok. Odtwarzamy ja
+ * DOSLOWNIE — kazde polozenie w arkuszu stylow jest podane w pikselach
+ * oryginalu — a do okna dopasowuje ja jedno `transform: scale()`.
  *
- * Ten mnoznik musi byc policzony z prawdziwego rozmiaru miejsca na gre.
- * Wczesniej dobieraly go progi `@media`, ktore patrza wylacznie na
- * szerokosc okna — i na telefonie w poziomie (844 px szerokosci, ale tylko
- * 390 px wysokosci) wychodzila scena wyzsza niz ekran. Stad przewijanie
- * i wielki ciemny prostokat obok gry.
+ * Skalowanie jest NIEROWNOMIERNE, i tak ma byc. Tak samo zachowywal sie
+ * odtwarzacz Flasha rozciagniety na okno przegladarki: przy ekranie
+ * szerszym niz 1,6:1 obraz robil sie odrobine szerszy, zamiast zostawiac
+ * czarne pasy po bokach. Gra ma wypelniac ekran.
  *
- * Bierzemy mniejszy z dwoch mnoznikow — z wysokosci i z szerokosci — wiec
- * scena zawsze miesci sie w calosci i nigdy nie ma czego przewijac.
+ * Rozjazd proporcji jest jednak ograniczony. Bez tego telefon trzymany
+ * pionowo rozciagnalby scene ponad trzykrotnie i postacie zrobilyby sie
+ * plaskie jak nalesniki. Kiedy okno wychodzi poza te granice, scena
+ * dostaje najwiekszy dopuszczalny rozmiar i jest wysrodkowana.
  */
 
 import { useEffect, useRef } from 'react';
 
-/** Wysokosc panelu menu i ekranu gry w oryginale. */
-const WYSOKOSC_SCENY = 700;
-/** Szerokosc samego ekranu gry. */
-const SZEROKOSC_EKRANU = 1000;
-/** Szerokosc panelu menu. */
-const SZEROKOSC_MENU = 280;
+export const SZEROKOSC_SCENY = 1280;
+export const WYSOKOSC_SCENY = 800;
 
 /**
- * @param zMenu czy panel menu stoi OBOK gry (szeroki ekran) i trzeba mu
- *              zarezerwowac miejsce, czy wjezdza na nia jako nakladka.
+ * Dopuszczalny stosunek `skala pionowa / skala pozioma`.
+ *
+ * 0,78 znaczy: obraz moze byc najwyzej okolo 28% szerszy, niz wynika
+ * z proporcji. Tyle wlasnie ma oryginal rozciagniety na ekran telefonu
+ * w poziomie i wyglada dobrze.
  */
-export function useSkalaSceny<T extends HTMLElement>(zMenu: boolean) {
+const NAJMNIEJ = 0.78;
+const NAJWIECEJ = 1.25;
+
+export function useSkalaSceny<T extends HTMLElement>() {
   const uchwyt = useRef<T>(null);
 
   useEffect(() => {
     const element = uchwyt.current;
     if (!element) return;
 
+    const rodzic = element.parentElement;
+    if (!rodzic) return;
+
     const przelicz = () => {
-      const { width, height } = element.getBoundingClientRect();
+      const { width, height } = rodzic.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
 
-      const potrzebnaSzerokosc = SZEROKOSC_EKRANU + (zMenu ? SZEROKOSC_MENU : 0);
-      const skala = Math.min(height / WYSOKOSC_SCENY, width / potrzebnaSzerokosc);
+      let sx = width / SZEROKOSC_SCENY;
+      let sy = height / WYSOKOSC_SCENY;
 
-      // Zaokraglenie w dol o pol piksela: bez tego suma szerokosci potrafi
-      // wyjsc o setne czesci piksela poza okno i przegladarka pokazuje pasek.
-      element.style.setProperty('--skala', String(Math.floor(skala * 1000) / 1000));
+      if (sy / sx < NAJMNIEJ) sx = sy / NAJMNIEJ;         // okno za szerokie
+      else if (sy / sx > NAJWIECEJ) sy = sx * NAJWIECEJ;  // okno za wysokie
+
+      element.style.setProperty('--sx', String(sx));
+      element.style.setProperty('--sy', String(sy));
     };
 
     przelicz();
 
     const obserwator = new ResizeObserver(przelicz);
-    obserwator.observe(element);
+    obserwator.observe(rodzic);
     return () => obserwator.disconnect();
-  }, [zMenu]);
+  }, []);
 
   return uchwyt;
 }
