@@ -44,7 +44,8 @@
    * zeby uklad pozostal ten sam, tylko mniejszy.
    */
   --skala: 1;
-  --pasek-menu: calc(280px * var(--skala));
+  /* 20 px odstepu + 180 px przycisku + 64 px smoka + ramka panelu. */
+  --pasek-menu: calc(310px * var(--skala));
   --promien: 10px;
 
   /* Grubosc ozdobnych ramek. Na telefonie mniejsza, zeby nie zjadala ekranu. */
@@ -97,13 +98,15 @@ img { max-width: 100%; }
   gap: .75rem;
   padding: 0 .75rem;
   height: 60px;
-  background: #0b0d14 url('/res/ui/baner.png') center / auto 100% no-repeat;
+  /* Pas rozciaga sie na CALA szerokosc okna. Wczesniej byl pokazywany
+     w naturalnych proporcjach i po bokach zostawaly czarne pola. */
+  background: #0b0d14 url('/res/ui/baner.png') center / 100% 100% no-repeat;
   border-bottom: 1px solid #000;
   position: relative;
 }
 
 @media (min-width: 1280px) {
-  .gora { background-size: 100% 100%; height: 76px; }
+  .gora { height: 76px; }
 }
 
 /* Napisy po bokach pasa — ItemShop z lewej, wyjscie z prawej. */
@@ -142,21 +145,25 @@ img { max-width: 100%; }
   clip-path: inset(50%);
 }
 
-/* Zasoby stoja u gory panelu menu, tak jak w oryginale. */
+/*
+ * Zasoby u gory panelu menu.
+ *
+ * Kolejnosc jest wazna: najpierw LICZBA, potem ikona — tak jak w oryginale
+ * ("1 zloto 00 srebro", "5000 grzybow"). Odwrotnie wygladalo obco.
+ */
 .zasoby {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: .1rem;
-  margin-bottom: .5rem;
-  font-size: 1rem;
-  font-weight: 700;
+  gap: .15rem;
+  margin-bottom: .7rem;
+  font-size: calc(19px * var(--skala));
   color: var(--pergamin);
-  text-shadow: 0 1px 2px #000;
+  text-shadow: 0 2px 3px #000;
 }
 
-.zasoby span { display: flex; align-items: center; gap: .25rem; }
-.zasoby img { width: 20px; height: 20px; }
+.zasoby .linia { display: flex; align-items: center; gap: .3rem; }
+.zasoby img { width: calc(26px * var(--skala)); height: calc(26px * var(--skala)); }
 
 .przelacznik-menu {
   display: none;
@@ -225,7 +232,10 @@ img { max-width: 100%; }
   align-items: center;
   width: var(--guzik-szerokosc);
   height: var(--guzik-wysokosc);
-  padding: 0 .9rem;
+  padding: 0 .6rem;
+  /* Napis na srodku przycisku — tak jak w oryginale. */
+  justify-content: center;
+  text-align: center;
   font: inherit;
   font-size: calc(17px * var(--skala));
   letter-spacing: .02em;
@@ -256,10 +266,12 @@ img { max-width: 100%; }
 .menu li::after {
   content: '';
   position: absolute;
-  left: var(--guzik-szerokosc);
-  top: calc(-10px * var(--skala));
-  width: calc(70px * var(--skala));
-  height: calc(60px * var(--skala));
+  /* Smok wchodzi lekko na przycisk i wystaje poza jego prawa krawedz —
+     jak REL_DRAGON_X/Y w oryginale, ale bez wychodzenia poza panel. */
+  left: calc(var(--guzik-szerokosc) - 12px * var(--skala));
+  top: calc(-6px * var(--skala));
+  width: calc(64px * var(--skala));
+  height: calc(56px * var(--skala));
   background: url('/res/ui/smok1.png') center / contain no-repeat;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .6));
   pointer-events: none;
@@ -456,8 +468,17 @@ img { max-width: 100%; }
  * wysokosci). Wszystko musi sie sciesnic, inaczej gracz oglada sam
  * naglowek i skrawek portretu.
  */
+/*
+ * Menu skaluje sie razem z oknem. Na waskim ekranie stale 310 px zabieraloby
+ * ponad 40% szerokosci — w oryginale menu zajmuje 22% sceny, wiec ekran gry
+ * musi dostac reszte.
+ */
+@media (max-width: 1100px) { :root { --skala: .78; } }
+@media (max-width: 860px) { :root { --skala: .62; } }
+@media (max-width: 620px) { :root { --skala: .55; } }
+
 @media (max-height: 540px) {
-  :root { --skala: .72; }
+  :root { --skala: .58; --ramka-grubosc: 13px; }
 
   .gora { padding: .3rem .6rem; height: 46px; }
   .zasoby { font-size: .85rem; margin-bottom: .3rem; }
@@ -540,17 +561,44 @@ img { max-width: 100%; }
  */
 .miasto {
   position: relative;
-  width: 100%;
   aspect-ratio: 1000 / 700;
   overflow: hidden;
   background: #10141f;
 }
 
 /*
- * Miasto wypelnia cala rame, bez marginesow — tak jak w oryginale.
- * Zwykle ekrany maja odstep od ramki, ten jeden nie.
+ * Ekrany gry wypelniaja cala rame, bez marginesow i bez przewijania.
+ *
+ * Wczesniej `aspect-ratio` wymuszalo wysokosc wieksza niz dostepna, wiec
+ * ekran postaci dalo sie przewijac w pionie, a dookola niego widac bylo
+ * niebieskie tlo ramki. Teraz obraz dopasowuje sie do MNIEJSZEGO z dwoch
+ * wymiarow i zawsze miesci sie w calosci.
  */
-.tresc.pelny { padding: 0; display: flex; align-items: center; }
+.tresc.pelny {
+  padding: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  /* Ciemne tlo zamiast granatowej poswiaty — obraz ekranu i tak zakrywa
+     cala rame, a ewentualny pasek z boku ma byc niewidoczny, nie niebieski. */
+  background: #0a1018;
+}
+
+/*
+ * Wysokosc wiodaca, szerokosc z proporcji.
+ *
+ * Wczesniej bylo `width: 100%`, co wygrywalo z `aspect-ratio` — obraz
+ * rozciagal sie na cala szerokosc, wysokosc byla przycinana i dolny rzad
+ * ekranu postaci znikal pod ramka.
+ */
+.tresc.pelny > * {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+
 
 .miasto img {
   position: absolute;
@@ -632,13 +680,16 @@ img { max-width: 100%; }
  * obrazy tla po 500x700. Wszystko, co na nich lezy, jest pozycjonowane
  * w procentach, wiec caly uklad skaluje sie razem z oknem.
  */
+/*
+ * Rozmiar pisma ustawia `useSkalaPisma` — mierzy prawdziwa szerokosc
+ * elementu i liczy z niej 1,55%, czyli 15,5 px przy scenie 1000 px, tak jak
+ * w oryginale. Jednostki kontenerowe okazaly sie tu zawodne, szczegoly
+ * w komentarzu tamtego pliku.
+ */
 .postac {
   position: relative;
-  width: 100%;
   aspect-ratio: 1000 / 700;
   overflow: hidden;
-  font-size: clamp(9px, 1.55cqw, 17px);
-  container-type: inline-size;
 }
 
 .postac > * { position: absolute; }
@@ -705,22 +756,59 @@ img { max-width: 100%; }
 
 /* --- cechy --- */
 
+/*
+ * Jedna siatka na cechy i wartosci pochodne, o kolumnach z oryginalu.
+ * Dwa osobne bloki obok siebie rozjezdzaly sie, bo kazdy dobieral
+ * szerokosci po swojemu.
+ */
 .postac-cechy {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: .35em;
+  display: grid;
+  align-items: center;
 }
 
-.postac-wiersz {
-  display: flex;
-  align-items: baseline;
-  gap: .5em;
-  line-height: 1.15;
+.postac-cechy .nazwa {
+  color: var(--pergamin);
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.postac-wiersz span { flex: 1; color: var(--pergamin); text-shadow: 0 1px 2px #000; }
-.postac-wiersz b { color: var(--zloto); text-shadow: 0 1px 2px #000; }
+.postac-cechy .wartosc {
+  color: var(--zloto);
+  text-shadow: 0 1px 2px #000;
+  text-align: right;
+  padding-right: .6em;
+  font-weight: 400;
+}
+
+/*
+ * Przycisk dodania punktu cechy — oryginalny zloty krzyzyk.
+ *
+ * `font: inherit` jest tu KONIECZNE. Przyciski nie dziedzicza pisma po
+ * rodzicu, wiec `em` liczylo sie od domyslnych 13 px przegladarki: przy
+ * wierszu wysokim na 12 px przycisk mial 25 px i rozpychal cala siatke,
+ * przez co nazwy cech zamienialy sie w "Zre..." i "Obra...".
+ */
+.postac-cechy .plus {
+  font: inherit;
+  /* Wiersz ma 32 px przy scenie 700 px wysokiej, czyli okolo 2 razy tyle,
+     co pismo. Przycisk musi zmiescic sie w tej wysokosci, inaczej rozpycha
+     siatke i nazwy cech sie ucinaja. */
+  width: 1.4em;
+  height: 1.4em;
+  justify-self: center;
+  padding: 0;
+  border: none;
+  background: url('/res/ui/plus.png') center / contain no-repeat;
+  cursor: pointer;
+}
+
+.postac-cechy .plus:hover:not(:disabled) { background-image: url('/res/ui/plus-najazd.png'); }
+.postac-cechy .plus:active:not(:disabled) { background-image: url('/res/ui/plus-wcisniety.png'); }
+
+/* Dopoki rozdawanie punktow nie jest przeniesione, przycisk jest przygaszony. */
+.postac-cechy .plus:disabled { opacity: .45; cursor: default; }
 
 /* --- prawa polowa --- */
 

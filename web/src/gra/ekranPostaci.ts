@@ -87,9 +87,48 @@ export const NAZWA_W_POLU = ramka(408, 336, 264, 30);
 
 export const PASEK_DOSWIADCZENIA = ramka(409, 381, 282, 24);
 
-/** Szesc wierszy wartosci pod portretem: POS_CHAR_PROP_Y = 517, co 32. */
-export const CECHY_LEWO = ramka(304, 517, 200, 200);
-export const CECHY_PRAWO = ramka(520, 517, 250, 200);
+/*
+ * Piec wierszy wartosci pod portretem. Kolumny stoja dokladnie tam, gdzie
+ * w oryginale — inaczej napisy sie rozjezdzaja:
+ *
+ *   POS_CHAR_PROP_COLUMN_1_X = 304   nazwa cechy
+ *   POS_CHAR_PROP_COLUMN_2_X = 405   wartosc cechy
+ *   POS_CHAR_PROP_COLUMN_3_X = 470   przycisk dodawania punktu
+ *   POS_CHAR_PROP_COLUMN_5_X = 520   nazwa wartosci pochodnej
+ *   POS_CHAR_PROP_COLUMN_6_X = 650   wartosc pochodna
+ *   POS_CHAR_PROP_Y = 517, REL_CHAR_PROP_Y = 32 (odstep wierszy)
+ */
+export const CECHY = ramka(304, 511, 400, 5 * 32 + 6);
+
+/*
+ * Szerokosci kolumn siatki.
+ *
+ * UWAGA na jednostke odniesienia: procenty w `grid-template-columns` licza
+ * sie od szerokosci SIATKI, nie od szerokosci ekranu. Liczone wzgledem
+ * ekranu (1000 px) wychodzily dwuipolkrotnie za wąskie i nazwy cech
+ * zamienialy sie w "Intel...", "Obraż...".
+ */
+const SZEROKOSC_SIATKI = 400;
+
+export const KOLUMNY_CECH = [
+  405 - 304, // nazwa cechy
+  470 - 405, // wartosc
+  520 - 470, // przycisk dodania punktu
+  650 - 520, // nazwa wartosci pochodnej
+]
+  .map((px) => `${(px / SZEROKOSC_SIATKI) * 100}%`)
+  .concat('1fr')
+  .join(' ');
+
+/*
+ * Wysokosc wiersza jako `1fr`, nie procent.
+ *
+ * Procent w `grid-auto-rows` liczy sie od wysokosci SIATKI, a nie ekranu —
+ * wyszlo z tego kilka pikseli na wiersz i napisy zlewaly sie w jedna
+ * plame. Piec rownych czesci wysokosci siatki daje dokladnie te 32 px
+ * z oryginalu, bo taka wlasnie wysokosc ma caly blok.
+ */
+export const WYSOKOSC_WIERSZA = '1fr';
 
 /** Prawa polowa ekranu. */
 export const OPIS = ramka(795, 175, 470, 240);

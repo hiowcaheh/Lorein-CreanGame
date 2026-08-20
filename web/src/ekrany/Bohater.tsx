@@ -7,11 +7,14 @@
  * wiec caly ekran skaluje sie razem z oknem.
  */
 
+import { Fragment } from 'react';
+import { useSkalaPisma } from '../gra/useSkalaPisma';
 import { Portret } from '../gra/Portret';
 import { NAZWY_KLAS, NAZWY_RAS } from '../gra/portret';
 import {
-  CECHY_LEWO,
-  CECHY_PRAWO,
+  CECHY,
+  KOLUMNY_CECH,
+  WYSOKOSC_WIERSZA,
   HONOR,
   KATALOG_SLOTOW,
   MIEJSCA,
@@ -39,9 +42,10 @@ function styl(r: Ramka): React.CSSProperties {
 
 export function Bohater({ gracz }: { gracz: Gracz }) {
   const wPlecaku = gracz.ekwipunek.filter((p) => p.slot >= 10);
+  const ekran = useSkalaPisma<HTMLDivElement>();
 
   return (
-    <div className="postac">
+    <div className="postac" ref={ekran}>
       <img className="postac-tlo lewe" src={TLO_LEWE} alt="" />
       <img className="postac-tlo prawe" src={TLO_PRAWE} alt="" />
 
@@ -77,21 +81,52 @@ export function Bohater({ gracz }: { gracz: Gracz }) {
         </span>
       </div>
 
-      {/* --- cechy i wartosci pochodne --- */}
-      <div className="postac-cechy lewo" style={styl(CECHY_LEWO)}>
-        <Wiersz nazwa="Siła" wartosc={gracz.cechy.sila} />
-        <Wiersz nazwa="Zręczność" wartosc={gracz.cechy.zrecznosc} />
-        <Wiersz nazwa="Inteligencja" wartosc={gracz.cechy.intelekt} />
-        <Wiersz nazwa="Wytrzym." wartosc={gracz.cechy.wytrzymalosc} />
-        <Wiersz nazwa="Szczęście" wartosc={gracz.cechy.szczescie} />
-      </div>
+      {/*
+        Cechy i wartosci pochodne w JEDNEJ siatce o kolumnach z oryginalu.
+        Dwa osobne bloki obok siebie rozjezdzaly sie, bo kazdy ustawial
+        szerokosci po swojemu.
+      */}
+      <div
+        className="postac-cechy"
+        style={{
+          ...styl(CECHY),
+          gridTemplateColumns: KOLUMNY_CECH,
+          gridAutoRows: WYSOKOSC_WIERSZA,
+        }}
+      >
+        {[
+          { nazwa: 'Siła', wartosc: gracz.cechy.sila },
+          { nazwa: 'Zręczność', wartosc: gracz.cechy.zrecznosc },
+          { nazwa: 'Inteligencja', wartosc: gracz.cechy.intelekt },
+          { nazwa: 'Wytrzym.', wartosc: gracz.cechy.wytrzymalosc },
+          { nazwa: 'Szczęście', wartosc: gracz.cechy.szczescie },
+        ].map((cecha, i) => {
+          const pochodne = [
+            { nazwa: 'Obrażenia', wartosc: `~${gracz.obrazenia.srednio}`, tytul: `${gracz.obrazenia.min} – ${gracz.obrazenia.max}` },
+            { nazwa: 'Zdolność uniku', wartosc: String(gracz.unik) },
+            { nazwa: 'Odporność', wartosc: String(gracz.odpornosc) },
+            { nazwa: 'Żywotność', wartosc: String(gracz.zycie) },
+            { nazwa: 'Cios krytyczny', wartosc: `${gracz.ciosKrytyczny}%` },
+          ][i]!;
 
-      <div className="postac-cechy prawo" style={styl(CECHY_PRAWO)}>
-        <Wiersz nazwa="Obrażenia" wartosc={`~${gracz.obrazenia.srednio}`} tytul={`${gracz.obrazenia.min} – ${gracz.obrazenia.max}`} />
-        <Wiersz nazwa="Zdolność uniku" wartosc={gracz.unik} />
-        <Wiersz nazwa="Odporność" wartosc={gracz.odpornosc} />
-        <Wiersz nazwa="Żywotność" wartosc={gracz.zycie} />
-        <Wiersz nazwa="Cios krytyczny" wartosc={`${gracz.ciosKrytyczny}%`} />
+          return (
+            <Fragment key={cecha.nazwa}>
+              <span className="nazwa">{cecha.nazwa}</span>
+              <b className="wartosc">{cecha.wartosc}</b>
+              <button
+                type="button"
+                className="plus"
+                title={`Dodaj punkt: ${cecha.nazwa}`}
+                aria-label={`Dodaj punkt: ${cecha.nazwa}`}
+                disabled
+              />
+              <span className="nazwa" title={pochodne.tytul ?? ''}>
+                {pochodne.nazwa}
+              </span>
+              <b className="wartosc">{pochodne.wartosc}</b>
+            </Fragment>
+          );
+        })}
       </div>
 
       {/* --- prawa polowa --- */}
@@ -110,7 +145,7 @@ export function Bohater({ gracz }: { gracz: Gracz }) {
       </div>
 
       <div className="postac-pancerz" style={styl(PANCERZ)}>
-        <img src={KATALOG_SLOTOW + 'icon_schild.jpg'} alt="" />
+        <img src="/res/ui/tarcza-ikona.png" alt="" />
         Pancerz: {gracz.pancerz}
       </div>
 
@@ -156,19 +191,4 @@ function Miejsce({
   );
 }
 
-function Wiersz({
-  nazwa,
-  wartosc,
-  tytul,
-}: {
-  nazwa: string;
-  wartosc: string | number;
-  tytul?: string | undefined;
-}) {
-  return (
-    <div className="postac-wiersz" title={tytul ?? ''}>
-      <span>{nazwa}</span>
-      <b>{wartosc}</b>
-    </div>
-  );
-}
+

@@ -110,6 +110,10 @@ NAZWANE = {
     197: 'krazek-najazd',
     199: 'krazek-wybrany',
     293: 'ptaszek',           # znacznik wyboru
+    254: 'plus',              # przycisk dodawania punktu cechy
+    256: 'plus-najazd',
+    258: 'plus-wcisniety',
+    183: 'tarcza-ikona',      # ikona pancerza przy prawej polowie ekranu
 }
 
 

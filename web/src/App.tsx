@@ -168,16 +168,17 @@ export function App() {
         <nav className={`menu${menuOtwarte ? ' otwarte' : ''}`}>
           {/* Zasoby stoja u gory panelu menu — tak jak w oryginale. */}
           <div className="zasoby">
-            <span title="Złoto i srebro">
-              <img src="/res/sfgame/if/icon_gold.png" alt="" />
-              {Math.floor(gracz.srebro / 100).toLocaleString('pl-PL')}
-              <img src="/res/sfgame/if/icon_silber.png" alt="" />
-              {String(gracz.srebro % 100).padStart(2, '0')}
-            </span>
-            <span title="Grzyby">
-              <img src="/res/sfgame/if/icon_pilz.png" alt="" />
-              {gracz.grzyby.toLocaleString('pl-PL')}
-            </span>
+            {/* Liczba przed ikona — kolejnosc jak w oryginale. */}
+            <div className="linia" title="Złoto i srebro">
+              <span>{Math.floor(gracz.srebro / 100).toLocaleString('pl-PL')}</span>
+              <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
+              <span>{String(gracz.srebro % 100).padStart(2, '0')}</span>
+              <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+            </div>
+            <div className="linia" title="Grzyby">
+              <span>{gracz.grzyby.toLocaleString('pl-PL')}</span>
+              <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
+            </div>
           </div>
 
           <ul>
@@ -204,7 +205,7 @@ export function App() {
           </ul>
         </nav>
 
-        <main className={`tresc${zakladka === 'miasto' ? ' pelny' : ''}`}>
+        <main className={`tresc${zakladka === 'miasto' || zakladka === 'bohater' ? ' pelny' : ''}`}>
           {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
           {zakladka === 'bohater' && <Bohater gracz={gracz} />}
         </main>
