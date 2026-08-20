@@ -7,6 +7,7 @@
 
 import { Hono } from 'hono';
 import { getSql } from '../db/client.js';
+import { zapiszWDzienniku } from '../db/dziennik.js';
 import { loadDefaultStats } from '../game/stats.js';
 import { time } from '../compat/php.js';
 import { wczytajGracza } from './gracz.js';
@@ -168,8 +169,17 @@ konto.post('/login', async (c) => {
   // odpowiedz zdradza, ktore konta istnieja.
   const zle = () => c.json({ blad: 'Nie ma takiego bohatera albo hasło się nie zgadza.' }, 401);
 
-  if (!konto_) return zle();
-  if (!(await hasloPasuje(haslo, String(konto_['password'] ?? '')))) return zle();
+  if (!konto_) {
+    await zapiszWDzienniku('/api/login', 401, 'logowanie-brak-konta', `nick: ${nick}`);
+    return zle();
+  }
+
+  if (!(await hasloPasuje(haslo, String(konto_['password'] ?? '')))) {
+    // Zapisujemy sam fakt i rodzaj zapisanego hasla — nigdy samego hasla.
+    const rodzaj = String(konto_['password'] ?? '').startsWith('scrypt$') ? 'scrypt' : 'md5';
+    await zapiszWDzienniku('/api/login', 401, 'logowanie-zle-haslo', `nick: ${nick}, zapisane haslo: ${rodzaj}`);
+    return zle();
+  }
   if (String(konto_['enabled'] ?? 'yes') === 'no') {
     return c.json({ blad: 'To konto zostało zablokowane.' }, 403);
   }
@@ -189,6 +199,7 @@ konto.post('/login', async (c) => {
     WHERE user_id = ${Number(konto_['user_id'])}
   `;
 
+  await zapiszWDzienniku('/api/login', 200, 'logowanie-ok', `nick: ${nick}`);
   return c.json(await odpowiedzZTokenem(sql, token));
 });
 

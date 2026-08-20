@@ -529,3 +529,26 @@ REVOKE ALL ON ALL TABLES    IN SCHEMA public FROM anon, authenticated;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
 
 COMMIT;
+
+-- ---------------------------------------------------------------------------
+-- Dziennik zdarzen serwera.
+--
+-- Gra dziala na serwerze bezstanowym — nie ma dokad zajrzec, gdy cos padnie
+-- u gracza. Wazne zdarzenia trafiaja wiec do bazy. Bez hasel i bez tresci
+-- zapytan.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS dziennik (
+  id          bigserial PRIMARY KEY,
+  kiedy       timestamptz NOT NULL DEFAULT now(),
+  sciezka     text        NOT NULL,
+  status      integer     NOT NULL,
+  rodzaj      text        NOT NULL,
+  szczegoly   text        NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS dziennik_kiedy_idx ON dziennik (kiedy DESC);
+
+ALTER TABLE dziennik ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON dziennik FROM anon, authenticated;
+REVOKE ALL ON SEQUENCE dziennik_id_seq FROM anon, authenticated;

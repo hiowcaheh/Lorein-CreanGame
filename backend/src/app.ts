@@ -19,6 +19,7 @@ import { register, login, loginFollowUp } from './actions/account.js';
 import { hero } from './actions/hero.js';
 import { buildClientConfig } from './clientConfig.js';
 import { closeSql, getSql } from './db/client.js';
+import { zapiszWDzienniku } from './db/dziennik.js';
 import { config } from './config.js';
 import { konto } from './api/konto.js';
 import { karczma } from './api/karczma.js';
@@ -87,10 +88,21 @@ if (config.serverless) {
  * Vercela, a w odpowiedzi zostaje krotki komunikat mozliwy do odczytania
  * w przegladarce.
  */
-app.onError((err, c) => {
+app.onError(async (err, c) => {
   console.error('Blad obslugi zapytania:', c.req.path, err);
 
   const message = err instanceof Error ? err.message : String(err);
+
+  /*
+   * Zapis do dziennika w bazie — na serwerze bezstanowym to jedyny slad,
+   * do ktorego da sie wrocic po fakcie.
+   *
+   * Musi byc `await`, a nie zapis w tle: pula polaczen zamyka sie zaraz po
+   * zakonczeniu ostatniego zapytania, wiec zapis puszczony luzem zostalby
+   * przerwany dokladnie wtedy, gdy jest najbardziej potrzebny.
+   */
+  await zapiszWDzienniku(c.req.path, 500, 'blad', `${message}\n${err instanceof Error ? (err.stack ?? '') : ''}`);
+
   return c.text(`Blad serwera: ${message}`, 500, {
     'content-type': 'text/plain; charset=utf-8',
     'access-control-allow-origin': '*',

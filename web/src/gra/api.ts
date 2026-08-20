@@ -8,26 +8,54 @@
 
 const KLUCZ_TOKENU = 'lorein.token';
 
+/**
+ * Token sesji trzymamy PRZEDE WSZYSTKIM w pamieci, a w `localStorage` tylko
+ * dodatkowo — zeby przetrwal odswiezenie strony.
+ *
+ * Odwrotna kolejnosc byla realna usterka. Safari na iPhonie potrafi odmowic
+ * dostepu do `localStorage` (prywatne okno, blokada ciasteczek, brak
+ * miejsca). Zapis cicho przepadal, kolejne zapytania szly bez tokenu,
+ * serwer odpowiadal 401 i gra wyrzucala gracza z powrotem na logowanie —
+ * co wygladalo dokladnie tak, jakby logowanie nie dzialalo, mimo ze serwer
+ * przyjmowal haslo bez zastrzezen.
+ */
+let wPamieci: string | null = null;
+
 export function token(): string | null {
+  if (wPamieci) return wPamieci;
   try {
-    return localStorage.getItem(KLUCZ_TOKENU);
+    wPamieci = localStorage.getItem(KLUCZ_TOKENU);
   } catch {
-    // Prywatne okno albo zablokowane ciasteczka — gra dziala, tyle ze
-    // trzeba sie logowac za kazdym razem.
-    return null;
+    wPamieci = null;
   }
+  return wPamieci;
 }
 
 export function zapiszToken(nowy: string): void {
+  wPamieci = nowy;
   try {
     localStorage.setItem(KLUCZ_TOKENU, nowy);
-  } catch { /* patrz wyzej */ }
+  } catch {
+    // Trudno — sesja przetrwa do odswiezenia strony, ale gra dziala.
+  }
 }
 
 export function zapomnijToken(): void {
+  wPamieci = null;
   try {
     localStorage.removeItem(KLUCZ_TOKENU);
   } catch { /* patrz wyzej */ }
+}
+
+/** Czy przegladarka pozwala nam cokolwiek zapamietac miedzy odswiezeniami. */
+export function pamiecDziala(): boolean {
+  try {
+    localStorage.setItem('lorein.proba', '1');
+    localStorage.removeItem('lorein.proba');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Blad, ktory da sie pokazac graczowi. */

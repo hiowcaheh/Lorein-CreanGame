@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { pamiecDziala, token } from '../gra/api';
 
 interface Wynik {
   nazwa: string;
@@ -113,6 +114,8 @@ export function Diagnostyka() {
   }
 
   const doSkopiowania = [
+    `pamiec przegladarki: ${pamiecDziala() ? 'dziala' : 'ZABLOKOWANA (prywatne okno albo blokada ciasteczek)'}`,
+    `token sesji: ${token() ? 'jest' : 'brak'}`,
     `strona: ${location.href}`,
     `przegladarka: ${navigator.userAgent}`,
     ...wyniki.map((w) => `${w.stan === 'ok' ? 'OK  ' : 'BLAD'} ${w.nazwa} — ${w.opis}`),
@@ -124,6 +127,14 @@ export function Diagnostyka() {
 
       <div className="karta" style={{ marginBottom: '1rem' }}>
         <div className="diag">
+          <div className={pamiecDziala() ? 'ok' : 'blad'}>
+            <b>{pamiecDziala() ? 'OK' : 'BŁĄD'}</b> pamięć przeglądarki
+            <div>
+              {pamiecDziala()
+                ? `zapis działa · token sesji: ${token() ? 'jest' : 'brak'}`
+                : 'zablokowana — prywatne okno albo blokada ciasteczek'}
+            </div>
+          </div>
           {wyniki.map((w) => (
             <div key={w.nazwa} className={w.stan}>
               <b>{w.stan === 'ok' ? 'OK' : w.stan === 'blad' ? 'BŁĄD' : '…'}</b> {w.nazwa}
