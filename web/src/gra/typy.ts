@@ -62,3 +62,60 @@ export interface OdpowiedzZTokenem {
   token: string;
   gracz: Gracz;
 }
+
+/** Jedno z trzech zadan w karczmie. */
+export interface Zadanie {
+  numer: 1 | 2 | 3;
+  /** Dlugosc w jednostkach po piec minut. */
+  dlugosc: number;
+  /** Ile naprawde potrwa — z uwzglednieniem wierzchowca. */
+  sekundy: number;
+  zloto: number;
+  doswiadczenie: number;
+  /** Numer krainy 1..21. */
+  lokacja: number;
+  /** Premia rzadkiego zadania w procentach; zero przy zwyklym. */
+  premia: number;
+  /** Czy przy zadaniu czeka przedmiot do zdobycia. */
+  nagrodaPrzedmiotowa: boolean;
+}
+
+/** Przebieg walki odegrany po zakonczonej wyprawie. */
+export interface PrzebiegWalki {
+  gracz: { nazwa: string; zycie: number; klasa: number; poziom: number };
+  potwor: { nazwa: string; zycie: number; klasa: number; poziom: number; obrazek: number };
+  /** Kolejne ciosy: kto uderzyl i ile zabral zycia. */
+  ciosy: { kto: number; obrazenia: number }[];
+}
+
+/** Rozliczenie zakonczonej wyprawy. */
+export interface Rozliczenie {
+  wygrana: boolean;
+  awans: number | null;
+  nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
+  zdobytyPrzedmiot: { nazwaSlotu: number } | null;
+  /** Nagroda przepadla, bo w plecaku nie bylo miejsca. */
+  plecakBylPelny: boolean;
+  walka: PrzebiegWalki;
+}
+
+/** Stan karczmy tak, jak podaje go backend. */
+export interface StanKarczmy {
+  wytrzymalosc: number;
+  wytrzymaloscMaks: number;
+  piwa: number;
+  piwaMaks: number;
+  progZaZdrowy: number;
+  grzyby: number;
+  /** 0 wolny, 2 na wyprawie. */
+  status: number;
+  wybraneZadanie: number;
+  /** Czas SERWERA, o ktorym wyprawa sie konczy. */
+  koniec: number;
+  /** Czas serwera w chwili odpowiedzi — z niego liczymy pozostaly czas. */
+  teraz: number;
+  wolneMiejsceWPlecaku: boolean;
+  zadania: Zadanie[];
+  rozliczenie?: Rozliczenie | null;
+  gracz?: Gracz;
+}

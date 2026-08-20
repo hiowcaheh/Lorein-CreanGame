@@ -11,11 +11,12 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { BladApi, zapomnijToken, zapiszToken, token, zapytaj } from './gra/api';
 import { useSkalaSceny } from './gra/useSkalaSceny';
 import { Bohater } from './ekrany/Bohater';
+import { Karczma } from './ekrany/Karczma';
 import { Diagnostyka } from './ekrany/Diagnostyka';
 import { Logowanie } from './ekrany/Logowanie';
 import { Miasto } from './ekrany/Miasto';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
-import type { Gracz, OdpowiedzZTokenem } from './gra/typy';
+import type { Gracz, OdpowiedzZTokenem, StanKarczmy } from './gra/typy';
 
 type Zakladka =
   | 'miasto'
@@ -46,7 +47,10 @@ const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['miasto', 'bohater'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma'];
+
+/** Zakladki, ktore wypelniaja cala rame wlasnym obrazem. */
+const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma'];
 
 /** Co widzi gracz, zanim wejdzie do gry. */
 type Brama = 'sprawdzam' | 'logowanie' | 'tworzenie';
@@ -57,6 +61,7 @@ export function App() {
   const [zakladka, setZakladka] = useState<Zakladka>('miasto');
   const [pracuje, setPracuje] = useState(false);
   const [blad, setBlad] = useState<string | null>(null);
+  const [karczma, setKarczma] = useState<StanKarczmy | null>(null);
 
   /** Zapisany token moze byc juz niewazny — sprawdzamy go przy starcie. */
   useEffect(() => {
@@ -124,6 +129,35 @@ export function App() {
       .then(({ gracz: g }) => setGracz(g))
       .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się przełożyć przedmiotu.'));
   }
+
+  /*
+   * Karczma. Kazda akcja odsyla PELNY stan, wiec klient niczego nie liczy
+   * sam — ani tego, czy wyprawa juz sie skonczyla, ani nagrod.
+   */
+  const wczytajKarczme = useCallback(() => {
+    void zapytaj<StanKarczmy>('/karczma')
+      .then((s) => {
+        setKarczma(s);
+        if (s.gracz) setGracz(s.gracz);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Karczma milczy.'));
+  }, []);
+
+  function akcjaKarczmy(sciezka: string, dane?: unknown) {
+    setBlad(null);
+    void zapytaj<StanKarczmy>(sciezka, dane ?? {})
+      .then((s) => {
+        // Podjecie wyprawy odsyla sam stan wyprawy, reszte mamy juz u siebie.
+        setKarczma((poprzedni) => (poprzedni ? { ...poprzedni, ...s } : s));
+        if (s.gracz) setGracz(s.gracz);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się.'));
+  }
+
+  // Wejscie do karczmy rozlicza zakonczona wyprawe — jak w oryginale.
+  useEffect(() => {
+    if (zakladka === 'karczma' && gracz) wczytajKarczme();
+  }, [zakladka, gracz, wczytajKarczme]);
 
   function wyloguj() {
     zapomnijToken();
@@ -240,10 +274,21 @@ export function App() {
         </ul>
       </nav>
 
-      <main className={`tresc${zakladka === 'miasto' || zakladka === 'bohater' ? ' pelny' : ''}`}>
+      <main className={`tresc${PELNOEKRANOWE.includes(zakladka) ? ' pelny' : ''}`}>
         {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
         {zakladka === 'bohater' && (
           <Bohater gracz={gracz} onZapiszOpis={zapiszOpis} onPrzenies={przeniesPrzedmiot} />
+        )}
+        {zakladka === 'karczma' && karczma && (
+          <Karczma
+            stan={karczma}
+            gracz={gracz}
+            onPodejmij={(numer) => akcjaKarczmy('/karczma/podejmij', { numer })}
+            onPrzerwij={() => akcjaKarczmy('/karczma/przerwij')}
+            onPrzyspiesz={() => akcjaKarczmy('/karczma/przyspiesz')}
+            onPiwo={() => akcjaKarczmy('/karczma/piwo')}
+            onOdswiez={wczytajKarczme}
+          />
         )}
 
         {/*
