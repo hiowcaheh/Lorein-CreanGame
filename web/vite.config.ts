@@ -14,6 +14,9 @@ const TYPY: Record<string, string> = {
   '.css': 'text/css',
   '.js': 'text/javascript',
   '.txt': 'text/plain; charset=utf-8',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
 };
 
 /**

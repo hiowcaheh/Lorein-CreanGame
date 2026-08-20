@@ -18,7 +18,7 @@ import {
   type Zadanie,
 } from '../game/karczma.js';
 import { potworNaZadanie, rozegrajWalke, wojownikZGracza, type Przedmiot } from '../game/walka.js';
-import { zbudujGracza } from './gracz.js';
+import { wczytajGracza } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
 import type { Context } from 'hono';
 
@@ -242,7 +242,7 @@ karczma.post('/karczma/odbierz', async (c) => {
       },
       ciosy: walka.ciosy,
     },
-    gracz: zbudujGracza(poAktualizacji ?? wiersz),
+    gracz: await wczytajGracza(sql, poAktualizacji ?? wiersz),
     zadania: noweZadania,
     wytrzymalosc,
   });

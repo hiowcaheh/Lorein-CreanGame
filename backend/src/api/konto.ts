@@ -9,7 +9,7 @@ import { Hono } from 'hono';
 import { getSql } from '../db/client.js';
 import { loadDefaultStats } from '../game/stats.js';
 import { time } from '../compat/php.js';
-import { zbudujGracza } from './gracz.js';
+import { wczytajGracza } from './gracz.js';
 import { czyStaryHash, hasloPasuje, nowyToken, zahashujHaslo } from './sesja.js';
 import type { Context } from 'hono';
 
@@ -50,7 +50,7 @@ async function odpowiedzZTokenem(sql: ReturnType<typeof getSql>, token: string) 
     SELECT * FROM user_data WHERE ssid = ${token} LIMIT 1
   `;
   if (!wiersz) throw new Error('konto zniknelo miedzy zapisem a odczytem');
-  return { token, gracz: zbudujGracza(wiersz) };
+  return { token, gracz: await wczytajGracza(sql, wiersz) };
 }
 
 // ------------------------------------------------------------ zaloz --
@@ -204,7 +204,7 @@ konto.get('/me', async (c) => {
   `;
 
   if (!wiersz) return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
-  return c.json({ gracz: zbudujGracza(wiersz) });
+  return c.json({ gracz: await wczytajGracza(getSql(), wiersz) });
 });
 
 export function tokenZNaglowka(c: Context): string | null {

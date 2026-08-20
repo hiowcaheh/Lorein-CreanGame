@@ -104,6 +104,8 @@ NAZWANE = {
     48: 'smok2',
     51: 'smok3',
     54: 'smok4',
+    57: 'smok5',
+    60: 'smok6',
     194: 'krazek',            # okragly guzik, stan zwykly
     197: 'krazek-najazd',
     199: 'krazek-wybrany',

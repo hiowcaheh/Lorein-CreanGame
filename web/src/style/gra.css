@@ -12,7 +12,20 @@
  * ekran. Dzieki temu ta sama grafika obsluguje telefon w pionie i monitor.
  */
 
+/*
+ * Czcionka gry — Komika Text, wyciagnieta z pliku SWF przez
+ * `backend/scripts/wyciagnij-czcionke-swf.py`. Jest osadzona w kliencie
+ * Flash i nie ma jej w zadnym katalogu z zasobami; bez niej napisy nigdy
+ * nie wygladaja jak w oryginale.
+ */
+@font-face {
+  font-family: 'Komika Text';
+  src: url('/res/ui/komika.woff') format('woff');
+  font-display: swap;
+}
+
 :root {
+  --czcionka: 'Komika Text', 'Trebuchet MS', 'Segoe UI', Tahoma, sans-serif;
   --zloto: #f0c042;
   --zloto-ciemne: #a8842c;
   --pergamin: #e8ddc8;
@@ -25,7 +38,13 @@
   --dobry: #7bb661;
   --zly: #c85a4a;
 
-  --pasek-menu: 15rem;
+  /*
+   * Menu zachowuje proporcje oryginalu: panel 280 px, przycisk 180x50,
+   * smok 70x60. `--skala` zmniejsza wszystko naraz na malych ekranach,
+   * zeby uklad pozostal ten sam, tylko mniejszy.
+   */
+  --skala: 1;
+  --pasek-menu: calc(280px * var(--skala));
   --promien: 10px;
 
   /* Grubosc ozdobnych ramek. Na telefonie mniejsza, zeby nie zjadala ekranu. */
@@ -47,7 +66,7 @@ html, body, #korzen {
 body {
   background: var(--tlo);
   color: var(--pergamin);
-  font-family: 'Trebuchet MS', 'Segoe UI', Tahoma, sans-serif;
+  font-family: var(--czcionka);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }
@@ -159,82 +178,101 @@ img { max-width: 100%; }
 /* ------------------------------------------------------------- menu -- */
 
 /*
- * Tlo menu to oryginalny panel 280x700 z ozdobna ramka. Przez `border-image`
- * rozciaga sie na dowolna wysokosc — rogi zostaja ostre, boki sie ciagna.
+ * Uklad menu jest przepisany ze stalych klienta Flash:
+ *
+ *   POS_IF_BTN_X = 20      przycisk zaczyna sie 20 px od lewej
+ *   POS_IF_BTN_Y = 180     pierwszy przycisk na wysokosci 180
+ *   REL_IF_BTN_1 = 44      kolejne co 44 px — przy wysokosci 50 px
+ *                          przyciski lekko na siebie nachodza
+ *   REL_IF_BTN_2 = 20      dodatkowa przerwa miedzy grupami
+ *   REL_DRAGON_X = 180     glowa smoka dokladnie przy prawej krawedzi
+ *   REL_DRAGON_Y = -10     i 10 px ponad gorna krawedzia przycisku
+ *
+ * Przycisk ma 180x50, wiec smok zaczyna sie tam, gdzie przycisk sie konczy —
+ * nie zachodzi na napis, tylko z niego wystaje.
  */
 .menu {
+  --guzik-szerokosc: calc(180px * var(--skala));
+  --guzik-wysokosc: calc(50px * var(--skala));
+  --guzik-odstep: calc(-6px * var(--skala));   /* 44 co krok przy 50 wysokosci */
+
   overflow-y: auto;
   overflow-x: hidden;
-  padding: .8rem .5rem;
+  padding: .6rem 0 .6rem calc(20px * var(--skala));
   display: flex;
   flex-direction: column;
-  gap: .35rem;
 
   background: #16202c;
   border: 20px solid transparent;
   border-image: url('/res/ui/panel-boczny.png') 30 fill / 20px stretch;
 }
 
-/*
- * Przycisk menu: kamienny pas z oryginalu plus glowa smoka z prawej.
- * Pas ma nieregularne konce, wiec 9-slice tnie go tak, zeby zostaly
- * nietkniete, a rozciagal sie tylko srodek.
- */
+.menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--guzik-odstep);
+}
+
+.menu li { position: relative; }
+
 .menu button {
   appearance: none;
   position: relative;
-  width: 100%;
-  min-height: 42px;
-  padding: .55rem 2.9rem .55rem 1rem;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  width: var(--guzik-szerokosc);
+  height: var(--guzik-wysokosc);
+  padding: 0 .9rem;
   font: inherit;
-  font-size: .95rem;
-  font-weight: 700;
-  letter-spacing: .06em;
+  font-size: calc(17px * var(--skala));
+  letter-spacing: .02em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--zloto);
   text-shadow: 0 1px 2px #000;
   background: none;
-  border: 14px solid transparent;
-  border-image: url('/res/ui/pasek.png') 14 44 14 44 fill / 14px 44px 14px 44px stretch;
+  border: 12px solid transparent;
+  border-image: url('/res/ui/guzik.png') 12 20 12 20 fill / 12px 20px 12px 20px stretch;
   cursor: pointer;
 }
 
-.menu button:hover:not(:disabled) {
-  border-image-source: url('/res/ui/pasek-najazd.png');
-}
-
+.menu button:hover:not(:disabled),
 .menu button[aria-current='true'] {
-  border-image-source: url('/res/ui/pasek-najazd.png');
-  color: #fff8dc;
+  border-image-source: url('/res/ui/guzik-najazd.png');
 }
 
+.menu button[aria-current='true'] { color: #fff8dc; }
 .menu button:active:not(:disabled) { transform: translateY(1px); }
+.menu button:disabled { opacity: .5; cursor: default; }
 
-.menu button:disabled { opacity: .45; cursor: default; }
-
-/* Glowa smoka przy kazdym przycisku — jak w oryginale. */
-.menu button::after {
+/*
+ * Glowa smoka: przyklejona do prawej krawedzi przycisku i wystajaca
+ * 10 px ponad jego gore — dokladnie jak REL_DRAGON_X/Y w oryginale.
+ * Szesc odmian, przydzielanych po kolei.
+ */
+.menu li::after {
   content: '';
   position: absolute;
-  right: -16px;
-  top: 50%;
-  width: 44px;
-  height: 38px;
-  transform: translateY(-50%);
+  left: var(--guzik-szerokosc);
+  top: calc(-10px * var(--skala));
+  width: calc(70px * var(--skala));
+  height: calc(60px * var(--skala));
   background: url('/res/ui/smok1.png') center / contain no-repeat;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .7));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .6));
   pointer-events: none;
 }
 
-.menu li:nth-child(4n + 2) button::after { background-image: url('/res/ui/smok2.png'); }
-.menu li:nth-child(4n + 3) button::after { background-image: url('/res/ui/smok3.png'); }
-.menu li:nth-child(4n + 4) button::after { background-image: url('/res/ui/smok4.png'); }
+.menu li:nth-child(6n + 2)::after { background-image: url('/res/ui/smok2.png'); }
+.menu li:nth-child(6n + 3)::after { background-image: url('/res/ui/smok3.png'); }
+.menu li:nth-child(6n + 4)::after { background-image: url('/res/ui/smok4.png'); }
+.menu li:nth-child(6n + 5)::after { background-image: url('/res/ui/smok5.png'); }
+.menu li:nth-child(6n)::after { background-image: url('/res/ui/smok6.png'); }
 
-.menu ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
-
-/* Oryginal nie ma naglowkow grup — tylko przerwa miedzy nimi. */
-.menu .przerwa { height: .9rem; }
+/* Oryginal nie ma naglowkow grup — tylko przerwa (REL_IF_BTN_2 = 20). */
+.menu .przerwa { height: calc(20px * var(--skala)); }
 
 /* ------------------------------------------------------------ tresc -- */
 
@@ -419,20 +457,13 @@ img { max-width: 100%; }
  * naglowek i skrawek portretu.
  */
 @media (max-height: 540px) {
-  :root { --pasek-menu: 12rem; }
+  :root { --skala: .72; }
 
   .gora { padding: .3rem .6rem; height: 46px; }
   .zasoby { font-size: .85rem; margin-bottom: .3rem; }
   .zasoby img { width: 16px; height: 16px; }
 
-  .menu { padding: .35rem; gap: .2rem; border-width: 14px; }
-  .menu ul { gap: .2rem; }
-
-  /* Waski panel: mniejszy smok i ciasniejszy odstep, inaczej glowa
-     zachodzi na napis i ucina go w polowie. */
-  .menu button { padding: .3rem 1.9rem .3rem .6rem; font-size: .78rem; min-height: 34px; border-width: 10px; }
-  .menu button::after { width: 30px; height: 26px; right: -8px; }
-  .menu .przerwa { height: .5rem; }
+  .menu { border-width: 14px; }
 
   .tresc { padding: .6rem; }
   .tresc h2 { font-size: 1.05rem; margin-bottom: .6rem; }
@@ -593,3 +624,134 @@ img { max-width: 100%; }
   .miasto-budynek img { opacity: .35; }
   .miasto-budynek span { opacity: .75; font-size: .62rem; bottom: -1.2rem; }
 }
+
+/* ----------------------------------------------------------- postac -- */
+
+/*
+ * Ekran postaci ma stale proporcje 1000x700 — takie jak dwa oryginalne
+ * obrazy tla po 500x700. Wszystko, co na nich lezy, jest pozycjonowane
+ * w procentach, wiec caly uklad skaluje sie razem z oknem.
+ */
+.postac {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1000 / 700;
+  overflow: hidden;
+  font-size: clamp(9px, 1.55cqw, 17px);
+  container-type: inline-size;
+}
+
+.postac > * { position: absolute; }
+
+.postac-tlo { top: 0; width: 50%; height: 100%; }
+.postac-tlo.lewe { left: 0; }
+.postac-tlo.prawe { left: 50%; }
+
+/* --- miejsca na przedmioty --- */
+
+.postac-slot { display: flex; align-items: center; justify-content: center; }
+.postac-slot img { width: 100%; height: 100%; object-fit: contain; }
+
+/* Sylwetka pustego miejsca jest przygaszona — ma podpowiadac, nie krzyczec. */
+.postac-slot img.pusty { opacity: .55; }
+
+/* --- portret --- */
+
+/* Tlo ma juz narysowana ramke pola, wiec portret wchodzi bez wlasnej. */
+.postac-portret { display: flex; align-items: center; justify-content: center; }
+.postac-portret .portret {
+  max-width: 100%;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: none;
+}
+
+/* --- imie i doswiadczenie --- */
+
+.postac-nazwa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1em;
+  color: var(--zloto);
+  text-shadow: 0 2px 3px #000;
+}
+
+.postac-pasek {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(180, 200, 230, .3);
+  border-radius: 3px;
+  background: rgba(6, 12, 20, .6);
+  overflow: hidden;
+}
+
+.postac-pasek .wypelnienie {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(#6fa8dc, #2b5f9e);
+}
+
+.postac-pasek span {
+  position: relative;
+  font-size: .85em;
+  color: var(--pergamin);
+  text-shadow: 0 1px 2px #000;
+}
+
+/* --- cechy --- */
+
+.postac-cechy {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: .35em;
+}
+
+.postac-wiersz {
+  display: flex;
+  align-items: baseline;
+  gap: .5em;
+  line-height: 1.15;
+}
+
+.postac-wiersz span { flex: 1; color: var(--pergamin); text-shadow: 0 1px 2px #000; }
+.postac-wiersz b { color: var(--zloto); text-shadow: 0 1px 2px #000; }
+
+/* --- prawa polowa --- */
+
+.postac-honor,
+.postac-pancerz,
+.postac-wierzchowiec {
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  color: var(--pergamin);
+  text-shadow: 0 1px 3px #000, 0 0 6px #000;
+}
+
+.postac-honor img,
+.postac-pancerz img { width: 1.7em; height: 1.7em; object-fit: contain; }
+
+/*
+ * Opis lezy na krajobrazie, wiec bez podkladu tekst gubi sie w trawie.
+ * Oryginal ma tam przydymiona niebieska tabliczke — odtwarzamy ja.
+ */
+.postac-opis {
+  padding: .6em .8em;
+  overflow: auto;
+  color: #0d2438;
+  font-size: 1.05em;
+  line-height: 1.35;
+  background: rgba(173, 205, 234, .58);
+  border: 1px solid rgba(255, 255, 255, .35);
+  border-radius: 4px;
+}
+
+/* Osiem odznak co 55 px w oryginale — czyli 5,5% szerokosci ekranu. */
+.postac-osiagniecia { display: flex; align-items: center; gap: .95%; }
+.postac-osiagniecia img { width: 10.6%; height: auto; }   /* 50 z 470 px */

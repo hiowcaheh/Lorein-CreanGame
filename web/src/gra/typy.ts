@@ -25,6 +25,32 @@ export interface Gracz {
   };
 
   zycie: number;
+
+  opis: string;
+
+  obrazenia: { min: number; max: number; srednio: number };
+  unik: number;
+  odpornosc: number;
+  ciosKrytyczny: number;
+  pancerz: number;
+  wierzchowiec: number;
+
+  ekwipunek: Przedmiot[];
+
+  /** Osiem odznak, kazda w stopniu 0..4. */
+  osiagniecia: number[];
+}
+
+/** Przedmiot w ekwipunku albo w plecaku. */
+export interface Przedmiot {
+  slot: number;
+  typ: number;
+  podtyp: number;
+  obrazek: string;
+  obrazenia: { min: number; max: number };
+  atrybuty: { rodzaj: number; wartosc: number }[];
+  zloto: number;
+  grzyby: number;
 }
 
 export interface OdpowiedzZTokenem {
