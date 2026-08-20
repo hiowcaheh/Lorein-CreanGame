@@ -755,3 +755,25 @@ img { max-width: 100%; }
 /* Osiem odznak co 55 px w oryginale — czyli 5,5% szerokosci ekranu. */
 .postac-osiagniecia { display: flex; align-items: center; gap: .95%; }
 .postac-osiagniecia img { width: 10.6%; height: auto; }   /* 50 z 470 px */
+
+/* ------------------------------------------------------- diagnostyka -- */
+
+.diag { font-size: .85rem; line-height: 1.5; }
+.diag > div { padding: .4rem 0; border-bottom: 1px solid rgba(120, 150, 190, .18); }
+.diag > div:last-child { border-bottom: none; }
+.diag > div > div { color: var(--przygaszony); word-break: break-word; font-size: .8rem; }
+.diag .ok b { color: var(--dobry); }
+.diag .blad b { color: var(--zly); }
+.diag .czekam b { color: var(--przygaszony); }
+
+.diag-tekst {
+  width: 100%;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: .75rem;
+  color: var(--pergamin);
+  background: rgba(8, 16, 26, .85);
+  border: 1px solid var(--obwodka-jasna);
+  border-radius: 6px;
+  padding: .6rem;
+  resize: vertical;
+}

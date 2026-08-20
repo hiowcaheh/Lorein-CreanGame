@@ -59,11 +59,22 @@ export const app = new Hono();
  * dalej i jest wspoldzielona miedzy zapytaniami.
  */
 if (config.serverless) {
+  /*
+   * Licznik trwajacych zapytan. Bez niego zamkniecie puli po pierwszym
+   * zakonczonym zapytaniu wyrywa polaczenie spod nog pozostalym — a strona
+   * wola kilka adresow naraz. Objawia sie to bledem
+   * `write CONNECTION_ENDED` i wygrywa wyscig zwykle to zapytanie, ktore
+   * trwa najdluzej. Czyli akurat logowanie, bo liczy hasz hasla.
+   */
+  let trwajace = 0;
+
   app.use('*', async (_c, next) => {
+    trwajace++;
     try {
       await next();
     } finally {
-      await closeSql();
+      trwajace--;
+      if (trwajace === 0) await closeSql();
     }
   });
 }

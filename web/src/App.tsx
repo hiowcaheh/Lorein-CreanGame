@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BladApi, zapomnijToken, zapiszToken, token, zapytaj } from './gra/api';
 import { Bohater } from './ekrany/Bohater';
+import { Diagnostyka } from './ekrany/Diagnostyka';
 import { Logowanie } from './ekrany/Logowanie';
 import { Miasto } from './ekrany/Miasto';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
@@ -98,6 +99,18 @@ export function App() {
   }
 
   // ------------------------------------------------------- widoki --
+
+  // `?diag=1` — strona sprawdzajaca kazda warstwe po kolei. Dziala takze
+  // przed zalogowaniem, bo najczesciej wtedy jest potrzebna.
+  if (new URLSearchParams(location.search).has('diag')) {
+    return (
+      <Rama>
+        <main className="tresc">
+          <Diagnostyka />
+        </main>
+      </Rama>
+    );
+  }
 
   if (!gracz) {
     return (
