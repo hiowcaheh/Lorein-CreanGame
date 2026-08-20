@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Readable } from 'node:stream';
-import handler from '../api/[[...sciezka]].js';
+import handler, { odtworzAdres } from '../api/index.js';
 
 /**
  * Most miedzy Node a Hono — testy przypadku, ktory kosztowal najwiecej czasu.
@@ -77,6 +77,36 @@ async function wywolaj(zadanie: never): Promise<Wynik> {
   return wynik;
 }
 
+describe('odtwarzanie adresu z parametru', () => {
+  /*
+   * Regula w vercel.json przepisuje `/api/(.*)` na `/api?sciezka=$1`.
+   * Bez odtworzenia aplikacja widzialaby zawsze `/api` i nie trafialaby
+   * w zadna trase — a przy nazwie pliku `[[...sciezka]]` Vercel podawal
+   * wrecz `/api/[[...sciezka]]`, czyli nazwe pliku zamiast adresu.
+   */
+  it('sklada z powrotem adres jednoczlonowy', () => {
+    const adres = odtworzAdres('/api?sciezka=login', 'przyklad.test');
+    expect(adres.pathname).toBe('/api/login');
+    expect(adres.searchParams.get('sciezka')).toBeNull();
+  });
+
+  it('sklada z powrotem adres wieloczlonowy', () => {
+    const adres = odtworzAdres('/api?sciezka=karczma/podejmij', 'przyklad.test');
+    expect(adres.pathname).toBe('/api/karczma/podejmij');
+  });
+
+  it('zachowuje pozostale parametry zapytania', () => {
+    const adres = odtworzAdres('/api?sciezka=ranking&strona=3', 'przyklad.test');
+    expect(adres.pathname).toBe('/api/ranking');
+    expect(adres.searchParams.get('strona')).toBe('3');
+  });
+
+  it('zostawia adres w spokoju, gdy parametru nie ma', () => {
+    const adres = odtworzAdres('/api/health', 'przyklad.test');
+    expect(adres.pathname).toBe('/api/health');
+  });
+});
+
 describe('most Node -> Hono', () => {
   it('GET dochodzi do aplikacji', async () => {
     const wynik = await wywolaj(zadanieZeStrumieniem('GET', '/api'));
@@ -98,6 +128,14 @@ describe('most Node -> Hono', () => {
     const wynik = await wywolaj(
       zadanieZeStrumieniem('POST', '/api/login', JSON.stringify({ nick: 'Ktos', haslo: 'x' })),
     );
+    expect(wynik.status).not.toBe(504);
+    expect([200, 401, 500]).toContain(wynik.status);
+  });
+
+  it('POST przez regule przepisujaca dociera pod wlasciwy adres', async () => {
+    // Tak wyglada zapytanie na Vercelu: sciezka siedzi w parametrze.
+    const wynik = await wywolaj(zadanieJakNaVercelu('POST', '/api?sciezka=login', { nick: 'Ktos', haslo: 'x' }));
+    expect(wynik.status).not.toBe(404);
     expect(wynik.status).not.toBe(504);
     expect([200, 401, 500]).toContain(wynik.status);
   });

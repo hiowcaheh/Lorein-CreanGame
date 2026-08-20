@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api?sciezka=$1" }
+  ],
+
   "headers": [
     {
       "source": "/",
@@ -20,6 +25,6 @@
   ],
   "regions": ["dub1"],
   "functions": {
-    "api/**": { "maxDuration": 15 }
+    "api/index.ts": { "maxDuration": 15 }
   }
 }

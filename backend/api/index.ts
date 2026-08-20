@@ -1,10 +1,22 @@
 /**
  * Wejscie dla Vercela — jedna funkcja obslugujaca cale `/api/*`.
  *
- * Nazwa pliku `[[...sciezka]]` to opcjonalny lapacz Vercela: pasuje do
- * `/api`, `/api/login`, `/api/karczma/podejmij` i wszystkiego innego pod
- * `/api`. Dzieki temu nie potrzeba zadnej reguly przepisujacej sciezki,
- * a funkcja dostaje adres taki, jaki wpisal klient.
+ * SCIEZKA PRZYCHODZI W PARAMETRZE, NIE W ADRESIE
+ *
+ * Wczesniej plik nazywal sie `[[...sciezka]].ts`, czyli byl "lapaczem"
+ * Vercela. Wygladalo to elegancko, ale Vercel zbudowal z tego regule
+ * pasujaca tylko do JEDNEGO czlonu sciezki:
+ *
+ *   ^/api/([^/]+)$  ->  /api/[[...sciezka]]?[...sciezka]=$1
+ *
+ * `/api/login` jeszcze trafialo, ale `/api/karczma/podejmij` juz nie —
+ * a przy okazji sciezka podawana funkcji byla przepisywana na nazwe pliku.
+ * Trasowanie zaczynalo wiec zalezec od tego, jak Vercel akurat zinterpretuje
+ * nazwe pliku, czego nie da sie ani sprawdzic, ani przewidziec.
+ *
+ * Teraz regula w `vercel.json` przepisuje `/api/(.*)` na `/api?sciezka=$1`,
+ * a ta funkcja odtwarza z tego pierwotny adres. Parametr jest NASZ, wiec
+ * wynik nie zalezy od niczyich domyslow — i da sie go przetestowac.
  *
  * Most miedzy Node a Hono jest tu napisany wprost, zamiast gotowym
  * `getRequestListener`. Powod jest konkretny i kosztowal sporo szukania.
@@ -75,6 +87,26 @@ async function odczytajTresc(req: ZadanieNode): Promise<string> {
   return Buffer.concat(kawalki).toString('utf8');
 }
 
+/**
+ * Adres, ktory ma zobaczyc aplikacja.
+ *
+ * Gdy zapytanie przyszlo przez regule przepisujaca, prawdziwa sciezka lezy
+ * w parametrze `sciezka` — wyjmujemy ja i skladamy adres z powrotem.
+ * Gdy parametru nie ma (zwykly serwer Node przy pracy lokalnej), adres jest
+ * juz wlasciwy i zostawiamy go w spokoju.
+ */
+export function odtworzAdres(surowy: string, gospodarz: string): URL {
+  const adres = new URL(surowy, `https://${gospodarz}`);
+  const przekazana = adres.searchParams.get('sciezka');
+
+  if (przekazana !== null) {
+    adres.searchParams.delete('sciezka');
+    adres.pathname = '/api/' + przekazana.replace(/^\/+/, '');
+  }
+
+  return adres;
+}
+
 function zbierzNaglowki(surowe: ZadanieNode['headers']): Headers {
   const naglowki = new Headers();
   for (const [nazwa, wartosc] of Object.entries(surowe)) {
@@ -89,7 +121,7 @@ function zbierzNaglowki(surowe: ZadanieNode['headers']): Headers {
 export default async function handler(req: ZadanieNode, res: OdpowiedzNode): Promise<void> {
   try {
     const gospodarz = (req.headers['host'] as string | undefined) ?? 'localhost';
-    const adres = new URL(req.url ?? '/', `https://${gospodarz}`);
+    const adres = odtworzAdres(req.url ?? '/', gospodarz);
     const metoda = (req.method ?? 'GET').toUpperCase();
 
     const bezTresci = metoda === 'GET' || metoda === 'HEAD';
