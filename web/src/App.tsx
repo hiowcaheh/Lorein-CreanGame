@@ -7,8 +7,9 @@
  * pobrany.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { BladApi, zapomnijToken, zapiszToken, token, zapytaj } from './gra/api';
+import { useSkalaSceny } from './gra/useSkalaSceny';
 import { Bohater } from './ekrany/Bohater';
 import { Diagnostyka } from './ekrany/Diagnostyka';
 import { Logowanie } from './ekrany/Logowanie';
@@ -104,7 +105,7 @@ export function App() {
   // przed zalogowaniem, bo najczesciej wtedy jest potrzebna.
   if (new URLSearchParams(location.search).has('diag')) {
     return (
-      <Rama>
+      <Rama maMenu={false}>
         <main className="tresc">
           <Diagnostyka />
         </main>
@@ -114,7 +115,7 @@ export function App() {
 
   if (!gracz) {
     return (
-      <Rama>
+      <Rama maMenu={false}>
         <main className="tresc">
           {brama === 'sprawdzam' && <p className="podpis">Wczytuję…</p>}
 
@@ -163,72 +164,118 @@ export function App() {
   let grupa = '';
 
   return (
-    <Rama menuOtwarte={menuOtwarte} onPrzelaczMenu={() => setMenuOtwarte((o) => !o)} onWyloguj={wyloguj}>
-      <div className="srodek">
-        <nav className={`menu${menuOtwarte ? ' otwarte' : ''}`}>
-          {/* Zasoby stoja u gory panelu menu — tak jak w oryginale. */}
-          <div className="zasoby">
-            {/* Liczba przed ikona — kolejnosc jak w oryginale. */}
-            <div className="linia" title="Złoto i srebro">
-              <span>{Math.floor(gracz.srebro / 100).toLocaleString('pl-PL')}</span>
-              <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
-              <span>{String(gracz.srebro % 100).padStart(2, '0')}</span>
-              <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
-            </div>
-            <div className="linia" title="Grzyby">
-              <span>{gracz.grzyby.toLocaleString('pl-PL')}</span>
-              <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
-            </div>
+    <Rama
+      maMenu
+      menuOtwarte={menuOtwarte}
+      onPrzelaczMenu={() => setMenuOtwarte((o) => !o)}
+      onWyloguj={wyloguj}
+    >
+      <nav className={`menu${menuOtwarte ? ' otwarte' : ''}`}>
+        {/*
+          Zasoby u gory panelu — w kolejnosci z oryginalu: najpierw LICZBA,
+          potem ikona, a calosc wyrownana do prawej krawedzi panelu.
+          Zloto i srebro w jednym wierszu, grzyby w nastepnym.
+        */}
+        <div className="zasoby">
+          <div className="linia" title="Złoto i srebro">
+            <span>{Math.floor(gracz.srebro / 100).toLocaleString('pl-PL')}</span>
+            <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
+            <span>{String(gracz.srebro % 100).padStart(2, '0')}</span>
+            <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
           </div>
+          <div className="linia" title="Grzyby">
+            <span>{gracz.grzyby.toLocaleString('pl-PL')}</span>
+            <img className="grzyb" src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
+          </div>
+        </div>
 
-          <ul>
-            {MENU.map((poz) => {
-              const naglowek = poz.grupa !== grupa ? ((grupa = poz.grupa), poz.grupa) : null;
-              return (
-                <li key={poz.klucz}>
-                  {naglowek && <div className="przerwa" />}
-                  <button
-                    aria-current={zakladka === poz.klucz}
-                    disabled={!GOTOWE.includes(poz.klucz)}
-                    title={GOTOWE.includes(poz.klucz) ? undefined : 'Jeszcze nie gotowe'}
-                    onClick={() => {
-                      setZakladka(poz.klucz);
-                      setMenuOtwarte(false);
-                    }}
-                  >
-                    {poz.nazwa}
-                  </button>
-                </li>
-              );
-            })}
+        <ul>
+          {MENU.map((poz) => {
+            // Przerwa (REL_IF_BTN_2 = 20) dzieli grupy — ale nie stoi przed
+            // pierwszym przyciskiem, bo ten zaczyna sie dokladnie na y=180.
+            const przerwa = grupa !== '' && poz.grupa !== grupa;
+            grupa = poz.grupa;
+            return (
+              <li key={poz.klucz}>
+                {przerwa && <div className="przerwa" />}
+                <button
+                  aria-current={zakladka === poz.klucz}
+                  disabled={!GOTOWE.includes(poz.klucz)}
+                  title={GOTOWE.includes(poz.klucz) ? undefined : 'Jeszcze nie gotowe'}
+                  onClick={() => {
+                    setZakladka(poz.klucz);
+                    setMenuOtwarte(false);
+                  }}
+                >
+                  {poz.nazwa}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
 
-          </ul>
-        </nav>
-
-        <main className={`tresc${zakladka === 'miasto' || zakladka === 'bohater' ? ' pelny' : ''}`}>
-          {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
-          {zakladka === 'bohater' && <Bohater gracz={gracz} />}
-        </main>
-      </div>
+      <main className={`tresc${zakladka === 'miasto' || zakladka === 'bohater' ? ' pelny' : ''}`}>
+        {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
+        {zakladka === 'bohater' && <Bohater gracz={gracz} />}
+      </main>
     </Rama>
+  );
+}
+
+/*
+ * Ponizej tej szerokosci panel menu nie miesci sie obok gry i wjezdza na nia
+ * jako nakladka. Ten sam prog co w arkuszu stylow.
+ */
+const WASKI = '(max-width: 640px)';
+
+/*
+ * Telefon trzymany pionowo. Scena gry ma proporcje 1000x700 — polozona na
+ * ekranie 390x844 zajmuje pasek na srodku i reszta stoi pusta. Gra jest
+ * z zalozenia pozioma, wiec zamiast udawac, ze da sie inaczej, mowimy
+ * o tym wprost.
+ */
+const PIONOWO = '(max-width: 640px) and (orientation: portrait)';
+
+function useZapytanieMedia(zapytanie: string): boolean {
+  return useSyncExternalStore(
+    (zmiana) => {
+      const pytanie = window.matchMedia(zapytanie);
+      pytanie.addEventListener('change', zmiana);
+      return () => pytanie.removeEventListener('change', zmiana);
+    },
+    () => window.matchMedia(zapytanie).matches,
+    () => false,
   );
 }
 
 /**
  * Pas z tytulem u gory. W oryginale po jego lewej stronie stoi ItemShop,
  * po prawej wyjscie z gry — trzymamy sie tego ukladu.
+ *
+ * Ponizej pasa lezy scena: panel menu i ekran gry. `useSkalaSceny` mierzy
+ * to miejsce i ustawia mnoznik `--skala`, z ktorego arkusz stylow wylicza
+ * KAZDY rozmiar w grze. Dzieki temu uklad jest zawsze ten sam co
+ * w oryginale i zawsze miesci sie w oknie.
  */
 function Rama({
   children,
+  maMenu,
   menuOtwarte,
   onPrzelaczMenu,
   onWyloguj,
 }: {
   children: React.ReactNode;
+  maMenu: boolean;
   menuOtwarte?: boolean;
   onPrzelaczMenu?: () => void;
   onWyloguj?: () => void;
 }) {
+  const waski = useZapytanieMedia(WASKI);
+  const pionowo = useZapytanieMedia(PIONOWO);
+  const [mimoTo, setMimoTo] = useState(false);
+  const scena = useSkalaSceny<HTMLDivElement>(maMenu && !waski);
+
   return (
     <div className="gra">
       <header className="gora">
@@ -255,7 +302,22 @@ function Rama({
         )}
       </header>
 
-      {children}
+      <div className="srodek" ref={scena}>
+        {children}
+      </div>
+
+      {pionowo && !mimoTo && (
+        <div className="obroc">
+          <div className="obroc-ikona" aria-hidden="true">
+            ⟳
+          </div>
+          <p>Obróć telefon poziomo</p>
+          <p className="podpis">Gra ma szeroki ekran — poziomo widać ją w całości.</p>
+          <button type="button" className="przycisk drugi" onClick={() => setMimoTo(true)}>
+            Graj mimo to
+          </button>
+        </div>
+      )}
     </div>
   );
 }

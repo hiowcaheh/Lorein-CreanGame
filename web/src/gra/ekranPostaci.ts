@@ -82,8 +82,8 @@ export const PLECAK: Ramka[] = [304, 398, 493, 588, 680].map((x) => ramka(x, 679
  */
 export const PORTRET = ramka(408 + 20, 119 + 20, 224, 224);
 
-/** Imie stoi na dole pola portretu, jak w oryginale. */
-export const NAZWA_W_POLU = ramka(408, 336, 264, 30);
+/** Imie stoi na dole pola portretu: POS_CHAR_NAME = (410, 345). */
+export const NAZWA_W_POLU = ramka(410, 345, 264, 30);
 
 export const PASEK_DOSWIADCZENIA = ramka(409, 381, 282, 24);
 
@@ -130,14 +130,23 @@ export const KOLUMNY_CECH = [
  */
 export const WYSOKOSC_WIERSZA = '1fr';
 
-/** Prawa polowa ekranu. */
-export const OPIS = ramka(795, 175, 470, 240);
+/*
+ * Prawa polowa ekranu — wszystko ze stalych oryginalu:
+ *
+ *   POS_GILDEEHRE       = (795, 120), SIZE_GILDEEHRE = 375x40
+ *   opis postaci        = (795, 120 + 40 + 15) czyli (795, 175),
+ *                         rozmiar SIZE_BLACK_CHARDESC = 440x200,
+ *                         a samo pole tekstowe 10 px do srodka
+ *   POS_CHAR_MOUNT      = (805, 429), wiersze co REL_CHAR_MOUNT_LINE_Y = 25
+ *   pancerz             = (780 + REL_CHAR_RUESTUNG_X, 100 + 495) = (795, 595)
+ *   POS_SCR_CHAR_ACH    = (795, 635), osiem odznak 50x67 co 55 px
+ */
+export const HONOR = ramka(795, 120, 375, 40);
+export const OPIS = ramka(795, 175, 440, 200);
 export const WIERZCHOWIEC = ramka(805, 429, 460, 130);
 export const PANCERZ = ramka(795, 595, 300, 30);
-/** Osiem odznak co 55 px: POS_SCR_CHAR_ACH + REL_SCR_CHAR_ACH_X. */
-export const OSIAGNIECIA = ramka(795, 628, 470, 67);
+export const OSIAGNIECIA = ramka(795, 635, 7 * 55 + 50, 67);
 export const KATALOG_ODZNAK = '/res/sfgame/scr/char/ach/';
-export const HONOR = ramka(795, 120, 470, 40);
 
 export const TLO_LEWE = '/res/sfgame/scr/char/charbg.jpg';
 export const TLO_PRAWE = '/res/sfgame/scr/char/character_right_new.jpg';
