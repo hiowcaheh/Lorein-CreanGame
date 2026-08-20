@@ -73,7 +73,7 @@ app.route('/api', karczma);
  * w polaczeniu z baza. Gdy nie odpowiada nawet `/version`, funkcja nie
  * uruchamia sie w ogole.
  */
-app.get('/version', (c) =>
+app.get('/api/version', (c) =>
   c.text(
     [
       'commit: ' + (process.env['VERCEL_GIT_COMMIT_SHA']?.slice(0, 7) ?? 'lokalnie'),
@@ -87,13 +87,13 @@ app.get('/version', (c) =>
 );
 
 /**
- * Adres, pod ktorym funkcja lezy na Vercelu wprost, bez przepisania sciezki.
+ * Goly `/api` — najprostszy dowod, ze funkcja wstala.
  *
- * Rozroznia dwie awarie wygladajace tak samo z zewnatrz: gdy tutaj jest
- * odpowiedz, a `/version` milczy, zepsute jest przepisanie sciezek
- * w `vercel.json`, a nie sam kod.
+ * Cale zaplecze siedzi teraz pod `/api/...`, bo tyle wystarczy: plik funkcji
+ * nazywa sie `[[...sciezka]].ts` i lapie wszystko pod tym przedrostkiem.
+ * Zadnych regul przepisujacych, zadnych niespodzianek z adresem.
  */
-app.get('/api/index', (c) =>
+app.get('/api', (c) =>
   c.text('funkcja startuje\n', 200, {
     'content-type': 'text/plain; charset=utf-8',
     'access-control-allow-origin': '*',
@@ -115,7 +115,7 @@ function opiszHostBazy(): string {
   }
 }
 
-app.get('/health', async (c) => {
+app.get('/api/health', async (c) => {
   // Sprawdzamy takze baze — samo "aplikacja wstala" niewiele mowi, gdy
   // najczestsza przyczyna problemow jest zle ustawione DATABASE_URL.
   let database = 'ok';
@@ -159,7 +159,7 @@ app.get('/health', async (c) => {
  * (pole 25), wiec to jest miejsce, w ktorym gra dowiaduje sie, gdzie ma
  * wysylac zapytania.
  */
-app.get('/config.php', async (c) => {
+app.get('/api/config.php', async (c) => {
   const body = await buildClientConfig(getSql(), new URL(c.req.url));
   return c.body(body, {
     headers: {
@@ -171,7 +171,7 @@ app.get('/config.php', async (c) => {
 });
 
 /** Jedyny endpoint gry. */
-app.get('/req.php', async (c) => {
+app.get('/api/req.php', async (c) => {
   const req = parseRequest(c.req.query('req'));
   const handler = handlers[req.action];
 

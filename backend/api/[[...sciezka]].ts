@@ -1,5 +1,17 @@
 /**
- * Wejscie dla Vercela.
+ * Wejscie dla Vercela — jedna funkcja obslugujaca cale `/api/*`.
+ *
+ * Nazwa pliku `[[...sciezka]]` to opcjonalny lapacz Vercela: pasuje do
+ * `/api`, `/api/login`, `/api/karczma/podejmij` i wszystkiego innego pod
+ * `/api`. Dzieki temu NIE potrzebujemy przepisywania sciezek w vercel.json,
+ * a funkcja dostaje adres taki, jaki wpisal klient — Hono trasuje po nim
+ * bez zadnych niespodzianek.
+ *
+ * Wczesniej byl tu `index.ts` plus regula przepisujaca. Regula dziala tylko
+ * dla dokladnie wyliczonych adresow, a przy kazdym nowym endpoincie trzeba
+ * bylo o niej pamietac — i nie bylo pewne, czy funkcja zobaczy adres
+ * pierwotny, czy juz przepisany.
+ *
  *
  * Cala aplikacja siedzi w `src/app.ts` i nie wie, gdzie jest uruchamiana.
  * Ten plik tylko ja opakowuje — analogicznie do `src/index.ts` dla Node

@@ -23,7 +23,8 @@
  * Uruchomienie:  npm run build
  */
 
-import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,6 +32,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const gameRoot = resolve(here, '../../sf555');
 const publicDir = resolve(here, '../public');
 const staticSrc = resolve(here, '../static-src');
+const webRoot = resolve(here, '../../web');
 
 async function exists(path) {
   try {
@@ -74,6 +76,10 @@ const light = [
   ['favicon.ico', 'favicon.ico'],
   ['crossdomain.xml', 'crossdomain.xml'],
   ['papaya_cfg.php', 'papaya_cfg.php'],
+  // Oprawa interfejsu wyciagnieta z pliku SWF. Lezy w `res/`, ale `res`
+  // jest kopiowane tylko raz — a te pliki dochodza i zmieniaja sie razem
+  // z kodem, wiec musza isc przy kazdym budowaniu.
+  ['res/ui', 'res/ui'],
 ];
 
 if (haveAssets) {
@@ -105,19 +111,38 @@ if (haveAssets) {
   }
 }
 
-/**
- * Strona uruchamiajaca gre — zawsze swieza, ze znacznikiem wersji.
- *
- * Znacznik trafia do diagnostyki (`?debug=1`), wiec od razu widac, czy
- * przegladarka albo cache Vercela nie podaja starej strony.
- */
 const stamp = [
   process.env['VERCEL_GIT_COMMIT_SHA']?.slice(0, 7) ?? 'lokalnie',
   new Date().toISOString().replace('T', ' ').slice(0, 16),
 ].join(' · ');
 
-const page = await readFile(resolve(staticSrc, 'index.html'), 'utf8');
-await writeFile(resolve(publicDir, 'index.html'), page.replaceAll('__WERSJA__', stamp), 'utf8');
-console.log(`skopiowano index.html (wersja: ${stamp})`);
+/**
+ * Stara strona z Flashem i Ruffle zostaje pod `/stare.html`.
+ *
+ * Nie jest juz punktem wejscia — gra chodzi teraz jako aplikacja webowa.
+ * Zostawiamy ja jako punkt odniesienia przy przenoszeniu kolejnych ekranow;
+ * jej zaplecze (`/req.php`, `/config.php`) siedzi teraz pod `/api/`.
+ */
+const staraStrona = await readFile(resolve(staticSrc, 'index.html'), 'utf8');
+await writeFile(resolve(publicDir, 'stare.html'), staraStrona.replaceAll('__WERSJA__', stamp), 'utf8');
+console.log('zapisano stare.html (dawna wersja na Ruffle)');
 
-console.log(`\nKatalog ${publicDir} gotowy.`);
+/**
+ * Wlasciwa gra: aplikacja webowa z katalogu `web/`.
+ *
+ * Budujemy ja tutaj, bo Vercel uruchamia polecenie budowania w katalogu
+ * `backend` — ale caly projekt jest sklonowany, wiec `../web` jest na miejscu.
+ */
+console.log('\nBuduje aplikacje webowa...');
+
+const cichy = { cwd: webRoot, stdio: 'inherit' };
+execFileSync('npm', ['ci', '--no-audit', '--no-fund'], cichy);
+execFileSync('npm', ['run', 'build'], cichy);
+
+// Wynik budowania idzie do `public/`: index.html w korzeniu, reszta w assets/.
+const webDist = resolve(webRoot, 'dist');
+await rm(resolve(publicDir, 'assets'), { recursive: true, force: true });
+await cp(webDist, publicDir, { recursive: true, force: true });
+console.log('skopiowano aplikacje webowa do public/');
+
+console.log(`\nKatalog ${publicDir} gotowy (wersja: ${stamp}).`);

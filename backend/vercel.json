@@ -1,11 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    { "source": "/req.php", "destination": "/api/index" },
-    { "source": "/config.php", "destination": "/api/index" },
-    { "source": "/health", "destination": "/api/index" },
-    { "source": "/version", "destination": "/api/index" }
-  ],
   "headers": [
     {
       "source": "/",
@@ -18,10 +12,14 @@
     {
       "source": "/res/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ],
   "regions": ["dub1"],
   "functions": {
-    "api/index.ts": { "maxDuration": 15 }
+    "api/[[...sciezka]].ts": { "maxDuration": 15 }
   }
 }

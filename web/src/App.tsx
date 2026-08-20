@@ -11,31 +11,34 @@ import { useCallback, useEffect, useState } from 'react';
 import { BladApi, zapomnijToken, zapiszToken, token, zapytaj } from './gra/api';
 import { Bohater } from './ekrany/Bohater';
 import { Logowanie } from './ekrany/Logowanie';
+import { Miasto } from './ekrany/Miasto';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import type { Gracz, OdpowiedzZTokenem } from './gra/typy';
 
 type Zakladka =
+  | 'miasto'
   | 'karczma' | 'arena' | 'warta' | 'zbrojownia' | 'magia' | 'stajnia' | 'grzybiarz'
   | 'bohater' | 'poczta' | 'gildia' | 'sala' | 'lochy' | 'opcje';
 
 const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
-  { klucz: 'karczma', nazwa: 'Karczma', grupa: 'Miasto' },
-  { klucz: 'arena', nazwa: 'Arena', grupa: 'Miasto' },
-  { klucz: 'warta', nazwa: 'Warta', grupa: 'Miasto' },
-  { klucz: 'zbrojownia', nazwa: 'Zbrojownia', grupa: 'Miasto' },
-  { klucz: 'magia', nazwa: 'Gabinet magii', grupa: 'Miasto' },
-  { klucz: 'stajnia', nazwa: 'Stajnia', grupa: 'Miasto' },
-  { klucz: 'grzybiarz', nazwa: 'Grzybiarz', grupa: 'Miasto' },
-  { klucz: 'bohater', nazwa: 'Bohater', grupa: 'Ty' },
-  { klucz: 'poczta', nazwa: 'Poczta', grupa: 'Ty' },
-  { klucz: 'gildia', nazwa: 'Gildia', grupa: 'Ty' },
-  { klucz: 'sala', nazwa: 'Sala Chwały', grupa: 'Świat' },
-  { klucz: 'lochy', nazwa: 'Lochy', grupa: 'Świat' },
-  { klucz: 'opcje', nazwa: 'Opcje', grupa: 'Świat' },
+  { klucz: 'miasto', nazwa: 'Miasto', grupa: 'a' },
+  { klucz: 'karczma', nazwa: 'Karczma', grupa: 'a' },
+  { klucz: 'arena', nazwa: 'Arena', grupa: 'a' },
+  { klucz: 'warta', nazwa: 'Warta', grupa: 'a' },
+  { klucz: 'zbrojownia', nazwa: 'Zbrojownia', grupa: 'a' },
+  { klucz: 'magia', nazwa: 'Gabinet magii', grupa: 'a' },
+  { klucz: 'stajnia', nazwa: 'Stajnia', grupa: 'a' },
+  { klucz: 'grzybiarz', nazwa: 'Grzybiarz', grupa: 'a' },
+  { klucz: 'bohater', nazwa: 'Bohater', grupa: 'b' },
+  { klucz: 'poczta', nazwa: 'Poczta', grupa: 'b' },
+  { klucz: 'gildia', nazwa: 'Gildia', grupa: 'b' },
+  { klucz: 'sala', nazwa: 'Sala Chwały', grupa: 'b' },
+  { klucz: 'lochy', nazwa: 'Lochy', grupa: 'b' },
+  { klucz: 'opcje', nazwa: 'Opcje', grupa: 'b' },
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['bohater'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater'];
 
 /** Co widzi gracz, zanim wejdzie do gry. */
 type Brama = 'sprawdzam' | 'logowanie' | 'tworzenie';
@@ -43,7 +46,7 @@ type Brama = 'sprawdzam' | 'logowanie' | 'tworzenie';
 export function App() {
   const [gracz, setGracz] = useState<Gracz | null>(null);
   const [brama, setBrama] = useState<Brama>(() => (token() ? 'sprawdzam' : 'logowanie'));
-  const [zakladka, setZakladka] = useState<Zakladka>('bohater');
+  const [zakladka, setZakladka] = useState<Zakladka>('miasto');
   const [menuOtwarte, setMenuOtwarte] = useState(false);
   const [pracuje, setPracuje] = useState(false);
   const [blad, setBlad] = useState<string | null>(null);
@@ -71,7 +74,7 @@ export function App() {
   const wejdz = useCallback((odpowiedz: OdpowiedzZTokenem) => {
     zapiszToken(odpowiedz.token);
     setGracz(odpowiedz.gracz);
-    setZakladka('bohater');
+    setZakladka('miasto');
   }, []);
 
   async function sprobuj(dzialanie: () => Promise<OdpowiedzZTokenem>) {
@@ -147,15 +150,29 @@ export function App() {
   let grupa = '';
 
   return (
-    <Rama gracz={gracz} menuOtwarte={menuOtwarte} onPrzelaczMenu={() => setMenuOtwarte((o) => !o)}>
+    <Rama menuOtwarte={menuOtwarte} onPrzelaczMenu={() => setMenuOtwarte((o) => !o)} onWyloguj={wyloguj}>
       <div className="srodek">
         <nav className={`menu${menuOtwarte ? ' otwarte' : ''}`}>
+          {/* Zasoby stoja u gory panelu menu — tak jak w oryginale. */}
+          <div className="zasoby">
+            <span title="Złoto i srebro">
+              <img src="/res/sfgame/if/icon_gold.png" alt="" />
+              {Math.floor(gracz.srebro / 100).toLocaleString('pl-PL')}
+              <img src="/res/sfgame/if/icon_silber.png" alt="" />
+              {String(gracz.srebro % 100).padStart(2, '0')}
+            </span>
+            <span title="Grzyby">
+              <img src="/res/sfgame/if/icon_pilz.png" alt="" />
+              {gracz.grzyby.toLocaleString('pl-PL')}
+            </span>
+          </div>
+
           <ul>
             {MENU.map((poz) => {
               const naglowek = poz.grupa !== grupa ? ((grupa = poz.grupa), poz.grupa) : null;
               return (
                 <li key={poz.klucz}>
-                  {naglowek && <div className="rozdzial">{naglowek}</div>}
+                  {naglowek && <div className="przerwa" />}
                   <button
                     aria-current={zakladka === poz.klucz}
                     disabled={!GOTOWE.includes(poz.klucz)}
@@ -171,29 +188,32 @@ export function App() {
               );
             })}
 
-            <li>
-              <div className="rozdzial">Konto</div>
-              <button onClick={wyloguj}>Wyloguj</button>
-            </li>
           </ul>
         </nav>
 
-        <main className="tresc">{zakladka === 'bohater' && <Bohater gracz={gracz} />}</main>
+        <main className={`tresc${zakladka === 'miasto' ? ' pelny' : ''}`}>
+          {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
+          {zakladka === 'bohater' && <Bohater gracz={gracz} />}
+        </main>
       </div>
     </Rama>
   );
 }
 
+/**
+ * Pas z tytulem u gory. W oryginale po jego lewej stronie stoi ItemShop,
+ * po prawej wyjscie z gry — trzymamy sie tego ukladu.
+ */
 function Rama({
   children,
-  gracz,
   menuOtwarte,
   onPrzelaczMenu,
+  onWyloguj,
 }: {
   children: React.ReactNode;
-  gracz?: Gracz;
   menuOtwarte?: boolean;
   onPrzelaczMenu?: () => void;
+  onWyloguj?: () => void;
 }) {
   return (
     <div className="gra">
@@ -208,17 +228,16 @@ function Rama({
             ☰
           </button>
         )}
-        <h1>LOREIN</h1>
 
-        {gracz && (
-          <div className="zasoby">
-            <span title="Srebro">
-              <img src="/res/sfgame/if/icon_silber.png" alt="" /> {gracz.srebro.toLocaleString('pl-PL')}
-            </span>
-            <span title="Grzyby">
-              <img src="/res/sfgame/if/icon_pilz.png" alt="" /> {gracz.grzyby.toLocaleString('pl-PL')}
-            </span>
-          </div>
+        <h1>Lorein</h1>
+
+        {onWyloguj && (
+          <>
+            <span className="link-gory lewy">ItemShop</span>
+            <button className="link-gory prawy" onClick={onWyloguj}>
+              Wyloguj
+            </button>
+          </>
         )}
       </header>
 

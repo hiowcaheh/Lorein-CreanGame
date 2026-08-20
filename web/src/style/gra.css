@@ -87,6 +87,32 @@ img { max-width: 100%; }
   .gora { background-size: 100% 100%; height: 76px; }
 }
 
+/* Napisy po bokach pasa — ItemShop z lewej, wyjscie z prawej. */
+.link-gory {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  color: var(--pergamin);
+  text-shadow: 0 0 5px #000, 0 0 9px #000, 0 1px 0 #000;
+  background: none;
+  border: none;
+  padding: .3rem .4rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.link-gory:hover { color: var(--zloto); }
+.link-gory.lewy { left: 12%; cursor: default; }
+.link-gory.prawy { right: 12%; }
+
+@media (max-width: 640px) {
+  .link-gory.lewy { display: none; }
+  .link-gory.prawy { right: .6rem; font-size: .82rem; }
+}
+
 /* Tytul gry jest juz namalowany na banerze — nasz naglowek zostaje tylko
    dla czytnikow ekranu. */
 .gora h1 {
@@ -97,18 +123,21 @@ img { max-width: 100%; }
   clip-path: inset(50%);
 }
 
+/* Zasoby stoja u gory panelu menu, tak jak w oryginale. */
 .zasoby {
-  margin-left: auto;
   display: flex;
-  gap: .9rem;
-  font-size: .95rem;
+  flex-direction: column;
+  align-items: center;
+  gap: .1rem;
+  margin-bottom: .5rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--zloto);
-  /* Baner jest kolorowy — bez obrysu liczby gina w tle. */
-  text-shadow: 0 0 4px #000, 0 0 8px #000, 0 1px 0 #000;
+  color: var(--pergamin);
+  text-shadow: 0 1px 2px #000;
 }
-.zasoby span { display: flex; align-items: center; gap: .3rem; }
-.zasoby img { width: 18px; height: 18px; }
+
+.zasoby span { display: flex; align-items: center; gap: .25rem; }
+.zasoby img { width: 20px; height: 20px; }
 
 .przelacznik-menu {
   display: none;
@@ -204,14 +233,8 @@ img { max-width: 100%; }
 
 .menu ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
 
-.menu .rozdzial {
-  margin: .6rem 0 .1rem;
-  font-size: .68rem;
-  letter-spacing: .18em;
-  color: var(--zloto-ciemne);
-  text-transform: uppercase;
-  text-align: center;
-}
+/* Oryginal nie ma naglowkow grup — tylko przerwa miedzy nimi. */
+.menu .przerwa { height: .9rem; }
 
 /* ------------------------------------------------------------ tresc -- */
 
@@ -396,15 +419,20 @@ img { max-width: 100%; }
  * naglowek i skrawek portretu.
  */
 @media (max-height: 540px) {
-  :root { --pasek-menu: 10.5rem; }
+  :root { --pasek-menu: 12rem; }
 
-  .gora { padding: .3rem .6rem; }
-  .gora h1 { font-size: .95rem; }
-  .zasoby { font-size: .85rem; }
+  .gora { padding: .3rem .6rem; height: 46px; }
+  .zasoby { font-size: .85rem; margin-bottom: .3rem; }
+  .zasoby img { width: 16px; height: 16px; }
 
-  .menu { padding: .4rem; gap: .2rem; }
-  .menu button { padding: .38rem .6rem; font-size: .82rem; }
-  .menu .rozdzial { margin: .35rem 0 .05rem; font-size: .62rem; }
+  .menu { padding: .35rem; gap: .2rem; border-width: 14px; }
+  .menu ul { gap: .2rem; }
+
+  /* Waski panel: mniejszy smok i ciasniejszy odstep, inaczej glowa
+     zachodzi na napis i ucina go w polowie. */
+  .menu button { padding: .3rem 1.9rem .3rem .6rem; font-size: .78rem; min-height: 34px; border-width: 10px; }
+  .menu button::after { width: 30px; height: 26px; right: -8px; }
+  .menu .przerwa { height: .5rem; }
 
   .tresc { padding: .6rem; }
   .tresc h2 { font-size: 1.05rem; margin-bottom: .6rem; }
@@ -470,4 +498,98 @@ img { max-width: 100%; }
   text-align: center;
   font-size: .78rem;
   text-shadow: 0 1px 2px #000;
+}
+
+/* ------------------------------------------------------------ miasto -- */
+
+/*
+ * Miasto ma stale proporcje 1000x700 — takie jak oryginalny obraz. Wszystko,
+ * co na nim lezy, jest ustawione w PROCENTACH, wiec caly plac skaluje sie
+ * razem z oknem i nic sie nie rozjezdza.
+ */
+.miasto {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1000 / 700;
+  overflow: hidden;
+  background: #10141f;
+}
+
+/*
+ * Miasto wypelnia cala rame, bez marginesow — tak jak w oryginale.
+ * Zwykle ekrany maja odstep od ramki, ten jeden nie.
+ */
+.tresc.pelny { padding: 0; display: flex; align-items: center; }
+
+.miasto img {
+  position: absolute;
+  display: block;
+  image-rendering: auto;
+  pointer-events: none;
+}
+
+/* Niebo zajmuje gorne 265 z 700 pikseli oryginalu. */
+.miasto-niebo { left: 0; top: 0; width: 100%; height: calc(265 / 700 * 100%); }
+
+/* Zabudowa zaczyna sie tam, gdzie konczy sie niebo. */
+.miasto-zabudowa { left: 0; top: calc(265 / 700 * 100%); width: 100%; height: calc(435 / 700 * 100%); }
+
+/* Pierwszy plan nachodzi na zabudowe (REL_STADT_FOREG_Y = 96 pikseli). */
+.miasto-przod { left: 0; top: calc(96 / 700 * 100%); width: 100%; height: auto; }
+
+.miasto-warstwa { height: auto; }
+
+/* Klikalny budynek: przezroczysty do czasu najechania. */
+.miasto-budynek {
+  position: absolute;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.miasto-budynek img {
+  position: static;
+  width: 100%;
+  height: auto;
+  opacity: 0;
+  transition: opacity .18s;
+}
+
+.miasto-budynek:hover img,
+.miasto-budynek:focus-visible img { opacity: 1; }
+
+/* Nazwa budynku pojawia sie pod kursorem — na telefonie nie ma najezdzania,
+   wiec podpis jest widoczny od razu. */
+.miasto-budynek span {
+  position: absolute;
+  left: 50%;
+  bottom: -1.6rem;
+  transform: translateX(-50%);
+  padding: .12rem .5rem;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  color: var(--zloto);
+  background: rgba(6, 10, 16, .82);
+  border: 1px solid var(--obwodka-jasna);
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity .18s;
+  pointer-events: none;
+  line-height: 1.5;
+}
+
+.miasto-budynek:hover span,
+.miasto-budynek:focus-visible span { opacity: 1; }
+
+/*
+ * Na dotyku nie ma najezdzania kursorem, wiec podpowiedz musi byc widoczna
+ * od razu — ale przygaszona, zeby nie zaslaniac miasta.
+ */
+@media (hover: none) {
+  .miasto-budynek img { opacity: .35; }
+  .miasto-budynek span { opacity: .75; font-size: .62rem; bottom: -1.2rem; }
 }
