@@ -18,7 +18,7 @@ import { ranking } from './actions/ranking.js';
 import { register, login, loginFollowUp } from './actions/account.js';
 import { hero } from './actions/hero.js';
 import { buildClientConfig } from './clientConfig.js';
-import { getSql } from './db/client.js';
+import { closeSql, getSql } from './db/client.js';
 import { config } from './config.js';
 import { konto } from './api/konto.js';
 import { karczma } from './api/karczma.js';
@@ -37,6 +37,36 @@ const handlers: Record<string, Handler> = {
 };
 
 export const app = new Hono();
+
+/*
+ * Na Vercelu zamykamy polaczenie z baza po kazdym zapytaniu.
+ *
+ * Brzmi rozrzutnie, ale bez tego gra w ogole nie odpowiada, i to w sposob
+ * wyjatkowo mylacy. Funkcja bezstanowa dziala na Lambdzie, a ta domyslnie
+ * czeka z oddaniem odpowiedzi az PETLA ZDARZEN Node'a bedzie pusta.
+ * Otwarte gniazdo do Postgresa i licznik bezczynnosci trzymaja te petle
+ * przy zyciu w nieskonczonosc — wiec zapytanie robi swoje, dane trafiaja
+ * do bazy, po czym wywolanie wisi az do limitu czasu i klient dostaje 504.
+ *
+ * Dokladnie tak to wygladalo: konto zakladalo sie w bazie razem
+ * z przedmiotem startowym, a przegladarka i tak pokazywala blad 504.
+ * Adresy nietykajace bazy (`/api`, `/api/version`) odpowiadaly normalnie,
+ * bo nie zostawialy po sobie zadnego otwartego uchwytu.
+ *
+ * Przy bazie w tym samym regionie co funkcja ponowne polaczenie kosztuje
+ * kilkanascie milisekund — nieporownanie mniej niz brak odpowiedzi.
+ * W zwyklym procesie (VPS, praca lokalna) nic sie nie zmienia: pula zyje
+ * dalej i jest wspoldzielona miedzy zapytaniami.
+ */
+if (config.serverless) {
+  app.use('*', async (_c, next) => {
+    try {
+      await next();
+    } finally {
+      await closeSql();
+    }
+  });
+}
 
 /**
  * Awaria po stronie serwera nie moze konczyc sie pusta odpowiedzia.

@@ -60,6 +60,16 @@ export const config = {
    * i trudno go powiazac z przyczyna. Przy jednym polaczeniu na proces
    * problem nie wystepuje.
    */
+  /**
+   * Czy dzialamy jako funkcja bezstanowa (Vercel), a nie jako zwykly proces.
+   *
+   * Rozroznienie ma konkretny skutek: przy funkcji trzeba po kazdym
+   * zapytaniu zamknac polaczenie z baza — patrz komentarz w `app.ts`.
+   */
+  get serverless(): boolean {
+    return process.env['VERCEL'] === '1' || process.env['AWS_LAMBDA_FUNCTION_NAME'] !== undefined;
+  },
+
   get usePooler(): boolean {
     return (
       this.databaseUrl.includes(':6543') ||

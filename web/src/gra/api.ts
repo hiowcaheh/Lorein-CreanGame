@@ -31,6 +31,25 @@ export function zapomnijToken(): void {
 }
 
 /** Blad, ktory da sie pokazac graczowi. */
+/**
+ * Zrozumialy komunikat zamiast samego numeru.
+ *
+ * Gracz nie ma pojecia, co znaczy 504 — a to akurat najczestszy blad
+ * przy grze na serwerze bezstanowym i zwykle mija po chwili.
+ */
+function opiszBlad(status: number): string {
+  if (status === 504 || status === 502) {
+    return 'Serwer nie odpowiedział na czas. Spróbuj jeszcze raz za chwilę.';
+  }
+  if (status === 429) {
+    return 'Za dużo prób z tego adresu. Odczekaj chwilę.';
+  }
+  if (status >= 500) {
+    return 'Coś się popsuło po stronie serwera. Spróbuj ponownie.';
+  }
+  return `Serwer odpowiedział błędem ${status}.`;
+}
+
 export class BladApi extends Error {
   constructor(komunikat: string, readonly status: number) {
     super(komunikat);
@@ -57,7 +76,7 @@ export async function zapytaj<T>(sciezka: string, cialo?: unknown): Promise<T> {
   const tresc = (await odpowiedz.json().catch(() => ({}))) as { blad?: string };
 
   if (!odpowiedz.ok) {
-    throw new BladApi(tresc.blad ?? `Serwer odpowiedział błędem ${odpowiedz.status}.`, odpowiedz.status);
+    throw new BladApi(tresc.blad ?? opiszBlad(odpowiedz.status), odpowiedz.status);
   }
 
   return tresc as T;

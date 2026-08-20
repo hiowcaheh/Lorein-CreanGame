@@ -20,6 +20,6 @@
   ],
   "regions": ["dub1"],
   "functions": {
-    "api/[[...sciezka]].ts": { "maxDuration": 15 }
+    "api/**": { "maxDuration": 15 }
   }
 }
