@@ -17,7 +17,8 @@
     "gen:gamedata": "node scripts/gen-gamedata.mjs",
     "gen:chardata": "node scripts/gen-chardata.mjs",
     "prepare:static": "node scripts/prepare-static.mjs",
-    "vercel-build": "node scripts/prepare-static.mjs"
+    "vercel-build": "node scripts/prepare-static.mjs",
+    "gen:nazwy": "node scripts/gen-nazwy-przedmiotow.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

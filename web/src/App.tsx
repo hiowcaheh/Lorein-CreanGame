@@ -96,6 +96,20 @@ export function App() {
     }
   }
 
+  /**
+   * Zapis opisu postaci.
+   *
+   * Nowa tresc laduje w stanie od razu, jeszcze przed odpowiedzia serwera —
+   * gracz widzi to, co wpisal, a nie migniecie starego tekstu. Gdyby zapis
+   * sie nie udal, serwer i tak przyslze prawde przy nastepnym `/me`.
+   */
+  function zapiszOpis(opis: string) {
+    setGracz((g) => (g ? { ...g, opis } : g));
+    void zapytaj<{ opis: string }>('/opis', { opis }).catch(() => {
+      setBlad('Nie udało się zapisać opisu.');
+    });
+  }
+
   function wyloguj() {
     zapomnijToken();
     setGracz(null);
@@ -213,7 +227,7 @@ export function App() {
 
       <main className={`tresc${zakladka === 'miasto' || zakladka === 'bohater' ? ' pelny' : ''}`}>
         {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
-        {zakladka === 'bohater' && <Bohater gracz={gracz} />}
+        {zakladka === 'bohater' && <Bohater gracz={gracz} onZapiszOpis={zapiszOpis} />}
 
         {/*
           Krzyzyk zamykajacy ekran — POS_IF_EXIT = (1220, 120), czyli

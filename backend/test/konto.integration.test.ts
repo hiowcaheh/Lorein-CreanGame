@@ -196,6 +196,34 @@ opisz('API konta', () => {
     expect((await wyslij('/api/register', { ...NOWY, email: 'to-nie-adres' })).status).toBe(400);
   });
 
+  it('/api/opis zapisuje opis postaci i oddaje go przez /api/me', async () => {
+    const { token } = (await (await wyslij('/api/register', NOWY)).json()) as { token: string };
+
+    const zapis = await wyslij('/api/opis', { opis: 'Bije mocno, myśli później.' }, token);
+    expect(zapis.status).toBe(200);
+
+    const moje = await wyslij('/api/me', undefined, token);
+    expect(((await moje.json()) as { gracz: { opis: string } }).gracz.opis).toBe(
+      'Bije mocno, myśli później.',
+    );
+  });
+
+  it('/api/opis czysci znaki, ktore rozbijaja stary protokol', async () => {
+    const { token } = (await (await wyslij('/api/register', NOWY)).json()) as { token: string };
+
+    // Stary klient sklada odpowiedz ze srednikow i ukosnikow, a ta sama
+    // baza obsluguje oba klienty — wpisany srednik nie moze tam trafic.
+    await wyslij('/api/opis', { opis: 'a;b/c|d\ne' }, token);
+
+    const moje = await wyslij('/api/me', undefined, token);
+    expect(((await moje.json()) as { gracz: { opis: string } }).gracz.opis).toBe('a b c d e');
+  });
+
+  it('/api/opis wymaga waznego tokenu', async () => {
+    expect((await wyslij('/api/opis', { opis: 'cokolwiek' })).status).toBe(401);
+    expect((await wyslij('/api/opis', { opis: 'cokolwiek' }, 'f'.repeat(32))).status).toBe(401);
+  });
+
   it('przycina rase, klase i wyglad do dozwolonego zakresu', async () => {
     const odp = await wyslij('/api/register', { ...NOWY, rasa: 99, klasa: -5, wyglad: [1e9, -3] });
     expect(odp.status).toBe(201);

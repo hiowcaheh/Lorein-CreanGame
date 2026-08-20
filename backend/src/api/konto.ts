@@ -10,7 +10,7 @@ import { getSql } from '../db/client.js';
 import { zapiszWDzienniku } from '../db/dziennik.js';
 import { loadDefaultStats } from '../game/stats.js';
 import { time } from '../compat/php.js';
-import { wczytajGracza } from './gracz.js';
+import { wczytajGracza, zakodujOpis } from './gracz.js';
 import { czyStaryHash, hasloPasuje, nowyToken, zahashujHaslo } from './sesja.js';
 import type { Context } from 'hono';
 
@@ -216,6 +216,49 @@ konto.get('/me', async (c) => {
 
   if (!wiersz) return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
   return c.json({ gracz: await wczytajGracza(getSql(), wiersz) });
+});
+
+// ---------------------------------------------------------- opis --
+
+/**
+ * Ile znakow opisu przyjmujemy.
+ *
+ * Oryginal nie mial twardego ograniczenia — pole `user_desc` to `text`,
+ * a klient wysylal wszystko, co gracz wpisal. Ale pole opisu ma na
+ * ekranie 440x200 pikseli, wiec dluzszy tekst i tak nie ma sie gdzie
+ * zmiescic, a bez limitu kazdy moglby wpakowac do bazy megabajt.
+ */
+const DLUGOSC_OPISU = 500;
+
+konto.post('/opis', async (c) => {
+  const token = tokenZNaglowka(c);
+  if (!token) return c.json({ blad: 'Brak tokenu sesji.' }, 401);
+
+  const dane = (await c.req.json().catch(() => ({}))) as { opis?: unknown };
+  if (typeof dane.opis !== 'string') return c.json({ blad: 'Brak opisu.' }, 400);
+
+  // Znaki sterujace i znaki nowej linii wychodza — stary klient sklejal
+  // odpowiedz srednikami i ukosnikami, wiec wpisany srednik potrafil
+  // rozjechac caly protokol. Nowy klient tego nie ma, ale ta sama baza
+  // obsluguje oba.
+  const opis = dane.opis
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f;/|]/g, ' ')
+    .trim()
+    .slice(0, DLUGOSC_OPISU);
+
+  const sql = getSql();
+  const zmienione = await sql<Record<string, unknown>[]>`
+    UPDATE user_data SET user_desc = ${zakodujOpis(opis)}
+    WHERE ssid = ${token}
+    RETURNING user_id
+  `;
+
+  if (zmienione.length === 0) {
+    return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
+  }
+
+  return c.json({ opis });
 });
 
 export function tokenZNaglowka(c: Context): string | null {

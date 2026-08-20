@@ -139,8 +139,21 @@ export const BOK_PLUSA = 33;
  *   POS_SCR_CHAR_ACH       = (795, 635), osiem odznak 50x67 co 55
  */
 export const IKONA_KLASY = ramka(795, 120, 40, 40);
-export const HONOR = ramka(845, 128, 325, 26);
-export const OPIS = ramka(795, 175, 440, 200);
+
+/*
+ * Ciemne plansze pod napisami (`black_square_neutral`) sa w oryginale
+ * podane stalymi: pasek czci 375x40 od (795,120), opis postaci 440x200
+ * od (795,175). Ale RAMKI, w ktorych maja siedziec, sa namalowane wprost
+ * na tle `character_right_new.jpg` i leza troche inaczej — zmierzone na
+ * obrazie: pasek czci 843..1170 x 118..155, opis 798..1225 x 175..400.
+ *
+ * Trzymamy sie pomiaru, bo to on decyduje o tym, co widac. Przy stalych
+ * z kodu plansza opisu byla o 25 px za niska i pod nia zostawal jasny
+ * pasek dna ramki.
+ */
+export const TLO_CZCI = ramka(843, 118, 328, 38);
+export const HONOR = ramka(853, 126, 310, 24);
+export const OPIS = ramka(798, 176, 428, 224);
 export const WIERZCHOWIEC = ramka(805, 429, 269, 130);
 export const PORTRET_WIERZCHOWCA = ramka(1079, 429, 150, 150);
 export const IKONA_PANCERZA = ramka(795, 595, 40, 40);

@@ -45,7 +45,12 @@ export interface Gracz {
 export interface Przedmiot {
   slot: number;
   typ: number;
+  /** Klasa, dla ktorej przedmiot jest przeznaczony (1 wojownik, 2 mag, 3 lowca). */
   podtyp: number;
+  /** Numer w tablicy przedmiotow danego rodzaju — z niego bierze sie nazwa. */
+  numer: number;
+  /** Poziom ulepszenia; w nazwie pokazywany jako " (+N)". */
+  ulepszenie: number;
   obrazek: string;
   obrazenia: { min: number; max: number };
   atrybuty: { rodzaj: number; wartosc: number }[];

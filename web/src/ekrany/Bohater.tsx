@@ -7,9 +7,11 @@
  * oryginalu, bo cala scena jest skalowana jednym `transform`.
  */
 
-import { Fragment } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { Portret } from '../gra/Portret';
 import { NAZWY_KLAS, NAZWY_RAS } from '../gra/portret';
+import { nazwaPrzedmiotu } from '../gra/przedmioty';
 import {
   BOK_PLUSA,
   HONOR,
@@ -31,6 +33,7 @@ import {
   PORTRET,
   PORTRET_WIERZCHOWCA,
   PRZESUNIECIE_PLUSA,
+  TLO_CZCI,
   TLO_LEWE,
   TLO_PRAWE,
   WIERSZ_CECHY_Y,
@@ -43,6 +46,12 @@ import type { Gracz, Przedmiot } from '../gra/typy';
 
 const NAZWY_WIERZCHOWCOW = ['brak', 'Osioł', 'Koń', 'Tygrys', 'Smok'];
 
+/**
+ * Podpowiedz przy pustym opisie — pozycja 116 oryginalnego pliku
+ * jezykowego (TXT_ENTERDESC).
+ */
+const ZACHETA_DO_OPISU = 'W tym miejscu możesz opisać swoją postać.';
+
 function styl(r: Ramka): React.CSSProperties {
   return { left: r.lewo, top: r.gora, width: r.szerokosc, height: r.wysokosc };
 }
@@ -52,8 +61,9 @@ function wiersz(i: number): number {
   return WIERSZ_CECHY_Y - 100 + i * ODSTEP_WIERSZA;
 }
 
-export function Bohater({ gracz }: { gracz: Gracz }) {
+export function Bohater({ gracz, onZapiszOpis }: { gracz: Gracz; onZapiszOpis: (opis: string) => void }) {
   const wPlecaku = gracz.ekwipunek.filter((p) => p.slot >= 10);
+  const [pokazany, setPokazany] = useState<Przedmiot | null>(null);
 
   const cechy = [
     { nazwa: 'Siła', wartosc: String(gracz.cechy.sila) },
@@ -83,12 +93,25 @@ export function Bohater({ gracz }: { gracz: Gracz }) {
         const przedmiot = gracz.ekwipunek.find((p) => p.slot === m.slot);
         const pusty = m.slot === 8 ? pustaBron(gracz.klasa) : m.pusty;
         return (
-          <Miejsce key={m.slot} nazwa={m.nazwa} ramka={m.ramka} pusty={pusty} przedmiot={przedmiot} />
+          <Miejsce
+            key={m.slot}
+            nazwa={m.nazwa}
+            ramka={m.ramka}
+            pusty={pusty}
+            przedmiot={przedmiot}
+            onPokaz={setPokazany}
+          />
         );
       })}
 
       {PLECAK.map((r, i) => (
-        <Miejsce key={`plecak${i}`} nazwa={`Plecak ${i + 1}`} ramka={r} przedmiot={wPlecaku[i]} />
+        <Miejsce
+          key={`plecak${i}`}
+          nazwa={`Plecak ${i + 1}`}
+          ramka={r}
+          przedmiot={wPlecaku[i]}
+          onPokaz={setPokazany}
+        />
       ))}
 
       {/* --- portret, imie, doswiadczenie --- */}
@@ -164,14 +187,13 @@ export function Bohater({ gracz }: { gracz: Gracz }) {
         title={NAZWY_KLAS[gracz.klasa]}
       />
 
+      <div className="postac-tlo-czci" style={styl(TLO_CZCI)} />
       <div className="postac-honor" style={styl(HONOR)}>
         <span>Poz.: {gracz.poziom}</span>
         <span>Cześć: {gracz.honor}</span>
       </div>
 
-      <div className="postac-opis" style={styl(OPIS)}>
-        {gracz.opis || 'W tym miejscu możesz opisać swoją postać.'}
-      </div>
+      <Opis wartosc={gracz.opis} onZapisz={onZapiszOpis} />
 
       <div className="postac-wierzchowiec" style={styl(WIERZCHOWIEC)}>
         Wierzchowiec: ({NAZWY_WIERZCHOWCOW[gracz.wierzchowiec] ?? 'brak'})
@@ -201,7 +223,85 @@ export function Bohater({ gracz }: { gracz: Gracz }) {
           <img key={numer} src={`${KATALOG_ODZNAK}ach-${numer}-${gracz.osiagniecia?.[i] ?? 0}.png`} alt="" />
         ))}
       </div>
+
+      {pokazany && (
+        <PodpowiedzPrzedmiotu
+          przedmiot={pokazany}
+          miejsce={srodekMiejsca(pokazany, gracz)}
+          onZamknij={() => setPokazany(null)}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Gdzie stoi miejsce, w ktorym lezy przedmiot — podpowiedz ma sie pokazac
+ * nad nim, a nie w przypadkowym rogu.
+ */
+function srodekMiejsca(przedmiot: Przedmiot, gracz: Gracz): { x: number; y: number } {
+  const wPlecaku = gracz.ekwipunek.filter((p) => p.slot >= 10);
+  const ramka =
+    MIEJSCA.find((m) => m.slot === przedmiot.slot)?.ramka ??
+    PLECAK[wPlecaku.indexOf(przedmiot)] ??
+    PLECAK[0]!;
+
+  return {
+    x: parseFloat(ramka.lewo) + parseFloat(ramka.szerokosc) / 2,
+    y: parseFloat(ramka.gora),
+  };
+}
+
+/**
+ * Opis postaci.
+ *
+ * Oryginal trzyma tam pole tekstowe: klikniecie ustawia w nim kursor,
+ * a zapis idzie na serwer dopiero przy utracie zaznaczenia
+ * (`LeavePlayerDesc` wysyla `ACT_SET_PLAYER_DESC`). Robimy tak samo.
+ */
+function Opis({ wartosc, onZapisz }: { wartosc: string; onZapisz: (opis: string) => void }) {
+  const [pisze, setPisze] = useState(false);
+  const [tresc, setTresc] = useState(wartosc);
+  const pole = useRef<HTMLTextAreaElement>(null);
+
+  // Opis moze przyjsc z serwera po zapisie — wtedy pole ma pokazac nowa tresc.
+  useEffect(() => {
+    if (!pisze) setTresc(wartosc);
+  }, [wartosc, pisze]);
+
+  useEffect(() => {
+    if (pisze) pole.current?.focus();
+  }, [pisze]);
+
+  if (!pisze) {
+    return (
+      <div
+        className="postac-opis"
+        style={styl(OPIS)}
+        role="button"
+        tabIndex={0}
+        title="Kliknij, aby opisać swoją postać"
+        onClick={() => setPisze(true)}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setPisze(true)}
+      >
+        {tresc || <span className="zacheta">{ZACHETA_DO_OPISU}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <textarea
+      ref={pole}
+      className="postac-opis"
+      style={styl(OPIS)}
+      value={tresc}
+      maxLength={500}
+      onChange={(e) => setTresc(e.target.value)}
+      onBlur={() => {
+        setPisze(false);
+        if (tresc !== wartosc) onZapisz(tresc);
+      }}
+    />
   );
 }
 
@@ -210,25 +310,38 @@ function Miejsce({
   ramka,
   pusty,
   przedmiot,
+  onPokaz,
 }: {
   nazwa: string;
   ramka: Ramka;
   pusty?: string | undefined;
   przedmiot?: Przedmiot | undefined;
+  onPokaz: (przedmiot: Przedmiot | null) => void;
 }) {
+  // Puste miejsce nie ma czego pokazywac, wiec zostaje zwyklym kafelkiem.
+  if (!przedmiot) {
+    return (
+      <div className="postac-slot" style={styl(ramka)} title={nazwa}>
+        {pusty && <img className="pusty" src={KATALOG_SLOTOW + pusty} alt="" />}
+      </div>
+    );
+  }
+
   return (
-    <div className="postac-slot" style={styl(ramka)} title={nazwa}>
-      {przedmiot ? (
-        <img
-          src={przedmiot.obrazek}
-          alt={nazwa}
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      ) : pusty ? (
-        <img className="pusty" src={KATALOG_SLOTOW + pusty} alt="" />
-      ) : null}
-    </div>
+    <button
+      type="button"
+      className="postac-slot"
+      style={styl(ramka)}
+      title={nazwaPrzedmiotu(przedmiot)}
+      onClick={() => onPokaz(przedmiot)}
+    >
+      <img
+        src={przedmiot.obrazek}
+        alt={nazwa}
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    </button>
   );
 }

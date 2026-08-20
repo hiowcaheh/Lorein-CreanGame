@@ -66,7 +66,19 @@ export interface Przedmiot {
   /** Numer miejsca: 1..10 zalozone, wyzej plecak. */
   slot: number;
   typ: number;
+  /** Klasa, dla ktorej przedmiot jest przeznaczony (1 wojownik, 2 mag, 3 lowca). */
   podtyp: number;
+  /**
+   * Numer w tablicy przedmiotow danego rodzaju.
+   *
+   * Klient sklada z niego nazwe: rodzaj i klasa wyznaczaja poczatek
+   * zakresu w pliku jezykowym, a ten numer przesuniecie w zakresie
+   * (`GetItemName` w oryginale). Bez niego nazwe trzeba byloby
+   * wyciagac z nazwy pliku obrazka.
+   */
+  numer: number;
+  /** Poziom ulepszenia — w nazwie pokazywany jako " (+N)". */
+  ulepszenie: number;
   /** Adres obrazka w katalogu zasobow. */
   obrazek: string;
   obrazenia: { min: number; max: number };
@@ -136,6 +148,8 @@ export function zbudujPrzedmiot(wiersz: Record<string, unknown>): Przedmiot {
     slot: intval(wiersz['slot'] ?? 0),
     typ,
     podtyp,
+    numer,
+    ulepszenie: intval(wiersz['upgrade_level'] ?? 0),
     obrazek: `/res/sfgame/itm/${typ}-${podtyp}/itm${typ}-${podtyp}-${numer}-1.png`,
     obrazenia: { min: intval(wiersz['dmg_min'] ?? 0), max: intval(wiersz['dmg_max'] ?? 0) },
     atrybuty: [1, 2, 3]
@@ -257,6 +271,13 @@ const SLOTY_PANCERZA = [0, 1, 2, 3, 5];
  * Opis postaci jest w bazie zakodowany jak adres URL, ze spacjami
  * zamienionymi na plusy. Zly zapis nie moze wywracac calego ekranu.
  */
+export function zakodujOpis(tekst: string): string {
+  // Stary serwer trzyma opis przepuszczony przez `urlencode()`, wiec spacja
+  // jest plusem, a nie `%20`. Zapisujemy tak samo — inaczej stary klient
+  // pokazywalby opisy z plusami zamiast spacji.
+  return encodeURIComponent(tekst).replaceAll('%20', '+');
+}
+
 function odkodujOpis(surowy: string): string {
   try {
     return decodeURIComponent(surowy.replaceAll('+', ' '));
