@@ -17,9 +17,10 @@ import { Diagnostyka } from './ekrany/Diagnostyka';
 import { Logowanie } from './ekrany/Logowanie';
 import { Miasto } from './ekrany/Miasto';
 import { Opcje } from './ekrany/Opcje';
+import { Zbrojownia } from './ekrany/Zbrojownia';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
-import type { Gracz, OdpowiedzZTokenem, StanKarczmy } from './gra/typy';
+import type { Gracz, OdpowiedzZTokenem, StanKarczmy, StanSklepu } from './gra/typy';
 
 type Zakladka =
   | 'miasto'
@@ -50,10 +51,10 @@ const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'opcje'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'opcje'];
 
 /** Zakladki, ktore wypelniaja cala rame wlasnym obrazem. */
-const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma'];
+const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia'];
 
 /** Co widzi gracz, zanim wejdzie do gry. */
 type Brama = 'sprawdzam' | 'logowanie' | 'tworzenie';
@@ -65,6 +66,7 @@ export function App() {
   const [pracuje, setPracuje] = useState(false);
   const [blad, setBlad] = useState<string | null>(null);
   const [karczma, setKarczma] = useState<StanKarczmy | null>(null);
+  const [sklep, setSklep] = useState<StanSklepu | null>(null);
   const odliczanie = useOdliczanieWyprawy(karczma);
 
   /** Zapisany token moze byc juz niewazny — sprawdzamy go przy starcie. */
@@ -162,6 +164,33 @@ export function App() {
   useEffect(() => {
     if (zakladka === 'karczma' && gracz) wczytajKarczme();
   }, [zakladka, gracz, wczytajKarczme]);
+
+  /*
+   * Sklepy. Wejscie odswieza towar, jesli minela polnoc — tak samo jak
+   * wejscie do karczmy rozlicza wyprawe.
+   */
+  const wczytajSklep = useCallback((numer: number) => {
+    void zapytaj<StanSklepu>(`/sklep/${numer}`)
+      .then((s) => {
+        setSklep(s);
+        if (s.gracz) setGracz(s.gracz);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Sklep jest zamknięty.'));
+  }, []);
+
+  function akcjaSklepu(sciezka: string, dane?: unknown) {
+    setBlad(null);
+    void zapytaj<StanSklepu>(sciezka, dane ?? {})
+      .then((s) => {
+        setSklep(s);
+        if (s.gracz) setGracz(s.gracz);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się.'));
+  }
+
+  useEffect(() => {
+    if (zakladka === 'zbrojownia' && gracz) wczytajSklep(0);
+  }, [zakladka, gracz, wczytajSklep]);
 
   function wyloguj() {
     zapomnijToken();
@@ -287,6 +316,15 @@ export function App() {
       <main className={`tresc${PELNOEKRANOWE.includes(zakladka) ? ' pelny' : ''}`}>
         {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
         {zakladka === 'opcje' && <Opcje />}
+        {zakladka === 'zbrojownia' && sklep && (
+          <Zbrojownia
+            stan={sklep}
+            gracz={gracz}
+            onKup={(miejsce, cel) => akcjaSklepu('/sklep/0/kup', { miejsce, cel: cel ?? 'zaloz' })}
+            onSprzedaj={(slot) => akcjaSklepu('/sklep/0/sprzedaj', { slot })}
+            onWymien={() => akcjaSklepu('/sklep/0/wymien')}
+          />
+        )}
         {zakladka === 'bohater' && (
           <Bohater gracz={gracz} onZapiszOpis={zapiszOpis} onPrzenies={przeniesPrzedmiot} />
         )}

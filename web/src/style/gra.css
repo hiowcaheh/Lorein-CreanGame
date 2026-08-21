@@ -1441,3 +1441,30 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 .opcje-suwak { display: flex; align-items: center; gap: 12px; }
 .opcje-suwak .przycisk { width: 48px; min-height: 40px; padding: 0; }
 .opcje-suwak input { width: 240px; accent-color: var(--zloto); }
+
+/* ------------------------------------------------------- sklepy -- */
+
+/*
+ * Ekran sklepu. Lewa polowa to ekran postaci (te same klasy `.postac-*`),
+ * prawa to tlo sklepu 500x700 od x = 500 — `POS_SCR_SHOP_BG_X = 780`.
+ */
+.sklep { position: relative; width: 1000px; height: 700px; overflow: hidden; font-size: var(--pismo); }
+
+/* Wszystko na ekranie sklepu stoi w pikselach sceny, tak jak na ekranie
+   postaci — polozenia podaja stale z klienta, nie przeplyw dokumentu. */
+.sklep > * { position: absolute; }
+
+.sklep-tlo { position: absolute; object-fit: fill; }
+.sklep-sprzedawca { position: absolute; pointer-events: none; }
+
+.sklep-wymiana {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.sklep-wymiana img { width: 25px; height: 24px; }
+

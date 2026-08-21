@@ -175,3 +175,21 @@ export interface StanKarczmy {
   rozliczenie?: Rozliczenie | null;
   gracz?: Gracz;
 }
+
+/** Przedmiot lezacy na sklepowej pólce — z cena, ktorej plecak nie ma. */
+export interface TowarSklepu extends Przedmiot {
+  cena: { zloto: number; grzyby: number };
+}
+
+/** Stan sklepu — odpowiedz `GET /api/sklep/:numer`. */
+export interface StanSklepu {
+  /** 0 zbrojownia, 1 gabinet magii. */
+  numer: number;
+  towar: TowarSklepu[];
+  /** Ile grzybow kosztuje wymiana calego towaru. */
+  kosztWymiany: number;
+  /** Kiedy towar odnowi sie sam — czas serwera w sekundach. */
+  odnowienie: number;
+  czasSerwera: number;
+  gracz: Gracz;
+}
