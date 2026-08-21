@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { POZIOM_EPIKOW, wylosujPrzedmiot, type Losowanie } from '../src/game/generatorPrzedmiotow.js';
+import {
+  POZIOM_EPIKOW,
+  SKLEP_GABINET,
+  wylosujPrzedmiot,
+  type Losowanie,
+} from '../src/game/generatorPrzedmiotow.js';
 
 /** Losowanie, ktore zawsze zwraca dolna granice przedzialu. */
 const NAJNIZEJ: Losowanie = (od) => od;
@@ -165,6 +170,77 @@ describe('wylosujPrzedmiot', () => {
 
       const helmMaga = wylosujPrzedmiot(60, 2, { rodzaj: 6, losuj: zEpikiem(53) });
       expect(helmMaga.atr_val_1).toBe(wojownik.atr_val_1);
+    });
+  });
+
+  /*
+   * Gabinet magii — „sklep 1". Rodzaje 8-13, bez obrazen i pancerza,
+   * numery bez czlonu klasowego, bo amulety i mikstury sa wspolne dla
+   * wszystkich klas.
+   */
+  describe('gabinet magii', () => {
+    it('handluje rodzajami od 8 w gore i nigdy kluczem do lochu', () => {
+      for (let i = 0; i < 300; i++) {
+        const p = wylosujPrzedmiot(40, 2, { sklep: SKLEP_GABINET });
+        expect(p.item_type).toBeGreaterThanOrEqual(8);
+        expect(p.item_type).toBeLessThanOrEqual(13);
+        // `if ($type == 11 && $option !== "tavern") $type = rand(8, 10);`
+        expect(p.item_type).not.toBe(11);
+        // `$item['dmg_min'] = 0;` — nic tu nie daje pancerza ani obrazen.
+        expect(p.dmg_min).toBe(0);
+        expect(p.dmg_max).toBe(0);
+      }
+    });
+
+    it('nie koduje klasy w numerze przedmiotu', () => {
+      for (const klasa of [1, 2, 3]) {
+        for (let i = 0; i < 50; i++) {
+          const p = wylosujPrzedmiot(40, klasa, { sklep: SKLEP_GABINET });
+          expect(p.item_id).toBeLessThan(1000);
+        }
+      }
+    });
+
+    it('album trafia na pólke tylko wtedy, kiedy gracza jeszcze nie ma', () => {
+      let zAlbumem = 0;
+      for (let i = 0; i < 400; i++) {
+        if (wylosujPrzedmiot(40, 1, { sklep: SKLEP_GABINET, maAlbum: true }).item_type === 13) {
+          zAlbumem++;
+        }
+      }
+      expect(zAlbumem).toBe(0);
+
+      let bezAlbumu = 0;
+      for (let i = 0; i < 400; i++) {
+        if (wylosujPrzedmiot(40, 1, { sklep: SKLEP_GABINET, maAlbum: false }).item_type === 13) {
+          bezAlbumu++;
+        }
+      }
+      expect(bezAlbumu).toBeGreaterThan(0);
+    });
+
+    it('mikstura niesie czas dzialania i swoje dzialanie', () => {
+      const p = wylosujPrzedmiot(40, 1, { sklep: SKLEP_GABINET, rodzaj: 12 });
+      // Pierwsza cecha to zawsze czas — `$potionDur = 11` i `POTION_DUR`.
+      expect(p.atr_type_1).toBe(11);
+      expect(p.atr_val_1).toBeGreaterThanOrEqual(72);
+      // Druga to cecha, ktora mikstura podnosi: 10, 15 albo 25 procent.
+      expect([10, 15, 25]).toContain(p.atr_val_2);
+      expect(p.item_id).toBeGreaterThanOrEqual(1);
+      expect(p.item_id).toBeLessThanOrEqual(16);
+    });
+
+    it('mikstura zycia dziala o 96 godzin dluzej', () => {
+      /*
+       * Numer 16 wypada, kiedy losowanie z osmiu trafi w jedynke — ale
+       * ta galaz istnieje TYLKO ponizej trzydziestego poziomu. Wyzej
+       * oryginal losuje wprost `rand(1, 16)`.
+       */
+      const losuj: Losowanie = (od, doWlacznie) => (od === 1 && doWlacznie === 8 ? 1 : od);
+      const p = wylosujPrzedmiot(20, 1, { sklep: SKLEP_GABINET, rodzaj: 12, losuj });
+      expect(p.item_id).toBe(16);
+      expect(p.atr_val_1).toBe(72 + 96);
+      expect(p.atr_type_2).toBe(12);
     });
   });
 });

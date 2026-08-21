@@ -1,5 +1,9 @@
 /**
- * Zbrojownia — sklep z bronia i pancerzem („sklep 0" w oryginale).
+ * Sklep — zbrojownia albo gabinet magii.
+ *
+ * Oba maja ten sam uklad i te same zasady; rozni je numer, tlo,
+ * sprzedawca i asortyment. Dlatego jest to jeden ekran, ktory dostaje
+ * `wyglad`, a nie dwa prawie identyczne pliki.
  *
  * Uklad z klienta Flash: prawa polowa ekranu to sklep (tlo `shakes.jpg`
  * 500x700 od x = 780), lewa to zwykly ekran postaci z tymi samymi
@@ -32,16 +36,14 @@ import {
 import {
   MIEJSCA_TOWARU,
   MIEJSCE_SPRZEDAZY,
-  OCZY_SPRZEDAWCY,
   PIERWSZE_MIEJSCE_TOWARU,
   PRZYCISK_TOWARU,
-  SPRZEDAWCA,
   TLO,
-  ZBROJOWNIA_OBRAZY,
   ciemno,
-  czyMiejsceTowaru,
   czyMiejsceSprzedazy,
+  czyMiejsceTowaru,
   type Ramka,
+  type WygladSklepu,
 } from '../gra/sklepUklad';
 import type { Gracz, Przedmiot, StanSklepu, TowarSklepu } from '../gra/typy';
 
@@ -56,15 +58,17 @@ function styl(r: Ramka): React.CSSProperties {
   return { left: r.lewo, top: r.gora, width: r.szerokosc, height: r.wysokosc };
 }
 
-export function Zbrojownia({
+export function Sklep({
   stan,
   gracz,
+  wyglad,
   onKup,
   onSprzedaj,
   onWymien,
 }: {
   stan: StanSklepu;
   gracz: Gracz;
+  wyglad: WygladSklepu;
   /** `cel === null` znaczy „zaloz na wlasciwe miejsce". */
   onKup: (miejsce: number, cel: number | null) => void;
   onSprzedaj: (slot: number) => void;
@@ -145,6 +149,15 @@ export function Zbrojownia({
   }, []);
 
   const noc = ciemno(new Date(stan.czasSerwera * 1000).getHours());
+  const [klatkaZwierzaka, setKlatkaZwierzaka] = useState(0);
+
+  useEffect(() => {
+    if (!wyglad.zwierzak) return;
+    const ile = wyglad.zwierzak.klatki.length;
+    // `ShopAniTimer` chodzi co 100 ms; malpa zmienia klatke rzadziej.
+    const zegar = setInterval(() => setKlatkaZwierzaka((k) => (k + 1) % ile), 700);
+    return () => clearInterval(zegar);
+  }, [wyglad]);
   const cechy = wierszeCech(gracz);
   const pochodne = wierszePochodnych(gracz);
 
@@ -220,7 +233,7 @@ export function Zbrojownia({
 
       {/* --------------------------------------------- prawa polowa -- */}
 
-      <img className="sklep-tlo" style={styl(TLO)} src={ZBROJOWNIA_OBRAZY.tlo} alt="" />
+      <img className="sklep-tlo" style={styl(TLO)} src={wyglad.tlo} alt="" />
 
       {/*
         Obszar sprzedazy — `CA_SELL_ITEM`. Zwykly, niewidoczny prostokat;
@@ -236,15 +249,23 @@ export function Zbrojownia({
 
       <img
         className="sklep-sprzedawca"
-        style={styl(SPRZEDAWCA)}
-        src={noc ? ZBROJOWNIA_OBRAZY.noc : ZBROJOWNIA_OBRAZY.dzien}
+        style={styl(wyglad.sprzedawca)}
+        src={noc ? wyglad.noc : wyglad.dzien}
         alt=""
       />
       {mruga && !noc && (
+        <img className="sklep-sprzedawca" style={styl(wyglad.oczy)} src={wyglad.mrugniecie} alt="" />
+      )}
+
+      {/*
+        Zwierzak sprzedawcy — w gabinecie magii malpa przewija trzy
+        klatki (`IMG_FIDGET_AFFE1..3`), w zbrojowni go nie ma.
+      */}
+      {wyglad.zwierzak && (
         <img
           className="sklep-sprzedawca"
-          style={styl(OCZY_SPRZEDAWCY)}
-          src={ZBROJOWNIA_OBRAZY.mrugniecie[0]}
+          style={styl(wyglad.zwierzak.ramka)}
+          src={wyglad.zwierzak.klatki[klatkaZwierzaka] ?? wyglad.zwierzak.klatki[0]}
           alt=""
         />
       )}

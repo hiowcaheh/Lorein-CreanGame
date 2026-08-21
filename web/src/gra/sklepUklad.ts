@@ -49,20 +49,56 @@ export const MIEJSCA_TOWARU: Ramka[] = [
 /** Przycisk „nowy towar" — wysrodkowany na 1025, gorna krawedz na 495. */
 export const PRZYCISK_TOWARU = ramka(1025 - 110, 495, 220, 46);
 
-/** Sprzedawca: `shakes_normal.jpg` 166x306 w punkcie (780+171, 100+112). */
-export const SPRZEDAWCA = ramka(780 + 171, 100 + 112, 166, 306);
-
-/** Mrugniecie podmienia tylko oczy — `shakes_augen1.jpg`, 53x59. */
-export const OCZY_SPRZEDAWCY = ramka(780 + 171 + 56, 100 + 112 + 33, 53, 59);
-
 const SHOPS = '/res/sfgame/scr/shops';
 
-/** Obrazy zbrojowni. Nocna odmiana wchodzi po zmroku, jak w oryginale. */
-export const ZBROJOWNIA_OBRAZY = {
+/**
+ * Wyglad jednego sklepu.
+ *
+ * Kazdy ma swoje tlo, sprzedawce w innym miejscu i inne mrugniecie —
+ * u kowala podmieniaja sie same oczy, u czarodzieja cala twarz. Gabinet
+ * ma do tego malpe, ktora sie rusza.
+ */
+export interface WygladSklepu {
+  tlo: string;
+  dzien: string;
+  noc: string;
+  mrugniecie: string;
+  /** Gdzie stoi sprzedawca i gdzie klatka mrugniecia. */
+  sprzedawca: Ramka;
+  oczy: Ramka;
+  /** Klatki zwierzaka; pusta lista, kiedy sklep go nie ma. */
+  zwierzak?: { klatki: string[]; ramka: Ramka };
+}
+
+/**
+ * Zbrojownia — `REL_SHAKES` = (171, 112), mrugniecie o (56, 33) dalej.
+ * Sprzedawca ma 166x306, klatka oczu 53x59.
+ */
+export const ZBROJOWNIA: WygladSklepu = {
   tlo: `${SHOPS}/shakes.jpg`,
   dzien: `${SHOPS}/shakes_normal.jpg`,
   noc: `${SHOPS}/shakes_nacht.jpg`,
-  mrugniecie: [`${SHOPS}/shakes_augen1.jpg`, `${SHOPS}/shakes_augen2.jpg`],
+  mrugniecie: `${SHOPS}/shakes_augen1.jpg`,
+  sprzedawca: ramka(780 + 171, 100 + 112, 166, 306),
+  oczy: ramka(780 + 171 + 56, 100 + 112 + 33, 53, 59),
+};
+
+/**
+ * Gabinet magii — `REL_FIDGET` = (74, 168), mrugniecie o (107, 88) dalej,
+ * malpa na `REL_FIDGET_AFFE` = (425, 128). Czarodziej ma 253x248, klatka
+ * mrugniecia 96x55, malpa 75x100 w trzech klatkach.
+ */
+export const GABINET: WygladSklepu = {
+  tlo: `${SHOPS}/fidget.jpg`,
+  dzien: `${SHOPS}/fidget_normal.jpg`,
+  noc: `${SHOPS}/fidget_nachts.jpg`,
+  mrugniecie: `${SHOPS}/fidget_normal_blinzeln.jpg`,
+  sprzedawca: ramka(780 + 74, 100 + 168, 253, 248),
+  oczy: ramka(780 + 74 + 107, 100 + 168 + 88, 96, 55),
+  zwierzak: {
+    klatki: [1, 2, 3].map((n) => `${SHOPS}/fidget_affe${n}.jpg`),
+    ramka: ramka(780 + 425, 100 + 128, 75, 100),
+  },
 };
 
 /**

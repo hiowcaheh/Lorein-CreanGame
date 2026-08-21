@@ -17,7 +17,8 @@ import { Diagnostyka } from './ekrany/Diagnostyka';
 import { Logowanie } from './ekrany/Logowanie';
 import { Miasto } from './ekrany/Miasto';
 import { Opcje } from './ekrany/Opcje';
-import { Zbrojownia } from './ekrany/Zbrojownia';
+import { GABINET, ZBROJOWNIA } from './gra/sklepUklad';
+import { Sklep } from './ekrany/Sklep';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, StanKarczmy, StanSklepu } from './gra/typy';
@@ -51,10 +52,10 @@ const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'opcje'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'opcje'];
 
 /** Zakladki, ktore wypelniaja cala rame wlasnym obrazem. */
-const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia'];
+const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia'];
 
 /** Co widzi gracz, zanim wejdzie do gry. */
 type Brama = 'sprawdzam' | 'logowanie' | 'tworzenie';
@@ -190,6 +191,7 @@ export function App() {
 
   useEffect(() => {
     if (zakladka === 'zbrojownia' && gracz) wczytajSklep(0);
+    if (zakladka === 'magia' && gracz) wczytajSklep(1);
   }, [zakladka, gracz, wczytajSklep]);
 
   function wyloguj() {
@@ -316,13 +318,20 @@ export function App() {
       <main className={`tresc${PELNOEKRANOWE.includes(zakladka) ? ' pelny' : ''}`}>
         {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
         {zakladka === 'opcje' && <Opcje />}
-        {zakladka === 'zbrojownia' && sklep && (
-          <Zbrojownia
+        {/*
+          Oba sklepy to ten sam ekran — rozni je numer, wyglad
+          i asortyment, a nie uklad ani zasady.
+        */}
+        {(zakladka === 'zbrojownia' || zakladka === 'magia') && sklep && (
+          <Sklep
             stan={sklep}
             gracz={gracz}
-            onKup={(miejsce, cel) => akcjaSklepu('/sklep/0/kup', { miejsce, cel: cel ?? 'zaloz' })}
-            onSprzedaj={(slot) => akcjaSklepu('/sklep/0/sprzedaj', { slot })}
-            onWymien={() => akcjaSklepu('/sklep/0/wymien')}
+            wyglad={zakladka === 'magia' ? GABINET : ZBROJOWNIA}
+            onKup={(miejsce: number, cel: number | null) =>
+              akcjaSklepu(`/sklep/${sklep.numer}/kup`, { miejsce, cel: cel ?? 'zaloz' })
+            }
+            onSprzedaj={(slot: number) => akcjaSklepu(`/sklep/${sklep.numer}/sprzedaj`, { slot })}
+            onWymien={() => akcjaSklepu(`/sklep/${sklep.numer}/wymien`)}
           />
         )}
         {zakladka === 'bohater' && (

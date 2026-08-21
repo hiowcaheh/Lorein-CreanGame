@@ -2,10 +2,11 @@
  * Losowanie przedmiotow — przepisane z `genItem()` oryginalnego
  * `sf555/req.php`.
  *
- * Na razie obejmuje asortyment ZBROJOWNI (w oryginale „sklep 0"): bron,
- * tarcze i czesci zbroi, czyli rodzaje od 1 do 7. Przedmioty epickie,
- * mikstury, klucze do lochow i album przyjda razem z ekranami, ktore ich
- * uzywaja — tam maja wlasne, osobne reguly.
+ * Obejmuje oba sklepy: ZBROJOWNIE („sklep 0" — bron, tarcze i czesci
+ * zbroi, rodzaje 1-7) i GABINET MAGII („sklep 1" — amulety, pierscienie,
+ * relikwie, mikstury i album, rodzaje 8-13). Klucze do lochow i odlamki
+ * lustra rodza sie wylacznie w karczmie, wiec ich tu nie ma — oryginal
+ * odrzuca rodzaj 11 poza wyprawa: `if ($type == 11 && $option !== "tavern")`.
  *
  * Wszystkie wzory i wszystkie stale pochodza z oryginalu. Tam, gdzie PHP
  * zachowuje sie inaczej niz JavaScript, jest o tym osobna uwaga.
@@ -99,10 +100,64 @@ export interface Ustawienia {
   grzybyZaEpik: number;
   /** `EPIC_CHANCE_SHOP` — na ilu setnych przedmiot w sklepie bywa epicki. */
   szansaNaEpik: number;
+  /** `ITEMGEN_PMUSH_LIFEPOT` — cena mikstury zycia w grzybach. */
+  grzybyZaMiksture: number;
+  /** `POTION_DUR` — ile godzin dziala mikstura. */
+  czasMikstury: number;
 }
 
 /** Wartosci z `game_settings` w `DATABASE.sql`. */
-const DOMYSLNE: Ustawienia = { grzybyZaDwieCechy: 10, grzybyZaEpik: 15, szansaNaEpik: 2 };
+const DOMYSLNE: Ustawienia = {
+  grzybyZaDwieCechy: 10,
+  grzybyZaEpik: 15,
+  szansaNaEpik: 2,
+  grzybyZaMiksture: 15,
+  czasMikstury: 72,
+};
+
+/** Numery sklepow z oryginalu. */
+export const SKLEP_ZBROJOWNIA = 0;
+export const SKLEP_GABINET = 1;
+
+/** Rodzaje przedmiotow gabinetu magii. */
+const AMULET = 8;
+const PIERSCIEN = 9;
+const KLUCZ = 11;
+const MIKSTURA = 12;
+const ALBUM = 13;
+
+/** Cecha „czas dzialania" — `$potionDur` w oryginale. */
+const CECHA_CZAS = 11;
+
+/**
+ * Co daje mikstura o danym numerze — `switch ($potionIDRand)`.
+ *
+ * Piatki numerow to kolejno cechy 1-5 w sile 10, 15 i 25 procent.
+ * Szesnastka to mikstura zycia: dziala o 96 godzin dluzej i ma wlasna
+ * ceche numer 12.
+ */
+/**
+ * Rodzaj przedmiotu w gabinecie magii.
+ *
+ *     if (rand(1, 4) == 1 && $album == -1 && $lvl >= 10) $type = rand(8, 13);
+ *     else                                                $type = rand(8, 12);
+ *     if ($type == 11 && $option !== "tavern")             $type = rand(8, 10);
+ *
+ * Album trafia na pólke tylko wtedy, kiedy gracz go jeszcze nie ma.
+ * Klucz do lochu (rodzaj 11) nie trafia nigdy — rodzi sie wylacznie
+ * z wyprawy, a w sklepie jest natychmiast wymieniany.
+ */
+function losujRodzajGabinetu(poziom: number, maAlbum: boolean, losuj: Losowanie): number {
+  const zAlbumem = losuj(1, 4) === 1 && !maAlbum && poziom >= 10;
+  const typ = zAlbumem ? losuj(8, 13) : losuj(8, 12);
+  return typ === KLUCZ ? losuj(8, 10) : typ;
+}
+
+function dzialanieMikstury(numer: number): { cecha: number; moc: number; dodatkowyCzas: number } {
+  if (numer === 16) return { cecha: 12, moc: 25, dodatkowyCzas: 96 };
+  const moce = [10, 15, 25];
+  return { cecha: ((numer - 1) % 5) + 1, moc: moce[Math.floor((numer - 1) / 5)] ?? 10, dodatkowyCzas: 0 };
+}
 
 /**
  * Od tego poziomu w sklepie zdarzaja sie przedmioty epickie.
@@ -142,15 +197,27 @@ export function wylosujPrzedmiot(
   klasa: number,
   {
     rodzaj,
+    sklep = SKLEP_ZBROJOWNIA,
+    maAlbum = false,
     losuj = LOSUJ,
     ustawienia = DOMYSLNE,
-  }: { rodzaj?: number; losuj?: Losowanie; ustawienia?: Ustawienia } = {},
+  }: {
+    rodzaj?: number;
+    /** 0 zbrojownia (rodzaje 1-7), 1 gabinet magii (8-13). */
+    sklep?: number;
+    /** Czy gracz ma juz album — bez niego gabinet bywa nim handluje. */
+    maAlbum?: boolean;
+    losuj?: Losowanie;
+    ustawienia?: Ustawienia;
+  } = {},
 ): Przedmiot {
-  let typ = rodzaj ?? losuj(NAJNIZSZY_RODZAJ, NAJWYZSZY_RODZAJ);
+  const gabinet = sklep === SKLEP_GABINET;
+
+  let typ = rodzaj ?? (gabinet ? losujRodzajGabinetu(poziom, maAlbum, losuj) : losuj(NAJNIZSZY_RODZAJ, NAJWYZSZY_RODZAJ));
 
   // Tarcze nosi tylko wojownik — oryginal losuje rodzaj od nowa, dopoki
   // nie trafi w cos, co dana klasa uniesie.
-  while (klasa !== WOJOWNIK && typ === TARCZA) {
+  while (!gabinet && klasa !== WOJOWNIK && typ === TARCZA) {
     typ = losuj(NAJNIZSZY_RODZAJ, NAJWYZSZY_RODZAJ);
   }
 
@@ -177,6 +244,9 @@ export function wylosujPrzedmiot(
   const dzielnik = typ === BRON ? 3 : 6;
   let zloto = zaokraglij(losuj(dolnaWidelka, gornaWidelka) / dzielnik + losuj(30, 50));
 
+  // Album ma cene sztywna — `if ($type == 13) $itemGold = 2500;`.
+  if (typ === ALBUM) zloto = 2500;
+
   // ------------------------------------------------------ ile cech --
 
   /*
@@ -185,12 +255,31 @@ export function wylosujPrzedmiot(
    * kosztuje grzybow.
    */
   const dwieCechy = losuj(1, 7) === 1;
+
+  /*
+   * Numer mikstury. Trzy pierwsze piatki to cechy 1-5 w sile 10, 15 i 25
+   * procent; szesnastka to mikstura zycia. Do dziesiatego poziomu
+   * gabinet trzyma najslabsze, do trzydziestego srednie.
+   */
+  const numerMikstury =
+    gabinet && typ === MIKSTURA
+      ? poziom < 10
+        ? losuj(1, 8) === 1
+          ? 16
+          : losuj(1, 5)
+        : poziom < 30
+          ? losuj(1, 8) === 1
+            ? 16
+            : losuj(1, 10)
+          : losuj(1, 16)
+      : 0;
+
   /*
    * `$lifepotionmushrand` dotyczy tylko mikstur z gabinetu magii, ale
    * losowanie idzie przed nastepnym i tam zostaje — bez niego caly
    * dalszy ciag rozjechalby sie z oryginalem.
    */
-  losuj(1, 25);
+  const zaMiksture = losuj(1, 25);
   const zaGrzyby = losuj(1, 3) === 1;
 
   /*
@@ -203,15 +292,37 @@ export function wylosujPrzedmiot(
   else if (epicki) {
     grzyby = ustawienia.grzybyZaEpik;
     zloto *= 3;
-  } else if (dwieCechy) grzyby = ustawienia.grzybyZaDwieCechy;
-  else if (zaGrzyby) grzyby = 1;
+  } else if (dwieCechy && typ < KLUCZ) grzyby = ustawienia.grzybyZaDwieCechy;
+  else if (zaGrzyby && typ < KLUCZ) grzyby = 1;
+  else if (typ === MIKSTURA && numerMikstury === 16 && zaMiksture >= 2) {
+    grzyby = ustawienia.grzybyZaMiksture;
+  }
 
   // ----------------------------------------------------- numer i moc --
 
   // Do osmego poziomu w zbrojowni leza tylko dwa pierwsze wzory kazdego
   // rodzaju; wyzej dochodza kolejne.
-  const zwykly =
-    poziom <= 8 ? losuj(1, 2) : poziom <= 18 ? losuj(3, 5) : poziom <= 29 ? losuj(5, 7) : losuj(8, 10);
+  /*
+   * Numer zwyklego przedmiotu. Zbrojownia trzyma je w widelkach
+   * rosnacych z poziomem; gabinet ma wlasne, szersze — amulety siegaja
+   * dwudziestki pierwszej, pierscienie szesnastki, reszta trzydziestki
+   * siodmej, a do dwudziestego poziomu wszystko miesci sie w trojce.
+   */
+  const zwykly = gabinet
+    ? poziom <= 19
+      ? losuj(1, 3)
+      : typ === AMULET
+        ? losuj(2, 21)
+        : typ === PIERSCIEN
+          ? losuj(2, 16)
+          : losuj(2, 37)
+    : poziom <= 8
+      ? losuj(1, 2)
+      : poziom <= 18
+        ? losuj(3, 5)
+        : poziom <= 29
+          ? losuj(5, 7)
+          : losuj(8, 10);
 
   /*
    * Numery epikow zaczynaja sie od piecdziesiatki i rosna z poziomem —
@@ -230,8 +341,12 @@ export function wylosujPrzedmiot(
 
   const przedmiot: Przedmiot = {
     item_type: typ,
-    // Klasa siedzi w tysiacach numeru: 1005 to piaty przedmiot maga.
-    item_id: numer + (klasa - 1) * 1000,
+    /*
+     * Klasa siedzi w tysiacach numeru: 1005 to piaty przedmiot maga.
+     * Dotyczy to WYLACZNIE zbrojowni — amulety, pierscienie i mikstury
+     * sa wspolne dla wszystkich klas i leza w katalogach `{typ}-1/`.
+     */
+    item_id: gabinet ? numer : numer + (klasa - 1) * 1000,
     dmg_min: 0,
     dmg_max: 0,
     atr_type_1: 0,
@@ -244,7 +359,10 @@ export function wylosujPrzedmiot(
     mush: grzyby,
   };
 
-  if (typ === BRON) {
+  if (gabinet) {
+    // `$item['dmg_min'] = 0;` — gabinet nie handluje ani bronia, ani zbroja.
+    przedmiot.dmg_min = 0;
+  } else if (typ === BRON) {
     const chwiejnosc = losuj(990, 1010) / 1000;
     const srednia = zaokraglij((poziom - 1) * 1.17 * MNOZNIK_BRONI[klasa - 1]! * chwiejnosc);
 
@@ -309,6 +427,40 @@ export function wylosujPrzedmiot(
   } else {
     przedmiot.atr_type_1 = losuj(1, 5);
     przedmiot.atr_val_1 = wartosc(3);
+  }
+
+  /*
+   * Mikstura i album maja wlasne dane i NADPISUJA wszystko, co wyszlo
+   * wyzej — tak samo robi oryginal, dwoma osobnymi `if`ami na koncu
+   * `genItem()`.
+   *
+   * Mikstura: pierwsza cecha to czas dzialania (`POTION_DUR`, przy
+   * miksturze zycia o 96 godzin dluzej), druga to samo dzialanie.
+   * `$fidget_item_ids` w oryginale nie jest nigdzie ustawiane, wiec
+   * podstawa numeru wychodzi zero i numerem przedmiotu jest sam numer
+   * mikstury.
+   */
+  if (typ === MIKSTURA) {
+    const { cecha, moc, dodatkowyCzas } = dzialanieMikstury(numerMikstury);
+    przedmiot.item_id = numerMikstury;
+    przedmiot.dmg_min = 0;
+    przedmiot.atr_type_1 = CECHA_CZAS;
+    przedmiot.atr_val_1 = ustawienia.czasMikstury + dodatkowyCzas;
+    przedmiot.atr_type_2 = cecha;
+    przedmiot.atr_val_2 = moc;
+    przedmiot.atr_type_3 = 0;
+    przedmiot.atr_val_3 = 0;
+  }
+
+  if (typ === ALBUM) {
+    przedmiot.item_id = 1;
+    przedmiot.dmg_min = 0;
+    przedmiot.atr_type_1 = 0;
+    przedmiot.atr_val_1 = 0;
+    przedmiot.atr_type_2 = 0;
+    przedmiot.atr_val_2 = 0;
+    przedmiot.atr_type_3 = 0;
+    przedmiot.atr_val_3 = 0;
   }
 
   return przedmiot;

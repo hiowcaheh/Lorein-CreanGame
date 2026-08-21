@@ -81,10 +81,18 @@ async function towarSklepu(sql: Sql, sklepNr: number, userId: number) {
   }));
 }
 
-/** Losuje jeden przedmiot na pólke. */
-function nowyTowar(poziom: number, klasa: number) {
-  // Zbrojownia ma rodzaje 1-7; gabinet magii dojdzie razem ze swoim ekranem.
-  return wylosujPrzedmiot(poziom, klasa);
+/**
+ * Losuje jeden przedmiot na pólke.
+ *
+ * Zbrojownia handluje rodzajami 1-7, gabinet magii 8-13. Album trafia na
+ * pólke tylko wtedy, kiedy gracz go jeszcze nie ma — `album == -1`
+ * w oryginale znaczy wlasnie „nie ma".
+ */
+function nowyTowar(sklepNr: number, wiersz: WierszGracza) {
+  return wylosujPrzedmiot(liczba(wiersz['lvl']) || 1, liczba(wiersz['class']) || 1, {
+    sklep: sklepNr,
+    maAlbum: liczba(wiersz['album']) !== -1,
+  });
 }
 
 async function wstawTowar(
@@ -132,12 +140,9 @@ async function wyczyscSklep(sql: Sql, sklepNr: number, userId: number) {
  * polnocnej wymiany.
  */
 async function wymienTowar(sql: Sql, sklepNr: number, wiersz: WierszGracza) {
-  const poziom = liczba(wiersz['lvl']) || 1;
-  const klasa = liczba(wiersz['class']) || 1;
-
   await wyczyscSklep(sql, sklepNr, wiersz.user_id);
   for (let slot = 0; slot < MIEJSC_W_SKLEPIE; slot++) {
-    await wstawTowar(sql, sklepNr, wiersz.user_id, slot, nowyTowar(poziom, klasa));
+    await wstawTowar(sql, sklepNr, wiersz.user_id, slot, nowyTowar(sklepNr, wiersz));
   }
 }
 
@@ -308,7 +313,7 @@ sklep.post('/sklep/:numer/kup', async (c) => {
   `;
 
   // Puste miejsce od razu dostaje nowy towar — `genNewItem()`.
-  const swiezy = nowyTowar(liczba(wiersz['lvl']) || 1, liczba(wiersz['class']) || 1);
+  const swiezy = nowyTowar(sklepNr, wiersz);
   const numerWiersza = liczba(towar['id']);
   if (sklepNr === ZBROJOWNIA) {
     await sql`
