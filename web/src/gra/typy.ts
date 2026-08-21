@@ -145,7 +145,11 @@ export interface Rozliczenie {
   lokacja: number;
   awans: number | null;
   nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
-  zdobytyPrzedmiot: { nazwaSlotu: number } | null;
+  /**
+   * Zdobyty przedmiot — caly, bo ekran walki pokazuje jego ikone
+   * i podpowiedz ze statystykami, a nie sam napis.
+   */
+  zdobytyPrzedmiot: Przedmiot | null;
   /** Nagroda przepadla, bo w plecaku nie bylo miejsca. */
   plecakBylPelny: boolean;
   walka: PrzebiegWalki;

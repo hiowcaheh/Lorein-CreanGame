@@ -16,7 +16,9 @@ import { Karczma } from './ekrany/Karczma';
 import { Diagnostyka } from './ekrany/Diagnostyka';
 import { Logowanie } from './ekrany/Logowanie';
 import { Miasto } from './ekrany/Miasto';
+import { Opcje } from './ekrany/Opcje';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
+import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, StanKarczmy } from './gra/typy';
 
 type Zakladka =
@@ -48,7 +50,7 @@ const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'opcje'];
 
 /** Zakladki, ktore wypelniaja cala rame wlasnym obrazem. */
 const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma'];
@@ -284,6 +286,7 @@ export function App() {
 
       <main className={`tresc${PELNOEKRANOWE.includes(zakladka) ? ' pelny' : ''}`}>
         {zakladka === 'miasto' && <Miasto onIdzDo={(cel) => setZakladka(cel as Zakladka)} />}
+        {zakladka === 'opcje' && <Opcje />}
         {zakladka === 'bohater' && (
           <Bohater gracz={gracz} onZapiszOpis={zapiszOpis} onPrzenies={przeniesPrzedmiot} />
         )}
@@ -325,6 +328,11 @@ export function App() {
  * serwer i tak podaje powod, szkoda go chowac.
  */
 function Komunikat({ tresc, onZnika }: { tresc: string; onZnika?: (() => void) | undefined }) {
+  // `Play(SND_ERROR)` — oryginal odzywa sie tak przy kazdej odmowie.
+  useEffect(() => {
+    zagraj(BLAD);
+  }, [tresc]);
+
   useEffect(() => {
     const licznik = setTimeout(() => onZnika?.(), 3500);
     return () => clearTimeout(licznik);
@@ -415,6 +423,25 @@ function Rama({
   const pionowo = useZapytanieMedia(PIONOWO);
   const [mimoTo, setMimoTo] = useState(false);
   const scena = useSkalaSceny<HTMLDivElement>();
+
+  /*
+   * Klikniecie gra `click.mp3` — na KAZDYM przycisku i na wcisnieciu,
+   * nie na puszczeniu. Oryginal wiesza to raz, w `DefineBtn`:
+   *
+   *     addEventListener(MouseEvent.MOUSE_DOWN, playClickSound);
+   *
+   * Jeden nasluch na calej grze robi to samo i nie trzeba pamietac
+   * o dokladaniu go do kazdego nowego ekranu.
+   */
+  useEffect(() => {
+    function naWcisniecie(zdarzenie: PointerEvent) {
+      const cel = zdarzenie.target as Element | null;
+      if (cel?.closest('button:not(:disabled)')) zagraj(KLIK);
+    }
+
+    document.addEventListener('pointerdown', naWcisniecie);
+    return () => document.removeEventListener('pointerdown', naWcisniecie);
+  }, []);
 
   return (
     <div className="gra">

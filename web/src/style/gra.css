@@ -1266,9 +1266,84 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 
 .walka-nagrody img { width: 24px; height: 20px; vertical-align: -3px; margin: 0 3px; }
 
-.walka-awans { margin-top: 4px; color: var(--zloto); }
+/*
+ * Awans po walce.
+ *
+ * Animacja przepisana z `LevelUpAniEvent` w kliencie — tam podskakuje
+ * napis przy pasku doswiadczenia na ekranie postaci. Zegar chodzi co
+ * 20 ms, krok idzie od 25 do 125 (czyli 2 sekundy), a wspolczynnik
+ * `kickIn` narasta po 0.1 na poczatku i opada po 115 kroku:
+ *
+ *     scaleX = (cos(step / 50 * 2PI) + 1) * kickIn + 1
+ *     scaleY = (sin(step / 50 * 2PI) + 1) * kickIn + 1
+ *     y     -= (sin(step / 50 * 2PI) + 1) * kickIn * 20
+ *
+ * Klatki ponizej sa z tych wzorow policzone co piaty krok. Skala rosnie
+ * do trzech, a napis podskakuje o 40 px — dlatego `transform` nie moze
+ * ruszac ukladu i siedzi na `inline-block`.
+ */
+.walka-awans {
+  position: absolute;
+  z-index: 9;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: 26px;
+  color: var(--zloto);
+  text-shadow: 0 0 6px rgba(240, 192, 66, .7), 0 2px 3px #000;
+}
+
+.walka-awans span {
+  display: inline-block;
+  transform-origin: center;
+  animation: awans-podskok 2s linear both;
+}
+
+@keyframes awans-podskok {
+  0% { transform: translateY(-2.0px) scale(1.000, 1.100); }
+  5% { transform: translateY(-4.9px) scale(1.115, 1.247); }
+  10% { transform: translateY(-1.0px) scale(1.691, 1.049); }
+  15% { transform: translateY(-1.0px) scale(2.309, 1.049); }
+  20% { transform: translateY(-8.2px) scale(2.809, 1.412); }
+  25% { transform: translateY(-20.0px) scale(3.000, 2.000); }
+  30% { transform: translateY(-31.8px) scale(2.809, 2.588); }
+  35% { transform: translateY(-39.0px) scale(2.309, 2.951); }
+  40% { transform: translateY(-39.0px) scale(1.691, 2.951); }
+  45% { transform: translateY(-31.8px) scale(1.191, 2.588); }
+  50% { transform: translateY(-20.0px) scale(1.000, 2.000); }
+  55% { transform: translateY(-8.2px) scale(1.191, 1.412); }
+  60% { transform: translateY(-1.0px) scale(1.691, 1.049); }
+  65% { transform: translateY(-1.0px) scale(2.309, 1.049); }
+  70% { transform: translateY(-8.2px) scale(2.809, 1.412); }
+  75% { transform: translateY(-20.0px) scale(3.000, 2.000); }
+  80% { transform: translateY(-31.8px) scale(2.809, 2.588); }
+  85% { transform: translateY(-39.0px) scale(2.309, 2.951); }
+  90% { transform: translateY(-39.0px) scale(1.691, 2.951); }
+  95% { transform: translateY(-15.9px) scale(1.095, 1.794); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
 .walka-przedmiot { margin-top: 4px; color: var(--pergamin); font-size: var(--pismo-cechy); }
 .walka-przedmiot.ostrzezenie { color: var(--zly); }
+
+/*
+ * Zdobyty przedmiot — ikona, nie napis. Klikniecie otwiera te sama
+ * podpowiedz ze statystykami, co w plecaku, wiec ramka musi lapac
+ * kliknięcia mimo `pointer-events: none` na calym podsumowaniu.
+ */
+.walka-zdobycz {
+  margin: 6px auto 0;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border: 1px solid var(--zloto);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, .45);
+  cursor: pointer;
+  pointer-events: auto;
+  display: block;
+}
+
+.walka-zdobycz img { width: 100%; height: 100%; object-fit: contain; }
 
 /* ------------------------------------------------------ komunikat -- */
 
@@ -1358,3 +1433,11 @@ button.postac-slot:hover img { filter: brightness(1.15); }
   padding: 12px;
   resize: vertical;
 }
+
+/* ---------------------------------------------------------- opcje -- */
+
+.opcje { padding: 40px 60px; }
+.opcje-wiersz { display: flex; align-items: center; gap: 24px; margin-top: 24px; }
+.opcje-suwak { display: flex; align-items: center; gap: 12px; }
+.opcje-suwak .przycisk { width: 48px; min-height: 40px; padding: 0; }
+.opcje-suwak input { width: 240px; accent-color: var(--zloto); }

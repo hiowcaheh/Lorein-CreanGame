@@ -208,6 +208,11 @@ export const WALKA_OBRAZENIA_ODSTEP = 200;
 export const WALKA_PRZYCISK = ramka(770 - 90, 710, 180, 50);
 /** Podsumowanie walki: POS_FIGHT_SUMMARY_Y = 520, wysrodkowane. */
 export const WALKA_PODSUMOWANIE_Y = 520 - POCZATEK_Y;
+/**
+ * Napis o awansie — tuz pod dolna krawedzia `box2.png` (505 + 177 = 682),
+ * nad przyciskiem na 710. Podskok unosi go z powrotem nad ramke.
+ */
+export const WALKA_AWANS_Y = 684 - POCZATEK_Y;
 
 /*
  * ANIMACJA CIOSU — port `WeaponStrike()` z `MainTimeline.as`.

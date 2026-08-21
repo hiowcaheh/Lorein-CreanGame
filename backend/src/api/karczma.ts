@@ -41,7 +41,7 @@ import {
   type Przedmiot,
   type Wojownik,
 } from '../game/walka.js';
-import { wczytajGracza, zbudujPrzedmiot } from './gracz.js';
+import { wczytajGracza, zbudujPrzedmiot, type Przedmiot as PrzedmiotEkranu } from './gracz.js';
 import { barwaPrzedmiotu, plikIkony, plikPocisku, typAnimacjiBroni } from '../game/grafikaPrzedmiotow.js';
 import { tokenZNaglowka } from './konto.js';
 import type { Context } from 'hono';
@@ -158,26 +158,18 @@ async function zapiszZadania(sql: Sql, userId: number, zadania: Zadanie[]): Prom
  * wyboru zadania moze pokazac nagrode dokladnie tak samo, jak plecak
  * pokazuje rzeczy juz zdobyte, razem z podpowiedzia.
  */
+/**
+ * Nagroda z `items_tavern` w postaci, ktora rozumie klient.
+ *
+ * Idzie przez `zbudujPrzedmiot()`, zeby sciezka do ikony powstawala
+ * DOKLADNIE tak samo, jak dla przedmiotu z plecaka — razem z barwa
+ * liczona ze statystyk. Wlasna kopia tego skladania juz raz sie
+ * rozjechala i ikony nagrod przestaly sie ladowac.
+ *
+ * Nagroda nie lezy w zadnym slocie, stad -1.
+ */
 function przedmiotZWiersza(w: Record<string, unknown>) {
-  const typ = liczba(w['item_type']);
-  const identyfikator = liczba(w['item_id']);
-  const podtyp = Math.floor(identyfikator / 1000) + 1;
-  const numer = identyfikator % 1000;
-
-  return {
-    slot: -1,
-    typ,
-    podtyp,
-    numer,
-    ulepszenie: liczba(w['upgrade_level']),
-    obrazek: `/res/sfgame/itm/${typ}-${podtyp}/itm${typ}-${podtyp}-${numer}-1.png`,
-    obrazenia: { min: liczba(w['dmg_min']), max: liczba(w['dmg_max']) },
-    atrybuty: [1, 2, 3]
-      .map((n) => ({ rodzaj: liczba(w[`atr_type_${n}`]), wartosc: liczba(w[`atr_val_${n}`]) }))
-      .filter((a) => a.rodzaj > 0),
-    zloto: liczba(w['gold']),
-    grzyby: liczba(w['mush']),
-  };
+  return { ...zbudujPrzedmiot(w), slot: -1 };
 }
 
 /** Nagrody czekajace przy zadaniach — po jednej na zadanie albo wcale. */
@@ -215,7 +207,11 @@ interface Rozliczenie {
   awans: number | null;
   nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
   /** Przedmiot, ktory wpadl do plecaka — albo powod, dla ktorego nie wpadl. */
-  zdobytyPrzedmiot: { nazwaSlotu: number } | null;
+  /**
+   * Zdobyty przedmiot — CALY, bo ekran walki pokazuje jego ikone
+   * i podpowiedz ze statystykami, tak samo jak plecak.
+   */
+  zdobytyPrzedmiot: PrzedmiotEkranu | null;
   plecakBylPelny: boolean;
   walka: unknown;
 }
@@ -279,7 +275,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   const kosztWyprawy = czasWyprawy(zadanie.dlugosc, wierzchowiec(wiersz, teraz));
 
   let znalezioneGrzyby = 0;
-  let zdobytyPrzedmiot: { nazwaSlotu: number } | null = null;
+  let zdobytyPrzedmiot: PrzedmiotEkranu | null = null;
   let plecakBylPelny = false;
   let zdobyteDoswiadczenie = 0;
 
@@ -326,7 +322,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
                   ${liczba(czekajacy['atr_val_1'])}, ${liczba(czekajacy['atr_val_2'])}, ${liczba(czekajacy['atr_val_3'])},
                   ${liczba(czekajacy['gold'])}, ${liczba(czekajacy['mush'])}, ${miejsce}, ${wiersz.user_id})
         `;
-        zdobytyPrzedmiot = { nazwaSlotu: miejsce };
+        zdobytyPrzedmiot = { ...zbudujPrzedmiot(czekajacy), slot: miejsce };
       }
     }
   }

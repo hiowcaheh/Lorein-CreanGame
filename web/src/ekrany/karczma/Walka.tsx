@@ -17,6 +17,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PODPISY, POTWORY, WYNIKI_WALKI } from '../../gra/karczma-teksty';
+import { PodpowiedzPrzedmiotu } from '../../gra/PodpowiedzPrzedmiotu';
+import {
+  FANFARY,
+  bronDoDzwieku,
+  plikDzwiekuBroni,
+  przygotujDzwieki,
+  zagraj,
+  type UzycieBroni,
+} from '../../gra/dzwieki';
 import { Portret } from '../../gra/Portret';
 import {
   OBRAZ_PASKA_ZYCIA,
@@ -43,6 +52,7 @@ import {
   WALKA_BRON_LEKKA_Y,
   WALKA_OBRAZENIA_ODSTEP,
   WALKA_OBRAZENIA_Y,
+  WALKA_AWANS_Y,
   WALKA_PODSUMOWANIE_Y,
   WALKA_PRZYCISK,
   WALKA_SKALA_SPRITE,
@@ -94,6 +104,9 @@ const BOHATER = 1;
 
 /** `SIZE_FIGHT_RESULT_TEXT_X` — szerokosc napisu z podsumowaniem. */
 const SZEROKOSC_PODSUMOWANIA = 490;
+
+/** Ekran gry ma 1000 px szerokosci — potrzebne do przeliczenia skali. */
+const SZEROKOSC_EKRANU_GRY = 1000;
 
 /**
  * Ktora piatka zdan opisze walke — port `fightStyle`.
@@ -152,6 +165,28 @@ export function Walka({
    */
   const [odgrywany, setOdgrywany] = useState(0);
   const [zaliczonych, setZaliczonych] = useState(0);
+  const [pokazZdobycz, setPokazZdobycz] = useState(false);
+
+  /*
+   * Podpowiedz staje NAD ikona zdobyczy. Ikona siedzi w przeplywie
+   * podsumowania, wiec jej polozenie znamy dopiero po zmierzeniu —
+   * przeliczamy je na uklad sceny, bo w takim `PodpowiedzPrzedmiotu`
+   * przyjmuje wspolrzedne.
+   */
+  const ramkaZdobyczy = useRef<HTMLButtonElement | null>(null);
+
+  function miejsceZdobyczy() {
+    const e = ramkaZdobyczy.current;
+    const ekran = e?.closest('.walka');
+    if (!e || !ekran) return { x: WALKA_SRODEK_X, y: WALKA_PODSUMOWANIE_Y };
+
+    const p = e.getBoundingClientRect();
+    const s = ekran.getBoundingClientRect();
+    // Scena jest przeskalowana, wiec pomiar z przegladarki trzeba
+    // przeliczyc z powrotem na piksele ukladu 1000x700.
+    const skala = s.width / SZEROKOSC_EKRANU_GRY || 1;
+    return { x: (p.x - s.x + p.width / 2) / skala, y: (p.y - s.y) / skala };
+  }
 
   const koniec = odgrywany >= walka.ciosy.length;
 
@@ -196,6 +231,29 @@ export function Walka({
    * IMG_WEAPON_CLAW2, ...)`. Bez tego przegladarka przerywa poprzednie
    * pobranie przy kazdej podmianie `src` i klatki mrugaja.
    */
+  /*
+   * Fanfary po wygranej — `if (charWin) Play(SND_JINGLE)` w `DoSkipFight`.
+   * Graja raz, w chwili gdy walka sie konczy, a nie przy kazdym renderze.
+   */
+  useEffect(() => {
+    if (koniec && wygrana) zagraj(FANFARY);
+  }, [koniec, wygrana]);
+
+  /*
+   * Probki obu broni sciagamy razem z klatkami — oryginal robi to samo
+   * przed walka (`Load(GetWeaponSound(...))` dla wszystkich czterech
+   * przypadkow uzycia).
+   */
+  useEffect(() => {
+    const uzycia: UzycieBroni[] = ['zamach', 'trafienie', 'blok', 'krytyk'];
+    const probki: string[] = [];
+    for (const strona of [walka.gracz.bron, walka.potwor.bron]) {
+      const { klasa, obrazek } = bronDoDzwieku(strona);
+      for (const u of uzycia) probki.push(plikDzwiekuBroni(klasa, obrazek, u));
+    }
+    przygotujDzwieki(probki);
+  }, [walka.gracz.bron, walka.potwor.bron]);
+
   useEffect(() => {
     const wszystkie = [
       ...klatkiLekkiegoCiosu(walka.gracz.bron),
@@ -297,8 +355,13 @@ export function Walka({
           tarczaObroncy={
             biezacy.kto === BOHATER ? walka.potwor.tarczaObrazek : walka.gracz.tarczaObrazek
           }
-          onTrafienie={() => setZaliczonych(odgrywany + 1)}
-          onKoniec={() => setOdgrywany(odgrywany + 1)}
+          /*
+            Obie aktualizacje ida przez funkcje i nigdy nie cofaja
+            licznika — „Pomin" ustawia go od razu na koniec, wiec
+            spozniony sygnal z poprzedniego ciosu ma go nie ruszyc.
+          */
+          onTrafienie={() => setZaliczonych((n) => Math.max(n, odgrywany + 1))}
+          onKoniec={() => setOdgrywany((n) => Math.max(n, odgrywany + 1))}
         />
       )}
 
@@ -368,14 +431,47 @@ export function Walka({
               </div>
             )}
 
-            {awans !== null && <div className="walka-awans">Nowy poziom: {awans}!</div>}
-
-            {zdobytyPrzedmiot && <div className="walka-przedmiot">Zdobyto przedmiot — leży w plecaku.</div>}
+            {/*
+              Zdobyty przedmiot pokazuje sie IKONA, tak jak nagroda w oknie
+              wyboru zadania — po kliknieciu wychodzi ta sama podpowiedz ze
+              statystykami, co w plecaku.
+            */}
+            {zdobytyPrzedmiot && (
+              <>
+                <button
+                  type="button"
+                  className="walka-zdobycz"
+                  ref={ramkaZdobyczy}
+                  onClick={() => setPokazZdobycz((czy) => !czy)}
+                >
+                  <img src={zdobytyPrzedmiot.obrazek} alt="" draggable={false} />
+                </button>
+                {pokazZdobycz && (
+                  <PodpowiedzPrzedmiotu
+                    przedmiot={zdobytyPrzedmiot}
+                    miejsce={miejsceZdobyczy()}
+                    onZamknij={() => setPokazZdobycz(false)}
+                  />
+                )}
+              </>
+            )}
 
             {plecakBylPelny && (
               <div className="walka-przedmiot ostrzezenie">Nagroda przepadła — plecak był pełny.</div>
             )}
           </div>
+
+          {/*
+            Awans stoi PONIZEJ ramki z podsumowaniem, wlasnym elementem
+            poza przeplywem — inaczej podskok zaslanialby zdanie o walce.
+            Animacja siega trzykrotnej skali i 40 px w gore, wiec musi
+            miec miejsce dla siebie.
+          */}
+          {awans !== null && (
+            <div className="walka-awans" style={{ left: WALKA_SRODEK_X, top: WALKA_AWANS_Y }}>
+              <span>Nowy poziom: {awans}!</span>
+            </div>
+          )}
 
           {/* „OK" staje dokladnie tam, gdzie przed chwila bylo „Pomin". */}
           <button
@@ -595,28 +691,38 @@ interface Galaz {
   skalaOno: number;
   przyrostOno: number;
   pociskOdRazu: boolean;
+  /**
+   * Kiedy odzywa sie zamach.
+   *
+   * `naStarcie` to bron biala — `if (strikeVal == 0) Play(..., 0)`, czyli
+   * przy pierwszym tiku. Bron dystansowa czeka do konca zamachu: mag do
+   * `strikeVal >= 0.4`, zwiadowca do `>= 0.3` — tam, gdzie klient wola
+   * `Play` razem z pokazaniem pocisku.
+   */
+  zamachNaStarcie: boolean;
 }
 
 function galazAnimacji(typAnimacji: number, lekki: boolean): Galaz {
   if (typAnimacji === 2) {
     return { krokZamachu: 0.15, krokDolotu: 0.15, progFazy: 0.4, progTarczy: 0.5,
              zWybuchem: true, skalaOno: onoSkalaPoczatkowa(2), przyrostOno: onoPrzyrostSkali(2),
-             pociskOdRazu: false };
+             pociskOdRazu: false, zamachNaStarcie: false };
   }
   if (typAnimacji === 3) {
     return { krokZamachu: 0.05, krokDolotu: 0.1, progFazy: 0.3, progTarczy: 0.5,
              zWybuchem: true, skalaOno: onoSkalaPoczatkowa(3), przyrostOno: onoPrzyrostSkali(3),
-             pociskOdRazu: true };
+             pociskOdRazu: true, zamachNaStarcie: false };
   }
   if (lekki) {
     // Galaz lekka nie ma wybuchu — klient ustawia `CNT_FIGHT_ONO` tylko
     // w galezi ciezkiej i dystansowej.
     return { krokZamachu: 0.2, krokDolotu: 0.2, progFazy: 0.4, progTarczy: 0.4,
-             zWybuchem: false, skalaOno: 0, przyrostOno: 0, pociskOdRazu: false };
+             zWybuchem: false, skalaOno: 0, przyrostOno: 0, pociskOdRazu: false,
+             zamachNaStarcie: true };
   }
   return { krokZamachu: 0.1, krokDolotu: 0.15, progFazy: 0.8, progTarczy: 0.5,
            zWybuchem: true, skalaOno: onoSkalaPoczatkowa(1), przyrostOno: onoPrzyrostSkali(1),
-           pociskOdRazu: false };
+           pociskOdRazu: false, zamachNaStarcie: true };
 }
 
 /**
@@ -696,6 +802,13 @@ function Cios({
   useEffect(() => {
     let biezacy = { ...POCZATEK_CIOSU, skalaOno: galaz.skalaOno };
     let dobity = false;
+    let przerwa: ReturnType<typeof setTimeout> | undefined;
+
+    const { klasa, obrazek } = bronDoDzwieku(bron);
+    const probka = (uzycie: UzycieBroni) => plikDzwiekuBroni(klasa, obrazek, uzycie);
+
+    // Bron biala zamachuje sie od razu, dystansowa dopiero po zamachu.
+    if (galaz.zamachNaStarcie) zagraj(probka('zamach'));
 
     const zegar = setInterval(() => {
       const poprzedniaFaza = biezacy.faza;
@@ -703,18 +816,45 @@ function Cios({
       setStan(biezacy);
       if (typAnimacji === 2) setKlatkaPocisku(Math.floor(Math.random() * 3));
 
+      if (!galaz.zamachNaStarcie && poprzedniaFaza === 0 && biezacy.faza === 1) {
+        zagraj(probka('zamach'));
+      }
+
       // Wejscie w faze 2 to chwila trafienia — wtedy spadaja paski zycia.
-      if (poprzedniaFaza === 1 && biezacy.faza === 2) trafienie.current();
+      if (poprzedniaFaza === 1 && biezacy.faza === 2) {
+        trafienie.current();
+        /*
+         * Odglos trafienia zalezy od rodzaju ciosu:
+         *
+         *     "-0" i flaga 1  -> blok   (`useCase` 2)
+         *     "-0" i unik     -> cisza, oryginal nic nie gra
+         *     krytyk          -> `useCase` 3
+         *     zwykly          -> `useCase` 1
+         */
+        if (rodzaj === 1) zagraj(probka('blok'));
+        else if (rodzaj !== 2) zagraj(probka(rodzaj === 3 ? 'krytyk' : 'trafienie'));
+      }
 
       if (biezacy.faza === 2 && biezacy.aObrazen <= 0 && !dobity) {
         dobity = true;
         clearInterval(zegar);
-        setTimeout(() => koniec.current(), PRZERWA_MIEDZY_CIOSAMI);
+        przerwa = setTimeout(() => koniec.current(), PRZERWA_MIEDZY_CIOSAMI);
       }
     }, TIK);
 
-    return () => clearInterval(zegar);
-  }, [galaz, blok, typAnimacji]);
+    /*
+     * Sprzatamy OBA zegary.
+     *
+     * Zapomniana `przerwa` byla powodem, dla ktorego walka po nacisnieciu
+     * „Pomin" na chwile wracala do zycia: cios konczyl sie tuz przed
+     * kliknieciem, zostawial 200-milisekundowy `setTimeout`, a ten juz po
+     * pominieciu wolal `onKoniec()` i cofal licznik ciosow.
+     */
+    return () => {
+      clearInterval(zegar);
+      if (przerwa) clearTimeout(przerwa);
+    };
+  }, [galaz, blok, typAnimacji, bron, rodzaj]);
 
   return (
     <>
