@@ -97,7 +97,7 @@ describe('silnik walki — zgodnosc z req.php', () => {
 
       it('potwor wychodzi identyczny przy tym samym ziarnie', () => {
         const gracz = wojownikZGracza(wiersz(w), przedmioty(w));
-        const potwor = potworNaZadanie(gracz, new PhpMtRand(w.ziarno));
+        const potwor = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), 'oryginalne');
 
         expect(potwor.poziom).toBe(w.potwor.lvl);
         expect(potwor.klasa).toBe(w.potwor.class);
@@ -109,6 +109,29 @@ describe('silnik walki — zgodnosc z req.php', () => {
         expect(potwor.szczescie).toBe(w.potwor.luck);
         expect(potwor.bronMin).toBe(w.potwor.bronMin);
         expect(potwor.bronMax).toBe(w.potwor.bronMax);
+      });
+
+      /*
+       * Wzor uzywany w grze rozni sie od oryginalu WYLACZNIE obrazeniami
+       * potwora (patrz `WzorObrazenPotwora`). Ten test tego pilnuje: gdyby
+       * odstepstwo rozlalo sie na cokolwiek innego — na cechy, zycie,
+       * poziom albo na kolejnosc losowan — wyjdzie tutaj.
+       */
+      it('wzor uzywany w grze rozni sie od oryginalu tylko obrazeniami', () => {
+        const gracz = wojownikZGracza(wiersz(w), przedmioty(w));
+        const oryginal = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), 'oryginalne');
+        const nasz = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), 'wzorGracza');
+
+        const { bronMin: _a, bronMax: _b, bronBazowaMin: _c, bronBazowaMax: _d, ...resztaOryginalu } = oryginal;
+        const { bronMin: _e, bronMax: _f, bronBazowaMin: _g, bronBazowaMax: _h, ...resztaNaszej } = nasz;
+        expect(resztaNaszej).toEqual(resztaOryginalu);
+
+        // Cecha glowna potwora to okolo 1/2,5 cechy gracza, wiec nasz
+        // mnoznik `1 + glowna/10` musi wyjsc wyzszy niz `glowna/50`.
+        const glownaPotwora =
+          nasz.klasa === 1 ? nasz.sila : nasz.klasa === 2 ? nasz.intelekt : nasz.zrecznosc;
+        expect(nasz.bronMin).toBe(Math.ceil(gracz.bronBazowaMin * (1 + glownaPotwora / 10)));
+        expect(nasz.bronMin).toBeGreaterThanOrEqual(oryginal.bronMin);
       });
     });
   }

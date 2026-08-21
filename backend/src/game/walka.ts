@@ -157,15 +157,52 @@ export function wojownikZGracza(
 }
 
 /**
+ * Ktorym wzorem liczyc obrazenia potwora z wyprawy.
+ *
+ * `oryginalne` — dokladnie to, co robi `getQuestMonster()`:
+ *
+ *     $mindmg = ceil($dmgMin * $p->getPrimaryStatValue() / 50);   // wojownik
+ *                                                        / 40    // mag
+ *                                                        / 45    // lowca
+ *
+ * gdzie `$dmgMin` to bron GRACZA, a `getPrimaryStatValue()` to cecha
+ * glowna GRACZA. Kazdy inny wojownik w `req.php` — gracz w konstruktorze
+ * `Char`, przeciwnik z areny, kopia z wiezy — liczy natomiast tak:
+ *
+ *     $this->dmg->min_damage = $weapon['dmg_min'] * (1 + $primary / 10);
+ *
+ * Te dwa wzory nie schodza sie nigdzie. Ich iloraz to `P / (5 * (10 + P))`,
+ * czyli przy kazdej sensownej cesze glownej okolo JEDNEJ PIATEJ. Zmierzone
+ * na porcie: przy wzorze oryginalnym gracz wygrywa 300 walk na 300 i traci
+ * srednio 7% zycia — na poziomie 7, 25 i 100 tak samo, wiec nie jest to
+ * kwestia niskiego poziomu.
+ *
+ * `wzorGracza` — ten sam wzor, co u kazdego innego wojownika, ale z cecha
+ * glowna POTWORA (juz obnizona, mniej wiecej 1/2,5 cechy gracza). Ubytek
+ * zycia rosnie wtedy do 13-25%, a wyprawy dalej sa do wygrania.
+ *
+ * Wybor nalezy do wlasciciela gry; domyslnie stoi `wzorGracza`. Wzor
+ * oryginalny zostaje w kodzie i to na nim pracuje test roznicowy, zeby
+ * dalo sie w kazdej chwili sprawdzic, ze reszta portu nie odplynela.
+ */
+export type WzorObrazenPotwora = 'oryginalne' | 'wzorGracza';
+
+/**
  * Potwor na zadanie — port `getQuestMonster()`.
  *
  * Potwor jest skrojony na miare gracza: jego cechy to cechy gracza
  * podzielone przez losowy wspolczynnik 2,00-3,00. Dlatego zadania sa
  * wykonalne na kazdym poziomie, ale nigdy pewne.
+ *
+ * JEDYNE ODSTEPSTWO OD `req.php` W CALYM SILNIKU WALKI dotyczy obrazen
+ * potwora — patrz `WzorObrazenPotwora` nizej. Wszystko pozostale, razem
+ * z kolejnoscia losowan, jest przepisane jeden do jednego i pilnuje tego
+ * test roznicowy na wzorcach z prawdziwego PHP.
  */
 export function potworNaZadanie(
   gracz: Wojownik,
   rng: PhpMtRand,
+  wzorObrazen: WzorObrazenPotwora = 'wzorGracza',
 ): Wojownik & { obrazek: number; bron: number } {
   const poziom = gracz.poziom + rng.rand(0, 2);
   const klasa = rng.rand(1, 3);
@@ -213,11 +250,20 @@ export function potworNaZadanie(
   const wytrzymalosc = ceil(gracz.wytrzymalosc / dziel());
   const szczescie = ceil(gracz.szczescie / dziel());
 
-  // Obrazenia potwora licza sie z SUROWEJ broni gracza (bez mnoznika cechy
-  // glownej, ktory dostaje sam gracz). Stad zadania sa latwiejsze niz arena:
-  // potwor bije za ulamek tego, co gracz.
-  const bronMin = ceil((gracz.bronBazowaMin * glownaGracza) / dzielnikObrazen);
-  const bronMax = ceil((gracz.bronBazowaMax * glownaGracza) / dzielnikObrazen);
+  /*
+   * Obrazenia potwora.
+   *
+   * Oba warianty biora SUROWA bron gracza (`$p->getWeapon()` w
+   * `getQuestMonster`), bo potwor wlasnej broni w bazie nie ma — rozni
+   * je tylko to, przez co ta bron jest przemnozona.
+   */
+  const glownaPotwora = klasa === 1 ? sila : klasa === 2 ? intelekt : zrecznosc;
+  const mnoznik =
+    wzorObrazen === 'oryginalne'
+      ? glownaGracza / dzielnikObrazen
+      : 1 + glownaPotwora / 10;
+  const bronMin = ceil(gracz.bronBazowaMin * mnoznik);
+  const bronMax = ceil(gracz.bronBazowaMax * mnoznik);
 
   const zycie = ceil(wytrzymalosc * mnoznikZycia * (poziom + 1));
 
