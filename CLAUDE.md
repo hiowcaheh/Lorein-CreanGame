@@ -17,6 +17,7 @@ ekranu, odpowiedz jest w zrodlach oryginalu, a nie we wlasnym wyczuciu:
 | napisy | `sf555/lang/sfgame_pl.txt` — numer pozycji odpowiada stalej `TXT_*` |
 | grafika interfejsu | w srodku pliku SWF; wyciaga ja `backend/scripts/wyciagnij-grafike-swf.py` do `sf555/res/ui/` |
 | grafika ekranow | `sf555/res/sfgame/` |
+| nazwy plikow przedmiotow i pociskow | `MainTimeline.as` — `GetItemFile()` i petla definiujaca `GetArrowID()`; port w `backend/src/game/grafikaPrzedmiotow.ts`. Sama para typ i numer NIE wyznacza pliku: wchodzi jeszcze barwa liczona ze statystyk |
 | czcionka | Komika Text, osadzona w SWF; wyciaga ja `backend/scripts/wyciagnij-czcionke-swf.py` |
 
 Przed zmiana wygladu: znajdz odpowiednia stala w `MainTimeline.as` i przepisz

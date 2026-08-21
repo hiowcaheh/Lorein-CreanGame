@@ -42,6 +42,7 @@ import {
   type Wojownik,
 } from '../game/walka.js';
 import { wczytajGracza, zbudujPrzedmiot } from './gracz.js';
+import { barwaPrzedmiotu, plikIkony, plikPocisku, typAnimacjiBroni } from '../game/grafikaPrzedmiotow.js';
 import { tokenZNaglowka } from './konto.js';
 import type { Context } from 'hono';
 
@@ -234,7 +235,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   const rng = new PhpMtRand();
   const przedmioty = await przedmiotyGracza(sql, wiersz.user_id);
   const gracz = wojownikZGracza(wiersz, przedmioty);
-  const potwor = potworNaZadanie(gracz, rng);
+  const potwor = potworNaZadanie(gracz, rng, { rzadkieZadanie: zadanie.premia === 145 });
 
   /*
    * Bron i tarcza gracza — dla ekranu walki, nie dla obliczen.
@@ -258,7 +259,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   const bronWSlocie = doRysowania.find((p) => liczba(p['slot']) === 8);
   const tarczaWSlocie = doRysowania.find((p) => liczba(p['slot']) === 9);
   const bronGracza = bronWSlocie ? liczba(bronWSlocie['item_id']) : 0;
-  const ikonaBroniGracza = bronWSlocie ? zbudujPrzedmiot(bronWSlocie).obrazek : null;
+  const rysunekBroniGracza = bronWSlocie ? rysunekBroni(bronWSlocie) : rysunekPiesci();
   const ikonaTarczyGracza = tarczaWSlocie ? zbudujPrzedmiot(tarczaWSlocie).obrazek : null;
 
   const zycieGraczaPrzed = gracz.zycie;
@@ -386,24 +387,129 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
     walka: {
       gracz: {
         ...opisWojownika(gracz, zycieGraczaPrzed, bronGracza),
-        bronObrazek: ikonaBroniGracza,
+        ...rysunekBroniGracza,
         tarczaObrazek: ikonaTarczyGracza,
       },
       potwor: {
         ...opisWojownika(potwor, zyciePotworaPrzed, potwor.bron),
         obrazek: potwor.obrazek,
+        ...rysunekBroniPotwora(potwor.bron),
         /*
-         * Potwor z wyprawy nigdy nie ma ikony broni ani tarczy.
-         * `getQuestMonster` konczy sie `new Monster(..., $wpnid, -1)`,
-         * a `hasShield()` zwraca 0 przy `shilid == -1` — czyli potwor
-         * NIE blokuje i nie ma czego pokazac.
+         * Potwor z wyprawy nigdy nie ma tarczy: `getQuestMonster` konczy
+         * sie `new Monster(..., $wpnid, -1)`, a `hasShield()` zwraca przy
+         * `shilid == -1` zero — czyli nie blokuje i nie ma czego pokazac.
          */
-        bronObrazek: null,
         tarczaObrazek: null,
       },
       ciosy: walka.ciosy,
     },
   };
+}
+
+/**
+ * Czym rysowac cios — komplet grafik dla jednej strony pojedynku.
+ *
+ * `typAnimacji` to `charWeaponType` z klienta: 1 bron biala, 2 rozdzka
+ * maga, 3 luk zwiadowcy. Kazdy z nich ma wlasna galaz animacji, wlasne
+ * tempo i wlasny wybuch przy trafieniu.
+ *
+ * `pociski` to klatki lecacego pocisku. Mag przelacza je co tik losowo
+ * (`GetArrowID(..., int(Math.random() * 3))`), wiec kula pulsuje; przy
+ * broni epickiej wszystkie trzy wskazuja ten sam plik i pulsowania nie
+ * ma — zostaje jeden staly efekt. Zwiadowca ma belt jednoklatkowy
+ * w swojej wlasnej barwie.
+ *
+ * `pociskUderzenia` zastepuje przy broni dystansowej wybuch „SMASH":
+ * mag dostaje czwarty wariant swojego pocisku, zwiadowca `arrowsmash.png`.
+ */
+interface RysunekBroni {
+  typAnimacji: 1 | 2 | 3;
+  bronObrazek: string | null;
+  pociski: string[];
+  pociskUderzenia: string | null;
+}
+
+const OBRAZ_UDERZENIA_STRZALY = '/res/sfgame/scr/fight/arrowsmash.png';
+
+/** Gole piesci — `charHasWeapon` falszywe, klient rysuje `kampf_faust.png`. */
+function rysunekPiesci(): RysunekBroni {
+  return { typAnimacji: 1, bronObrazek: null, pociski: [], pociskUderzenia: null };
+}
+
+function rysunekBroni(wiersz: Record<string, unknown>): RysunekBroni {
+  const numer = liczba(wiersz['item_id']);
+  const typAnimacji = typAnimacjiBroni(numer);
+  const przedmiot = zbudujPrzedmiot(wiersz);
+  const barwa = barwaPrzedmiotu({
+    dmg_min: liczba(wiersz['dmg_min']),
+    dmg_max: liczba(wiersz['dmg_max']),
+    atr_type_1: liczba(wiersz['atr_type_1']),
+    atr_type_2: liczba(wiersz['atr_type_2']),
+    atr_type_3: liczba(wiersz['atr_type_3']),
+    atr_val_1: liczba(wiersz['atr_val_1']),
+    atr_val_2: liczba(wiersz['atr_val_2']),
+    atr_val_3: liczba(wiersz['atr_val_3']),
+  });
+
+  return {
+    typAnimacji,
+    bronObrazek: przedmiot.obrazek,
+    ...pociskiBroni(numer, barwa, typAnimacji),
+  };
+}
+
+/**
+ * Bron potwora z wyprawy.
+ *
+ * `$weapons` daje numery ujemne (pazur, kij, kiel) i jeden dodatni:
+ * 1004, rozdzke potwora-maga. Ujemne nie sa przedmiotem, wiec nie maja
+ * ani ikony, ani barwy — klient rysuje dla nich `kampf_*`. Dodatni idzie
+ * przez te same reguly, co bron gracza, tyle ze typ przedmiotu potwora
+ * to 8 (`Monster::getWeapon()`), a jego blok statystyk jest staly, wiec
+ * barwa wychodzi z niego, a nie z bazy.
+ */
+function rysunekBroniPotwora(numer: number): RysunekBroni {
+  if (numer <= 0) return { typAnimacji: 1, bronObrazek: null, pociski: [], pociskUderzenia: null };
+
+  const typAnimacji = typAnimacjiBroni(numer);
+  // `Monster::getWeapon()`: dmg 1/2, atr_type_1 = 1, atr_val_1 = 1, reszta zero.
+  const barwa = barwaPrzedmiotu({
+    dmg_min: 1,
+    dmg_max: 2,
+    atr_type_1: 1,
+    atr_type_2: 0,
+    atr_type_3: 0,
+    atr_val_1: 1,
+    atr_val_2: 0,
+    atr_val_3: 0,
+  });
+
+  return {
+    typAnimacji,
+    bronObrazek: plikIkony(TYP_BRONI_POTWORA, numer, barwa),
+    ...pociskiBroni(numer, barwa, typAnimacji),
+  };
+}
+
+/** `Monster::getWeapon()` zwraca `item_type => 8`. */
+const TYP_BRONI_POTWORA = 8;
+
+function pociskiBroni(
+  numer: number,
+  barwa: number,
+  typAnimacji: 1 | 2 | 3,
+): { pociski: string[]; pociskUderzenia: string | null } {
+  if (typAnimacji === 2) {
+    // Mag: trzy klatki losowane co tik i czwarta na uderzenie.
+    const klatki = [0, 1, 2].map((b) => plikPocisku(numer, b)).filter((s): s is string => s !== null);
+    return { pociski: klatki, pociskUderzenia: plikPocisku(numer, 3) };
+  }
+  if (typAnimacji === 3) {
+    // Zwiadowca: belt w barwie przedmiotu, wybuch wspolny dla wszystkich.
+    const belt = plikPocisku(numer, barwa);
+    return { pociski: belt ? [belt] : [], pociskUderzenia: OBRAZ_UDERZENIA_STRZALY };
+  }
+  return { pociski: [], pociskUderzenia: null };
 }
 
 /**

@@ -97,7 +97,7 @@ describe('silnik walki — zgodnosc z req.php', () => {
 
       it('potwor wychodzi identyczny przy tym samym ziarnie', () => {
         const gracz = wojownikZGracza(wiersz(w), przedmioty(w));
-        const potwor = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), 'oryginalne');
+        const potwor = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), { wzorObrazen: 'oryginalne' });
 
         expect(potwor.poziom).toBe(w.potwor.lvl);
         expect(potwor.klasa).toBe(w.potwor.class);
@@ -119,8 +119,8 @@ describe('silnik walki — zgodnosc z req.php', () => {
        */
       it('wzor uzywany w grze rozni sie od oryginalu tylko obrazeniami', () => {
         const gracz = wojownikZGracza(wiersz(w), przedmioty(w));
-        const oryginal = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), 'oryginalne');
-        const nasz = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), 'wzorGracza');
+        const oryginal = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), { wzorObrazen: 'oryginalne' });
+        const nasz = potworNaZadanie(gracz, new PhpMtRand(w.ziarno), { wzorObrazen: 'wzorGracza' });
 
         const { bronMin: _a, bronMax: _b, bronBazowaMin: _c, bronBazowaMax: _d, ...resztaOryginalu } = oryginal;
         const { bronMin: _e, bronMax: _f, bronBazowaMin: _g, bronBazowaMax: _h, ...resztaNaszej } = nasz;

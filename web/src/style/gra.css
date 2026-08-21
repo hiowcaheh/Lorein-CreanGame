@@ -1160,13 +1160,39 @@ button.postac-slot:hover img { filter: brightness(1.15); }
   pointer-events: none;
 }
 
-/* Wybuch „SMASH" — `smash1..6.png`, 286x202, skalowany od srodka. */
+/*
+ * Pocisk broni dystansowej: kula maga albo belt zwiadowcy.
+ *
+ * Kontener bez wlasnych rozmiarow, skalowany i obracany wzgledem swojego
+ * punktu zaczepienia — obrazek wisi w nim lewym gornym rogiem, bo tak
+ * ustawia go `SetCnt` bez offsetow i bez srodkowania.
+ */
+.walka-pocisk {
+  position: absolute;
+  z-index: 4;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.walka-pocisk img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+}
+
+/*
+ * Wybuch trafienia. Bron biala ma `smash1..6.png` (286x202), mag czwarty
+ * wariant swojego pocisku, zwiadowca `arrowsmash.png` (500x500) — kazdy
+ * innej wielkosci, wiec srodkowanie musi byc niezalezne od rozmiaru.
+ */
 .walka-ono {
   position: absolute;
   z-index: 5;
-  width: 286px;
-  height: 202px;
   transform-origin: center;
+  max-width: none;
   pointer-events: none;
 }
 

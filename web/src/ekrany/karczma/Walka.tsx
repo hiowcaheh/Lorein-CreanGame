@@ -15,7 +15,7 @@
  *   kolumny 324/450 (bohater) i 1059/1185 (przeciwnik)
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PODPISY, POTWORY } from '../../gra/karczma-teksty';
 import { Portret } from '../../gra/Portret';
 import {
@@ -43,7 +43,6 @@ import {
   WALKA_BRON_LEKKA_Y,
   WALKA_OBRAZENIA_ODSTEP,
   WALKA_OBRAZENIA_Y,
-  WALKA_ONO_Y,
   WALKA_PRZYCISK,
   WALKA_SKALA_SPRITE,
   bronCiezkaObrot,
@@ -54,7 +53,22 @@ import {
   lekkiCios,
   obrazCiezkiegoCiosu,
   obrazPotwora,
+  WALKA_BELT_Y,
+  WALKA_KULA_Y,
+  WALKA_LUK_Y,
+  WALKA_ROZDZKA_OFFSET_X,
+  WALKA_ROZDZKA_Y,
+  beltObrot,
+  beltX,
+  kulaX,
+  lukObrot,
+  lukX,
+  onoPrzyrostSkali,
+  onoSkalaPoczatkowa,
   onoX,
+  onoY,
+  rozdzkaObrot,
+  rozdzkaX,
   tarczaX,
   tarczaY,
   tloKrainy,
@@ -130,6 +144,8 @@ export function Walka({
   }
 
   const biezacy = koniec ? undefined : walka.ciosy[odgrywany];
+  /** Kto zadaje ten cios — z jego broni bierze sie cala animacja. */
+  const atakujacy = biezacy && (biezacy.kto === BOHATER ? walka.gracz : walka.potwor);
   const nazwaPotwora = POTWORY[walka.potwor.obrazek - 1] ?? walka.potwor.nazwa;
 
   /*
@@ -143,13 +159,18 @@ export function Walka({
     const wszystkie = [
       ...klatkiLekkiegoCiosu(walka.gracz.bron),
       ...klatkiLekkiegoCiosu(walka.potwor.bron),
+      ...walka.gracz.pociski,
+      ...walka.potwor.pociski,
       ...KLATKI_UDERZENIA,
     ];
+    for (const wybuch of [walka.gracz.pociskUderzenia, walka.potwor.pociskUderzenia]) {
+      if (wybuch) wszystkie.push(wybuch);
+    }
     for (const adres of new Set(wszystkie)) {
       const obraz = new Image();
       obraz.src = adres;
     }
-  }, [walka.gracz.bron, walka.potwor.bron]);
+  }, [walka.gracz, walka.potwor]);
 
   function pomin() {
     setZaliczonych(walka.ciosy.length);
@@ -217,14 +238,17 @@ export function Walka({
         alt=""
       />
 
-      {biezacy && (
+      {biezacy && atakujacy && (
         <Cios
           key={odgrywany}
           kto={biezacy.kto}
           rodzaj={biezacy.rodzaj}
           obrazenia={biezacy.obrazenia}
-          bron={biezacy.kto === BOHATER ? walka.gracz.bron : walka.potwor.bron}
-          bronObrazek={biezacy.kto === BOHATER ? walka.gracz.bronObrazek : walka.potwor.bronObrazek}
+          bron={atakujacy.bron}
+          bronObrazek={atakujacy.bronObrazek}
+          typAnimacji={atakujacy.typAnimacji}
+          pociski={atakujacy.pociski}
+          pociskUderzenia={atakujacy.pociskUderzenia}
           /*
            * Tarcza nalezy do OBRONCY: przy ciosie bohatera broni sie
            * potwor, przy ciosie potwora — bohater.
@@ -411,7 +435,9 @@ interface StanCiosu {
   aTarcza: number;
   /** `DamageAlpha` — liczba obrazen. */
   aObrazen: number;
-  /** `OnoAlpha` i skala wybuchu „SMASH". */
+  /** `BulletAlpha` — pocisk broni dystansowej. */
+  aPocisk: number;
+  /** `OnoAlpha` i skala wybuchu przy trafieniu. */
   aOno: number;
   skalaOno: number;
   /** Napis z obrazeniami wedruje w gore po 2 px na tik. */
@@ -425,6 +451,7 @@ const POCZATEK_CIOSU: StanCiosu = {
   aBron: 1,
   aTarcza: 0,
   aObrazen: 0,
+  aPocisk: 0,
   aOno: 0,
   skalaOno: 0.6,
   yObrazen: 0,
@@ -432,32 +459,43 @@ const POCZATEK_CIOSU: StanCiosu = {
 };
 
 /**
- * Jeden tik zegara — przepisany `switch (strikePhase)` z klienta.
+ * Jeden tik zegara — przepisany `switch (weaponType)` i `switch (strikePhase)`
+ * z klienta.
  *
- * Galaz lekka i ciezka roznia sie krokiem `strikeVal` i progami, wiec
- * dlugosc ciosu wychodzi rozna: lekki 2 + 3 + 14 tikow (760 ms),
- * ciezki 8 + 2 + 14 (960 ms).
+ * Kazdy typ broni ma wlasne progi i wlasny krok `strikeVal`, wiec i wlasna
+ * dlugosc ciosu:
+ *
+ *   bron biala, lekka (pazur, machniecie)   2 + 3 + 14 tikow   760 ms
+ *   bron biala, ciezka (ikona broni)        8 + 2 + 14         960 ms
+ *   rozdzka maga                            3 + 4 + 14         840 ms
+ *   luk i kusza                             6 + 7 + 14        1080 ms
+ *
+ * Do tego 200 ms przerwy `DoStrikeTimer` miedzy ciosami.
  */
-function tikCiosu(st: StanCiosu, lekki: boolean, blok: boolean): StanCiosu {
+function tikCiosu(st: StanCiosu, galaz: Galaz, blok: boolean): StanCiosu {
   const n = { ...st };
 
   if (n.faza === 0) {
-    n.s += lekki ? 0.2 : 0.1;
-    if (blok && n.s >= (lekki ? 0.4 : 0.5)) n.aTarcza = 1;
-    if (n.s >= (lekki ? 0.4 : 0.8)) n.faza = 1;
+    n.s += galaz.krokZamachu;
+    if (blok && n.s >= galaz.progTarczy) n.aTarcza = 1;
+    if (n.s >= galaz.progFazy) n.faza = 1;
+    // Belt jest widoczny od pierwszego tiku, kula dopiero po zamachu.
+    if (galaz.pociskOdRazu) n.aPocisk = 1;
+    else if (n.faza === 1) n.aPocisk = 1;
     return n;
   }
 
   if (n.faza === 1) {
-    n.s += lekki ? 0.2 : 0.15;
+    n.s += galaz.krokDolotu;
+    if (blok && n.s >= galaz.progTarczy) n.aTarcza = 1;
     if (n.s >= 1) {
       n.s = 1;
       n.faza = 2;
       n.widacObrazenia = true;
       n.aObrazen = 1;
-      if (!lekki) {
+      if (galaz.zWybuchem) {
         n.aOno = 1;
-        n.skalaOno = 0.6;
+        n.skalaOno = galaz.skalaOno;
       }
     }
     return n;
@@ -466,8 +504,9 @@ function tikCiosu(st: StanCiosu, lekki: boolean, blok: boolean): StanCiosu {
   n.aObrazen = Math.max(0, n.aObrazen - 0.075);
   n.aBron = Math.max(0, n.aBron - 0.2);
   n.aTarcza = Math.max(0, n.aTarcza - 0.2);
+  n.aPocisk = Math.max(0, n.aPocisk - 0.2);
   if (n.aOno > 0) {
-    n.skalaOno += 0.2;
+    n.skalaOno += galaz.przyrostOno;
     n.aOno = Math.max(0, n.aOno - 0.2);
   }
   n.yObrazen -= 2;
@@ -475,12 +514,52 @@ function tikCiosu(st: StanCiosu, lekki: boolean, blok: boolean): StanCiosu {
 }
 
 /**
+ * Parametry jednej galezi animacji, wyjete z `StrikeAniTimerEvent`.
+ *
+ * `progTarczy` rozni sie miedzy galeziami: bron biala lekka podnosi
+ * tarcze przy `strikeVal >= 0.4`, cala reszta przy `>= 0.5`.
+ */
+interface Galaz {
+  krokZamachu: number;
+  krokDolotu: number;
+  progFazy: number;
+  progTarczy: number;
+  zWybuchem: boolean;
+  skalaOno: number;
+  przyrostOno: number;
+  pociskOdRazu: boolean;
+}
+
+function galazAnimacji(typAnimacji: number, lekki: boolean): Galaz {
+  if (typAnimacji === 2) {
+    return { krokZamachu: 0.15, krokDolotu: 0.15, progFazy: 0.4, progTarczy: 0.5,
+             zWybuchem: true, skalaOno: onoSkalaPoczatkowa(2), przyrostOno: onoPrzyrostSkali(2),
+             pociskOdRazu: false };
+  }
+  if (typAnimacji === 3) {
+    return { krokZamachu: 0.05, krokDolotu: 0.1, progFazy: 0.3, progTarczy: 0.5,
+             zWybuchem: true, skalaOno: onoSkalaPoczatkowa(3), przyrostOno: onoPrzyrostSkali(3),
+             pociskOdRazu: true };
+  }
+  if (lekki) {
+    // Galaz lekka nie ma wybuchu — klient ustawia `CNT_FIGHT_ONO` tylko
+    // w galezi ciezkiej i dystansowej.
+    return { krokZamachu: 0.2, krokDolotu: 0.2, progFazy: 0.4, progTarczy: 0.4,
+             zWybuchem: false, skalaOno: 0, przyrostOno: 0, pociskOdRazu: false };
+  }
+  return { krokZamachu: 0.1, krokDolotu: 0.15, progFazy: 0.8, progTarczy: 0.5,
+           zWybuchem: true, skalaOno: onoSkalaPoczatkowa(1), przyrostOno: onoPrzyrostSkali(1),
+           pociskOdRazu: false };
+}
+
+/**
  * Jeden cios — port `WeaponStrike()`.
  *
- * Bron leci jedna z dwoch galezi (patrz `lekkiCios`), po stronie
- * obroncy staje tarcza, kiedy flaga ciosu ma wartosc 1, a przy ciosie
- * zwyklym i krytycznym wybucha „SMASH". Wszystkie polozenia licza sie
- * ze `strikeVal` tymi samymi wzorami, co w kliencie.
+ * O tym, co poleci przez ekran, decyduje `typAnimacji` (`charWeaponType`
+ * w oryginale): bron biala leci sama, mag posyla kule, zwiadowca belt.
+ * Po stronie obroncy staje tarcza, kiedy flaga ciosu ma wartosc 1,
+ * a przy ciosie zwyklym i krytycznym trafienie wybucha. Wszystkie
+ * polozenia licza sie ze `strikeVal` tymi samymi wzorami, co w kliencie.
  */
 function Cios({
   kto,
@@ -488,6 +567,9 @@ function Cios({
   obrazenia,
   bron,
   bronObrazek,
+  typAnimacji,
+  pociski,
+  pociskUderzenia,
   tarczaObroncy,
   onTrafienie,
   onKoniec,
@@ -497,21 +579,47 @@ function Cios({
   obrazenia: number;
   bron: number;
   bronObrazek: string | null;
+  typAnimacji: 1 | 2 | 3;
+  pociski: string[];
+  pociskUderzenia: string | null;
   tarczaObroncy: string | null;
   onTrafienie: () => void;
   onKoniec: () => void;
 }) {
   const odBohatera = kto === BOHATER;
-  const lekki = lekkiCios(bron);
+  const lekki = typAnimacji === 1 && lekkiCios(bron);
   const blok = rodzaj === 1;
   const krytyczny = rodzaj === 3;
+  /*
+   * Parametry galezi musza byc STALE miedzy renderami — zegar ciosu
+   * trzyma je w zaleznosciach `useEffect`. Swiezy obiekt co render
+   * kasowalby i zakladal zegar na nowo, wiec `strikeVal` nigdy nie
+   * ruszalby dalej niz pierwszy tik.
+   */
+  const galaz = useMemo(() => galazAnimacji(typAnimacji, lekki), [typAnimacji, lekki]);
 
-  const [stan, setStan] = useState(POCZATEK_CIOSU);
+  const [stan, setStan] = useState({ ...POCZATEK_CIOSU, skalaOno: galaz.skalaOno });
 
-  /* Klatka wybuchu losowana raz na cios — `int(Math.random() * 6)`. */
+  /*
+   * Wybuch przy trafieniu.
+   *
+   * Bron biala losuje jedna z szesciu klatek „SMASH"
+   * (`int(Math.random() * 6)`), a dystansowa ma swoja: mag czwarty
+   * wariant wlasnego pocisku, zwiadowca `arrowsmash.png`.
+   */
   const [ono] = useState(
-    () => KLATKI_UDERZENIA[Math.floor(Math.random() * KLATKI_UDERZENIA.length)] as string,
+    () =>
+      pociskUderzenia ??
+      (KLATKI_UDERZENIA[Math.floor(Math.random() * KLATKI_UDERZENIA.length)] as string),
   );
+
+  /*
+   * Klatka kuli maga. Klient przelacza ja co tik
+   * (`GetArrowID(..., int(Math.random() * 3))`), wiec kula pulsuje.
+   * Przy broni epickiej wszystkie trzy warianty wskazuja ten sam plik
+   * i pulsowania po prostu nie widac.
+   */
+  const [klatkaPocisku, setKlatkaPocisku] = useState(0);
 
   const trafienie = useRef(onTrafienie);
   const koniec = useRef(onKoniec);
@@ -519,13 +627,14 @@ function Cios({
   koniec.current = onKoniec;
 
   useEffect(() => {
-    let biezacy = POCZATEK_CIOSU;
+    let biezacy = { ...POCZATEK_CIOSU, skalaOno: galaz.skalaOno };
     let dobity = false;
 
     const zegar = setInterval(() => {
       const poprzedniaFaza = biezacy.faza;
-      biezacy = tikCiosu(biezacy, lekki, blok);
+      biezacy = tikCiosu(biezacy, galaz, blok);
       setStan(biezacy);
+      if (typAnimacji === 2) setKlatkaPocisku(Math.floor(Math.random() * 3));
 
       // Wejscie w faze 2 to chwila trafienia — wtedy spadaja paski zycia.
       if (poprzedniaFaza === 1 && biezacy.faza === 2) trafienie.current();
@@ -538,12 +647,14 @@ function Cios({
     }, TIK);
 
     return () => clearInterval(zegar);
-  }, [lekki, blok]);
+  }, [galaz, blok, typAnimacji]);
 
   return (
     <>
-      {lekki ? <BronLekka bron={bron} odBohatera={odBohatera} blok={blok} stan={stan} /> : null}
-      {!lekki ? (
+      {typAnimacji === 1 && lekki && (
+        <BronLekka bron={bron} odBohatera={odBohatera} blok={blok} stan={stan} />
+      )}
+      {typAnimacji === 1 && !lekki && (
         <BronCiezka
           bron={bron}
           bronObrazek={bronObrazek}
@@ -552,7 +663,24 @@ function Cios({
           krytyczny={krytyczny}
           stan={stan}
         />
-      ) : null}
+      )}
+      {typAnimacji === 2 && (
+        <Rozdzka
+          bronObrazek={bronObrazek}
+          odBohatera={odBohatera}
+          stan={stan}
+          pocisk={pociski[klatkaPocisku] ?? pociski[0] ?? null}
+        />
+      )}
+      {typAnimacji === 3 && (
+        <Luk
+          bronObrazek={bronObrazek}
+          odBohatera={odBohatera}
+          blok={blok}
+          stan={stan}
+          pocisk={pociski[0] ?? null}
+        />
+      )}
 
       {/*
         Tarcza obroncy. `visible = (opponent ? oppFlag : charFlag) == 1`,
@@ -574,17 +702,19 @@ function Cios({
         />
       )}
 
-      {/* „SMASH" — tylko galaz ciezka i tylko przy ciosie, ktory doszedl. */}
-      {!lekki && (rodzaj === 0 || rodzaj === 3) && stan.aOno > 0 && (
+      {/* Wybuch trafienia — klient chowa go przy bloku i uniku. */}
+      {galaz.zWybuchem && (rodzaj === 0 || rodzaj === 3) && stan.aOno > 0 && (
         <img
           className="walka-ono"
           src={ono}
           alt=""
           style={{
-            left: onoX(odBohatera) - 143,
-            top: WALKA_ONO_Y - 101,
+            left: onoX(odBohatera, typAnimacji),
+            top: onoY(typAnimacji),
             opacity: stan.aOno,
-            transform: `scale(${stan.skalaOno})`,
+            transform: `translate(-50%, -50%) scale(${
+              typAnimacji === 3 && !odBohatera ? -stan.skalaOno : stan.skalaOno
+            }, ${stan.skalaOno})`,
           }}
         />
       )}
@@ -599,6 +729,121 @@ function Cios({
           }}
         >
           {NAZWY_CIOSOW[rodzaj] ?? `-${obrazenia.toLocaleString('pl-PL')}`}
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * Galaz maga: rozdzka zostaje w rece i sie kolysze, a kula leci i rosnie.
+ *
+ * Rozdzka ma obrazek przesuniety o (30, -30) — inaczej niz bron biala,
+ * ktora ma (-30, -30). Kula nie jest srodkowana wcale: jej lewy gorny
+ * rog stoi w punkcie kontenera, a `y` odejmuje polowe JUZ PRZESKALOWANEJ
+ * wysokosci, wiec srodek kuli trzyma sie stalej wysokosci.
+ */
+function Rozdzka({
+  bronObrazek,
+  odBohatera,
+  stan,
+  pocisk,
+}: {
+  bronObrazek: string | null;
+  odBohatera: boolean;
+  stan: StanCiosu;
+  pocisk: string | null;
+}) {
+  const znak = odBohatera ? 1 : -1;
+
+  return (
+    <>
+      {bronObrazek && (
+        <div
+          className="walka-bron-ciezka"
+          style={{
+            left: rozdzkaX(odBohatera),
+            top: WALKA_ROZDZKA_Y,
+            opacity: stan.aBron,
+            transform: `rotate(${rozdzkaObrot(odBohatera, stan.s)}deg) scale(${znak * WALKA_SKALA_SPRITE}, ${WALKA_SKALA_SPRITE})`,
+          }}
+        >
+          <img
+            src={bronObrazek}
+            alt=""
+            width={90}
+            height={90}
+            style={{ left: WALKA_ROZDZKA_OFFSET_X - 45, top: -30 - 45 }}
+          />
+        </div>
+      )}
+
+      {pocisk && stan.aPocisk > 0 && (
+        <div
+          className="walka-pocisk"
+          style={{
+            left: kulaX(odBohatera, stan.s),
+            top: WALKA_KULA_Y,
+            opacity: stan.aPocisk,
+            transform: `scale(${znak * stan.s * 2}, ${stan.s * 2}) translateY(-50%)`,
+          }}
+        >
+          <img src={pocisk} alt="" />
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * Galaz zwiadowcy: luk stoi przechylony przy strzelajacym, belt rusza
+ * dopiero po `strikeVal > 0.3` i leci 400 px, obracajac sie po drodze.
+ *
+ * Ani luk, ani belt nie sa srodkowane — `SetCnt` bez zadnych offsetow
+ * stawia ich lewy gorny rog w punkcie kontenera.
+ */
+function Luk({
+  bronObrazek,
+  odBohatera,
+  blok,
+  stan,
+  pocisk,
+}: {
+  bronObrazek: string | null;
+  odBohatera: boolean;
+  blok: boolean;
+  stan: StanCiosu;
+  pocisk: string | null;
+}) {
+  const znak = odBohatera ? 1 : -1;
+
+  return (
+    <>
+      {bronObrazek && (
+        <div
+          className="walka-bron-ciezka"
+          style={{
+            left: lukX(odBohatera),
+            top: WALKA_LUK_Y,
+            opacity: stan.aBron,
+            transform: `rotate(${lukObrot(odBohatera)}deg) scale(${znak * WALKA_SKALA_SPRITE}, ${WALKA_SKALA_SPRITE})`,
+          }}
+        >
+          <img src={bronObrazek} alt="" width={90} height={90} style={{ left: 0, top: 0 }} />
+        </div>
+      )}
+
+      {pocisk && stan.aPocisk > 0 && (
+        <div
+          className="walka-pocisk"
+          style={{
+            left: beltX(odBohatera, Math.max(0.05, stan.s), blok),
+            top: WALKA_BELT_Y,
+            opacity: stan.aPocisk,
+            transform: `rotate(${beltObrot(odBohatera, stan.s)}deg) scale(${znak}, 1)`,
+          }}
+        >
+          <img src={pocisk} alt="" />
         </div>
       )}
     </>

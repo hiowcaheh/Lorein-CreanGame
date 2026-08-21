@@ -7,6 +7,7 @@
  */
 
 import { bonusyZPrzedmiotow } from '../game/ekwipunek.js';
+import { barwaPrzedmiotu, plikIkony } from '../game/grafikaPrzedmiotow.js';
 import { LEVELS } from '../protocol/gamedata.js';
 import { intval } from '../compat/php.js';
 import type { Sql } from '../db/client.js';
@@ -150,8 +151,9 @@ function mnoznikZycia(klasa: number): number {
 /**
  * Zamienia wiersz z tabeli `items` na przedmiot dla klienta.
  *
- * Nazwy plikow w `res/sfgame/itm/` maja postac
- * `{typ}-{podtyp}/itm{typ}-{podtyp}-{numer}-1.png`.
+ * Sciezke do ikony sklada `plikIkony()` — port `GetItemFile()`. Sama para
+ * typ i numer jej nie wyznacza: wchodzi jeszcze barwa, liczona z osmiu
+ * pol statystyk przedmiotu.
  */
 export function zbudujPrzedmiot(wiersz: Record<string, unknown>): Przedmiot {
   const typ = intval(wiersz['item_type'] ?? 0);
@@ -161,13 +163,24 @@ export function zbudujPrzedmiot(wiersz: Record<string, unknown>): Przedmiot {
   const podtyp = Math.floor(identyfikator / 1000) + 1;
   const numer = identyfikator % 1000;
 
+  const barwa = barwaPrzedmiotu({
+    dmg_min: intval(wiersz['dmg_min'] ?? 0),
+    dmg_max: intval(wiersz['dmg_max'] ?? 0),
+    atr_type_1: intval(wiersz['atr_type_1'] ?? 0),
+    atr_type_2: intval(wiersz['atr_type_2'] ?? 0),
+    atr_type_3: intval(wiersz['atr_type_3'] ?? 0),
+    atr_val_1: intval(wiersz['atr_val_1'] ?? 0),
+    atr_val_2: intval(wiersz['atr_val_2'] ?? 0),
+    atr_val_3: intval(wiersz['atr_val_3'] ?? 0),
+  });
+
   return {
     slot: intval(wiersz['slot'] ?? 0),
     typ,
     podtyp,
     numer,
     ulepszenie: intval(wiersz['upgrade_level'] ?? 0),
-    obrazek: `/res/sfgame/itm/${typ}-${podtyp}/itm${typ}-${podtyp}-${numer}-1.png`,
+    obrazek: plikIkony(typ, identyfikator, barwa),
     obrazenia: { min: intval(wiersz['dmg_min'] ?? 0), max: intval(wiersz['dmg_max'] ?? 0) },
     atrybuty: [1, 2, 3]
       .map((n) => ({

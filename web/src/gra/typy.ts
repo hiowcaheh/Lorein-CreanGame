@@ -109,6 +109,18 @@ export interface StronaWalki {
    * grafiki zastepczej (piesc, kij, kosc, machniecie).
    */
   bronObrazek: string | null;
+  /**
+   * `charWeaponType` z klienta: 1 bron biala, 2 rozdzka maga, 3 luk
+   * zwiadowcy. Kazdy typ ma inna galaz animacji i inne tempo.
+   */
+  typAnimacji: 1 | 2 | 3;
+  /**
+   * Klatki lecacego pocisku. Mag losuje z nich co tik, zwiadowca ma
+   * jedna. Pusta tablica przy broni bialej.
+   */
+  pociski: string[];
+  /** Czym wybucha trafienie przy broni dystansowej; `null` przy bialej. */
+  pociskUderzenia: string | null;
   /** Ikona tarczy — staje po stronie obroncy, kiedy odbije cios. */
   tarczaObrazek: string | null;
 }

@@ -182,19 +182,18 @@ describe('potwor na zadanie', () => {
     }
   });
 
-  it('gracz wygrywa zadania niemal zawsze — tak jest w oryginale', () => {
+  it('zadania sa do wygrania, ale kosztuja zycie', () => {
     /*
-     * To nie jest przeoczenie w porcie, tylko wlasnosc oryginalu,
-     * potwierdzona wzorcami z prawdziwego PHP (fixtures/walka.json).
+     * Potwor z wyprawy liczy obrazenia wzorem gracza — patrz
+     * `WzorObrazenPotwora` i tabelka swiadomych odstepstw w `CLAUDE.md`.
+     * Przy oryginalnym wzorze z `req.php` potwor bil za okolo jedna piata
+     * tego, co gracz, i wyprawy byly nie do przegrania.
      *
-     * Obrazenia gracza to bron razy (1 + cecha glowna / 10) — przy cesze 100
-     * daje to mnoznik 11. Potwor liczy swoje obrazenia z SUROWEJ broni razy
-     * cecha gracza podzielona przez 40-50, czyli mnoznik okolo 2. Do tego ma
-     * ulamek zycia gracza. Zadania w karczmie sa wiec z zalozenia bezpieczne;
-     * prawdziwe wyzwanie to arena i lochy, gdzie przeciwnik jest pelnoprawna
-     * postacia liczona tym samym wzorem co gracz.
+     * Dolna granica pilnuje, ze wyprawa dalej jest oplacalna, a ubytek
+     * zycia — ze przestala byc darmowa.
      */
     let wygrane = 0;
+    let ubytek = 0;
     const proby = 300;
 
     for (let ziarno = 1; ziarno <= proby; ziarno++) {
@@ -202,8 +201,45 @@ describe('potwor na zadanie', () => {
       const gracz = wojownikZGracza(WOJOWNIK, [bron(10, 20)]);
       const potwor = potworNaZadanie(gracz, rng);
       if (rozegrajWalke(gracz, potwor, rng).wygral === 1) wygrane++;
+      ubytek += 1 - Math.max(0, gracz.zycie) / gracz.zycieMaks;
     }
 
-    expect(wygrane / proby).toBeGreaterThan(0.95);
+    expect(wygrane / proby).toBeGreaterThan(0.9);
+    expect(ubytek / proby).toBeGreaterThan(0.1);
+  });
+
+  /*
+   * Rzadkie zadanie („czerwone") — jedyne miejsce w `getQuestMonster()`,
+   * gdzie potwor jest mocniejszy niz zwykle:
+   *
+   *     $ids = [139, 145, 148, 152, 155, 157];
+   *     $monster_id = $ids[rand(0, 5)];
+   *     $OP_health  = ceil($OP_health * 1.5);
+   *     $wpnid      = -2;
+   */
+  describe('rzadkie zadanie', () => {
+    const BOSSOWIE = [139, 145, 148, 152, 155, 157];
+
+    it('daje potwora z listy bossow, poltora raza wiecej zycia i pazur', () => {
+      for (const ziarno of [7, 42, 1234, 99999]) {
+        const gracz = wojownikZGracza(WOJOWNIK, [bron(10, 20)]);
+        const zwykly = potworNaZadanie(gracz, new PhpMtRand(ziarno));
+        const rzadki = potworNaZadanie(gracz, new PhpMtRand(ziarno), { rzadkieZadanie: true });
+
+        expect(BOSSOWIE).toContain(rzadki.obrazek);
+        expect(rzadki.zycie).toBe(Math.ceil(zwykly.zycie * 1.5));
+        expect(rzadki.bron).toBe(-2);
+      }
+    });
+
+    it('nie rusza niczego poza zyciem, bronia i numerem potwora', () => {
+      const gracz = wojownikZGracza(WOJOWNIK, [bron(10, 20)]);
+      const zwykly = potworNaZadanie(gracz, new PhpMtRand(2024));
+      const rzadki = potworNaZadanie(gracz, new PhpMtRand(2024), { rzadkieZadanie: true });
+
+      for (const cecha of ['poziom', 'klasa', 'sila', 'zrecznosc', 'intelekt', 'wytrzymalosc', 'szczescie', 'bronMin', 'bronMax'] as const) {
+        expect(rzadki[cecha]).toBe(zwykly[cecha]);
+      }
+    });
   });
 });

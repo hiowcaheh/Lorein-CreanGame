@@ -157,6 +157,12 @@ export function wojownikZGracza(
 }
 
 /**
+ * Szesc potworow, ktore stawia rzadkie zadanie — `$ids` w
+ * `getQuestMonster()`. Numery wskazuja i obrazek, i nazwe.
+ */
+const BOSSOWIE_RZADKIEGO_ZADANIA = [139, 145, 148, 152, 155, 157];
+
+/**
  * Ktorym wzorem liczyc obrazenia potwora z wyprawy.
  *
  * `oryginalne` — dokladnie to, co robi `getQuestMonster()`:
@@ -202,8 +208,10 @@ export type WzorObrazenPotwora = 'oryginalne' | 'wzorGracza';
 export function potworNaZadanie(
   gracz: Wojownik,
   rng: PhpMtRand,
-  wzorObrazen: WzorObrazenPotwora = 'wzorGracza',
+  opcje: { wzorObrazen?: WzorObrazenPotwora; rzadkieZadanie?: boolean } = {},
 ): Wojownik & { obrazek: number; bron: number } {
+  const wzorObrazen = opcje.wzorObrazen ?? 'wzorGracza';
+  const rzadkieZadanie = opcje.rzadkieZadanie ?? false;
   const poziom = gracz.poziom + rng.rand(0, 2);
   const klasa = rng.rand(1, 3);
 
@@ -265,9 +273,33 @@ export function potworNaZadanie(
   const bronMin = ceil(gracz.bronBazowaMin * mnoznik);
   const bronMax = ceil(gracz.bronBazowaMax * mnoznik);
 
-  const zycie = ceil(wytrzymalosc * mnoznikZycia * (poziom + 1));
+  let zycie = ceil(wytrzymalosc * mnoznikZycia * (poziom + 1));
 
-  const bron = dostepneBronie[rng.rand(0, 2)] ?? -1;
+  let bron = dostepneBronie[rng.rand(0, 2)] ?? -1;
+  let obrazek = rng.rand(1, 158);
+
+  /*
+   * Rzadkie zadanie („czerwone", `quest_red_N == 145`).
+   *
+   * Jedyne miejsce w `getQuestMonster()`, gdzie potwor jest mocniejszy
+   * niz zwykle — i jedyne, gdzie zalezy od SAMEGO ZADANIA, a nie tylko
+   * od gracza:
+   *
+   *     $ids = [139, 145, 148, 152, 155, 157];
+   *     $monster_id = $ids[rand(0, 5)];
+   *     $OP_health  = ceil($OP_health * 1.5);
+   *     $wpnid      = -2;
+   *
+   * Losowanie numeru potwora idzie PRZED tym sprawdzeniem, wiec przy
+   * rzadkim zadaniu wynik `rand(1, 158)` jest wyrzucany, a generator
+   * i tak go zuzyl. Bez tego dalszy przebieg walki rozjechalby sie
+   * z oryginalem.
+   */
+  if (rzadkieZadanie) {
+    obrazek = BOSSOWIE_RZADKIEGO_ZADANIA[rng.rand(0, 5)] ?? 139;
+    zycie = ceil(zycie * 1.5);
+    bron = -2;
+  }
 
   return {
     nazwa: 'Potwór',
@@ -291,7 +323,7 @@ export function potworNaZadanie(
      * Numer potwora 1..158 — decyduje o obrazku i o nazwie. Nazwa lezy
      * w pliku jezykowym pod `TXT_MONSTER_NAME + numer - 1`.
      */
-    obrazek: rng.rand(1, 158),
+    obrazek,
   };
 }
 

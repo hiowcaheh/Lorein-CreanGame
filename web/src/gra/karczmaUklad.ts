@@ -318,6 +318,56 @@ export function tarczaY(s: number): number {
   return 350 - Math.cos(s * 2 * Math.PI) * 20 - 20 - POCZATEK_Y;
 }
 
+/*
+ * GALAZ 2 — ROZDZKA MAGA (`weaponType == 2`)
+ *
+ * Rozdzka zostaje przy rzucajacym i tylko sie kolysze, a przez ekran
+ * leci kula, ktora ROSNIE w locie. Kontener broni ma tu obrazek
+ * przesuniety o (30, -30), a nie (-30, -30) jak przy broni bialej.
+ */
+export const WALKA_ROZDZKA_OFFSET_X = 30;
+export function rozdzkaX(odBohatera: boolean): number {
+  return 770 + (odBohatera ? -1 : 1) * 170 - POCZATEK_X;
+}
+export const WALKA_ROZDZKA_Y = 350 - POCZATEK_Y;
+export function rozdzkaObrot(odBohatera: boolean, s: number): number {
+  return (odBohatera ? 1 : -1) * (-30 + 70 * s);
+}
+
+/** Kula maga: rosnie od zera do podwojnej wielkosci, leciac 300 px. */
+export function kulaX(odBohatera: boolean, s: number): number {
+  const znak = odBohatera ? 1 : -1;
+  return 770 + -znak * 200 + znak * 300 * s - POCZATEK_X;
+}
+/** `y = POS_FIGHT_WEAPONS_Y - 70 - height / 2` — wysokosc juz przeskalowana. */
+export const WALKA_KULA_Y = 350 - 70 - POCZATEK_Y;
+
+/*
+ * GALAZ 3 — LUK I KUSZA (`weaponType == 3`)
+ *
+ * Luk stoi przy strzelajacym przechylony o 42 stopnie, a belt rusza
+ * dopiero po `strikeVal > 0.3` i leci 400 px. Kontener broni nie jest
+ * tu ani przesuniety, ani wysrodkowany — `SetCnt` bez zadnych offsetow.
+ */
+export function lukX(odBohatera: boolean): number {
+  return 770 + (odBohatera ? -1 : 1) * 200 - POCZATEK_X;
+}
+export const WALKA_LUK_Y = 350 - 140 - POCZATEK_Y;
+export function lukObrot(odBohatera: boolean): number {
+  return odBohatera ? 42 : -42;
+}
+
+export function beltX(odBohatera: boolean, s: number, blok: boolean): number {
+  const znak = odBohatera ? 1 : -1;
+  const podstawa = 770 + -znak * 200;
+  if (s <= 0.3) return podstawa + znak * ((0.3 / s) * 10) - POCZATEK_X;
+  return podstawa + znak * 400 * s * (blok ? 0.7 : 1) - POCZATEK_X;
+}
+export const WALKA_BELT_Y = 350 - 110 - POCZATEK_Y;
+export function beltObrot(odBohatera: boolean, s: number): number {
+  return (odBohatera ? 1 : -1) * (42 + (s - 0.3) * 6);
+}
+
 /**
  * Wybuch „SMASH" — `CNT_FIGHT_ONO`, szesc klatek `smash1..6.png`
  * (286x202). Pojawia sie TYLKO w galezi ciezkiej i tylko przy ciosie
@@ -325,9 +375,27 @@ export function tarczaY(s: number): number {
  * Zaczyna od skali 0.6 i rosnie po 0.2 na tik, gasnac.
  */
 export const KLATKI_UDERZENIA = [1, 2, 3, 4, 5, 6].map((n) => `/res/sfgame/scr/fight/smash${n}.png`);
-export const WALKA_ONO_Y = 350 - 20 - POCZATEK_Y;
-export function onoX(odBohatera: boolean): number {
-  return 770 + (odBohatera ? 1 : -1) * 200 - POCZATEK_X;
+/**
+ * Polozenie i skala wybuchu zaleza od typu broni — klient ma dla kazdego
+ * osobna galaz `switch (weaponType)`:
+ *
+ *     1: x +- 200, y - 20, skala 0.6 i +0.2 na tik
+ *     2: x +- 230, y - 40, skala 0.3 i +0.1
+ *     3: x +- 235, y - 42, skala 0.4 i +0.05, odbita po stronie potwora
+ */
+export function onoX(odBohatera: boolean, typAnimacji: number): number {
+  const odsun = typAnimacji === 2 ? 230 : typAnimacji === 3 ? 235 : 200;
+  return 770 + (odBohatera ? 1 : -1) * odsun - POCZATEK_X;
+}
+export function onoY(typAnimacji: number): number {
+  const podnies = typAnimacji === 2 ? 40 : typAnimacji === 3 ? 42 : 20;
+  return 350 - podnies - POCZATEK_Y;
+}
+export function onoSkalaPoczatkowa(typAnimacji: number): number {
+  return typAnimacji === 2 ? 0.3 : typAnimacji === 3 ? 0.4 : 0.6;
+}
+export function onoPrzyrostSkali(typAnimacji: number): number {
+  return typAnimacji === 2 ? 0.1 : typAnimacji === 3 ? 0.05 : 0.2;
 }
 
 export const OBRAZ_RAMKI_PORTRETU = '/res/sfgame/scr/fight/character_border.png';
