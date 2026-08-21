@@ -10,22 +10,28 @@
  * ten slot" i dostaje odswiezony stan.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { Portret } from '../gra/Portret';
 import { nazwaPrzedmiotu } from '../gra/przedmioty';
 import { usePrzeciaganie } from '../gra/usePrzeciaganie';
 import { PIERWSZY_SLOT_PLECAKA, slotDlaRodzaju } from '../gra/przedmioty';
 import {
+  KOLUMNY_CECH,
   MIEJSCA,
+  ODSTEP_WIERSZA,
   PLECAK,
   PORTRET,
   TLO_LEWE,
+  WIERSZ_CECHY_Y,
   pustaBron,
+  wierszeCech,
+  wierszePochodnych,
   type Ramka as RamkaPostaci,
 } from '../gra/ekranPostaci';
 import {
   MIEJSCA_TOWARU,
+  MIEJSCE_SPRZEDAZY,
   OCZY_SPRZEDAWCY,
   PIERWSZE_MIEJSCE_TOWARU,
   PRZYCISK_TOWARU,
@@ -34,11 +40,17 @@ import {
   ZBROJOWNIA_OBRAZY,
   ciemno,
   czyMiejsceTowaru,
+  czyMiejsceSprzedazy,
   type Ramka,
 } from '../gra/sklepUklad';
 import type { Gracz, Przedmiot, StanSklepu, TowarSklepu } from '../gra/typy';
 
 const KATALOG_SLOTOW = '/res/sfgame/scr/char/';
+
+/** Wiersz cech: `POS_CHAR_PROP_Y + i * REL_CHAR_PROP_Y`, minus poczatek ekranu. */
+function wierszCechy(i: number): number {
+  return WIERSZ_CECHY_Y - 100 + i * ODSTEP_WIERSZA;
+}
 
 function styl(r: Ramka): React.CSSProperties {
   return { left: r.lewo, top: r.gora, width: r.szerokosc, height: r.wysokosc };
@@ -74,8 +86,17 @@ export function Zbrojownia({
         return;
       }
 
-      // Ze swojego ekwipunku na pólke — sprzedaz.
-      if (cel !== null && czyMiejsceTowaru(cel)) onSprzedaj(przedmiot.slot);
+      /*
+       * Ze swojego ekwipunku na sklep — sprzedaz.
+       *
+       * Liczy sie CALY obszar sklepu, nie same miejsca z towarem:
+       * `DefineClickArea(CA_SELL_ITEM, ..., 280 + 550, 100, 450, 700)`.
+       * W oryginale rzuca sie rzecz sprzedawcy pod nogi, a nie celuje
+       * w pólke.
+       */
+      if (cel !== null && (czyMiejsceTowaru(cel) || czyMiejsceSprzedazy(cel))) {
+        onSprzedaj(przedmiot.slot);
+      }
     },
   });
 
@@ -124,6 +145,8 @@ export function Zbrojownia({
   }, []);
 
   const noc = ciemno(new Date(stan.czasSerwera * 1000).getHours());
+  const cechy = wierszeCech(gracz);
+  const pochodne = wierszePochodnych(gracz);
 
   return (
     <div className="sklep" ref={ekran}>
@@ -169,9 +192,47 @@ export function Zbrojownia({
         />
       ))}
 
+      {/*
+        Cechy i wartosci pochodne — `BNC_SCREEN_SHAKES` dostaje te same
+        piec wierszy, co ekran postaci. Bez przyciskow „+":
+        `BTN_SCR_CHAR_STEIGERN1` nalezy wylacznie do ekranu postaci.
+      */}
+      {cechy.map((cecha, i) => (
+        <Fragment key={cecha.nazwa}>
+          <span className="postac-cecha" style={{ left: KOLUMNY_CECH[0], top: wierszCechy(i) }}>
+            {cecha.nazwa}
+          </span>
+          <span className="postac-cecha" style={{ left: KOLUMNY_CECH[1], top: wierszCechy(i) }}>
+            {cecha.wartosc}
+          </span>
+          <span
+            className="postac-cecha"
+            style={{ left: KOLUMNY_CECH[3], top: wierszCechy(i) }}
+            title={pochodne[i]!.tytul}
+          >
+            {pochodne[i]!.nazwa}
+          </span>
+          <span className="postac-cecha" style={{ left: KOLUMNY_CECH[4], top: wierszCechy(i) }}>
+            {pochodne[i]!.wartosc}
+          </span>
+        </Fragment>
+      ))}
+
       {/* --------------------------------------------- prawa polowa -- */}
 
       <img className="sklep-tlo" style={styl(TLO)} src={ZBROJOWNIA_OBRAZY.tlo} alt="" />
+
+      {/*
+        Obszar sprzedazy — `CA_SELL_ITEM`. Zwykly, niewidoczny prostokat;
+        lezy pod towarem i pod przyciskiem, wiec upuszczenie na pólke
+        dalej trafia w pólke.
+      */}
+      <div
+        className="sklep-obszar-sprzedazy"
+        style={styl(MIEJSCE_SPRZEDAZY.ramka)}
+        data-slot={MIEJSCE_SPRZEDAZY.numer}
+        aria-hidden="true"
+      />
 
       <img
         className="sklep-sprzedawca"

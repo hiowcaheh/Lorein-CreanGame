@@ -1468,3 +1468,12 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 
 .sklep-wymiana img { width: 25px; height: 24px; }
 
+
+/*
+ * Obszar sprzedazy — niewidoczny prostokat, ktory ma LAPAC upuszczony
+ * przedmiot. Nie moze wiec dostac `pointer-events: none`: przeciaganie
+ * szuka celu przez `elementFromPoint`, a element przezroczysty dla
+ * wskaznika w ogole sie tam nie pojawia. Towar i przycisk leza wyzej
+ * w drzewie, wiec upuszczenie na nie dalej trafia w nie.
+ */
+.sklep-obszar-sprzedazy { background: none; }

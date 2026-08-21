@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { wylosujPrzedmiot, type Losowanie } from '../src/game/generatorPrzedmiotow.js';
+import { POZIOM_EPIKOW, wylosujPrzedmiot, type Losowanie } from '../src/game/generatorPrzedmiotow.js';
 
 /** Losowanie, ktore zawsze zwraca dolna granice przedzialu. */
 const NAJNIZEJ: Losowanie = (od) => od;
@@ -64,14 +64,16 @@ describe('wylosujPrzedmiot', () => {
 
   it('mag nigdy nie dostaje tarczy', () => {
     // Pierwsze losowanie rodzaju daje tarcze, drugie helm.
-    const losuj = zListy([2, 6, 14, 30, 2, 2, 1, 1, 1]);
+    const losuj = zListy([2, 6, 50, 14, 30, 2, 1, 2, 1, 1, 1]);
     expect(wylosujPrzedmiot(1, 2, { losuj }).item_type).toBe(6);
   });
 
   it('co siodmy przedmiot ma dwie rozne cechy', () => {
     const losuj = zListy([
+      50, //    daleko od progu epika
       14, 30, // cena
       1, //     dwie cechy
+      1, //     mikstura zycia (dotyczy tylko gabinetu magii)
       2, //     bez dodatkowego grzyba
       1, //     numer
       12, //    pancerz
@@ -102,5 +104,67 @@ describe('wylosujPrzedmiot', () => {
       expect(rzecz.atr_val_1).toBeGreaterThanOrEqual(1);
       expect(Number.isInteger(rzecz.gold)).toBe(true);
     }
+  });
+
+  /*
+   * Przedmioty epickie — `$epicRand` w `genItem()`.
+   *
+   *     elseif ($lvl >= 50 && $sanca <= $epic_chance_shop) $epicRand = 1;
+   *
+   * Ponizej piecdziesiatego poziomu nie ma ich wcale, i zadne odswiezanie
+   * towaru tego nie zmieni.
+   */
+  describe('przedmioty epickie', () => {
+    /** Losowanie, ktore trafia w epika: `sanca` = 1 przy progu 2. */
+    function zEpikiem(numerEpika: number): Losowanie {
+      let i = 0;
+      return (od, doWlacznie) => {
+        i++;
+        if (i === 1) return 1; //  sanca — trafiony prog
+        if (od === 50) return numerEpika; // numer epika
+        return od === doWlacznie ? od : od;
+      };
+    }
+
+    it('nie pojawiaja sie ponizej piecdziesiatego poziomu', () => {
+      for (let poziom = 1; poziom < POZIOM_EPIKOW; poziom++) {
+        for (let i = 0; i < 40; i++) {
+          const p = wylosujPrzedmiot(poziom, 1);
+          expect(p.item_id % 1000).toBeLessThan(50);
+        }
+      }
+    });
+
+    it('od piecdziesiatki trafiaja sie i maja numer 50 lub wyzszy', () => {
+      const p = wylosujPrzedmiot(60, 1, { rodzaj: 3, losuj: zEpikiem(50) });
+      expect(p.item_id % 1000).toBe(50);
+      // `ITEMGEN_PMUSH_EPIC` i potrojona cena w zlocie.
+      expect(p.mush).toBe(15);
+    });
+
+    it('numer decyduje o komplecie cech', () => {
+      // 50 — trzy cechy: glowna klasy, wytrzymalosc i szczescie.
+      const trzy = wylosujPrzedmiot(60, 1, { rodzaj: 3, losuj: zEpikiem(50) });
+      expect([trzy.atr_type_1, trzy.atr_type_2, trzy.atr_type_3]).toEqual([1, 4, 5]);
+
+      // 53 — wszystkie piec naraz (cecha numer 6).
+      const wszystkie = wylosujPrzedmiot(60, 1, { rodzaj: 3, losuj: zEpikiem(53) });
+      expect(wszystkie.atr_type_1).toBe(6);
+      expect(wszystkie.atr_type_2).toBe(0);
+
+      // 52 — samo szczescie.
+      const szczescie = wylosujPrzedmiot(60, 1, { rodzaj: 3, losuj: zEpikiem(52) });
+      expect(szczescie.atr_type_1).toBe(5);
+    });
+
+    it('bron maga i lowcy ma cechy podwojone', () => {
+      const wojownik = wylosujPrzedmiot(60, 1, { rodzaj: 1, losuj: zEpikiem(53) });
+      const mag = wylosujPrzedmiot(60, 2, { rodzaj: 1, losuj: zEpikiem(53) });
+      // `$increasedStats` — dotyczy WYLACZNIE broni klas 2 i 3.
+      expect(mag.atr_val_1).toBe(wojownik.atr_val_1 * 2);
+
+      const helmMaga = wylosujPrzedmiot(60, 2, { rodzaj: 6, losuj: zEpikiem(53) });
+      expect(helmMaga.atr_val_1).toBe(wojownik.atr_val_1);
+    });
   });
 });

@@ -172,3 +172,50 @@ export const IKONA_TARCZY = '/res/sfgame/scr/char/icon_schild.jpg';
 export const TLO_LEWE = '/res/sfgame/scr/char/charbg.jpg';
 export const TLO_PRAWE = '/res/sfgame/scr/char/character_right_new.jpg';
 export const KATALOG_SLOTOW = '/res/sfgame/scr/char/';
+
+/**
+ * Dwie kolumny cech spod portretu.
+ *
+ * Ten sam komplet stoi na ekranie postaci i w sklepach — `BNC_SCREEN_CHAR`
+ * i `BNC_SCREEN_SHAKES` dostaja po piec `LBL_SCR_CHAR_STAERKE`
+ * i `LBL_SCR_CHAR_SCHADEN` z podpisami. Roznica jest jedna: w sklepie
+ * nie ma przyciskow „+", bo `BTN_SCR_CHAR_STEIGERN1` nalezy tylko do
+ * ekranu postaci.
+ */
+export function wierszeCech(gracz: {
+  cechy: { sila: number; zrecznosc: number; intelekt: number; wytrzymalosc: number; szczescie: number };
+  obrazenia: { min: number; max: number; srednio: number };
+  unik: number;
+  odpornosc: number;
+  zycie: number;
+  ciosKrytyczny: number;
+}) {
+  return [
+    { nazwa: 'Siła', wartosc: String(gracz.cechy.sila) },
+    { nazwa: 'Zręczność', wartosc: String(gracz.cechy.zrecznosc) },
+    { nazwa: 'Inteligencja', wartosc: String(gracz.cechy.intelekt) },
+    // "Wytrzym." — skrot jest w oryginalnym pliku jezykowym (pozycja 63).
+    { nazwa: 'Wytrzym.', wartosc: String(gracz.cechy.wytrzymalosc) },
+    { nazwa: 'Szczęście', wartosc: String(gracz.cechy.szczescie) },
+  ];
+}
+
+export function wierszePochodnych(gracz: {
+  obrazenia: { min: number; max: number; srednio: number };
+  unik: number;
+  odpornosc: number;
+  zycie: number;
+  ciosKrytyczny: number;
+}) {
+  return [
+    {
+      nazwa: 'Obrażenia',
+      wartosc: `~${gracz.obrazenia.srednio}`,
+      tytul: `${gracz.obrazenia.min} – ${gracz.obrazenia.max}`,
+    },
+    { nazwa: 'Zdolność uniku', wartosc: String(gracz.unik), tytul: '' },
+    { nazwa: 'Odporność', wartosc: String(gracz.odpornosc), tytul: '' },
+    { nazwa: 'Żywotność', wartosc: String(gracz.zycie), tytul: '' },
+    { nazwa: 'Cios krytyczny', wartosc: `${gracz.ciosKrytyczny}%`, tytul: '' },
+  ];
+}

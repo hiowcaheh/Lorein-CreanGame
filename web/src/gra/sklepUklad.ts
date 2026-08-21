@@ -88,3 +88,25 @@ export const PIERWSZE_MIEJSCE_TOWARU = 100;
 export function czyMiejsceTowaru(slot: number): boolean {
   return slot >= PIERWSZE_MIEJSCE_TOWARU && slot < PIERWSZE_MIEJSCE_TOWARU + MIEJSCA_TOWARU.length;
 }
+
+/**
+ * Obszar, na ktory rzuca sie rzecz do sprzedania.
+ *
+ *     DefineClickArea(CA_SELL_ITEM, C_EMPTY, undefined, 280 + 550, 100, 450, 700);
+ *
+ * Prostokat 450x700 od x = 830 — czyli prawie cala prawa polowa ekranu,
+ * ale NIE od samej krawedzi tla sklepu (780). Pojawia sie dopiero, kiedy
+ * gracz zlapie wlasny przedmiot na ekranie sklepu, i przyjmuje wszystko
+ * z ekwipunku i plecaka.
+ *
+ * Ma wlasny numer poza zakresem ekwipunku i poza zakresem towaru, zeby
+ * jedno upuszczenie wystarczylo do rozpoznania, o co chodzi.
+ */
+export const MIEJSCE_SPRZEDAZY = {
+  numer: 200,
+  ramka: ramka(280 + 550, 100, 450, 700),
+};
+
+export function czyMiejsceSprzedazy(slot: number): boolean {
+  return slot === MIEJSCE_SPRZEDAZY.numer;
+}
