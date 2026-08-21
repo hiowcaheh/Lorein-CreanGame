@@ -115,6 +115,26 @@ const ZAKRESY_TYTULOW = {
   6: [stala('TXT_QUEST_ESCORT_TITLE'), 23],
 };
 
+/*
+ * Podsumowanie walki — `LBL_FIGHT_SUMMARY`.
+ *
+ * Klient bierze `txt[(int(Math.random() * 5) + fightStyle) + (charWin ?
+ * TXT_FIGHT_WIN : TXT_FIGHT_LOSE)]`, gdzie `fightStyle` to 0, 5, 10 albo
+ * 15 zaleznie od tego, ile zycia zostalo zwyciezcy. Daje to cztery
+ * piatki zdan po kazdej stronie: od zmiazdzenia po walke na styk.
+ */
+const TXT_FIGHT_WIN = 4300;
+const TXT_FIGHT_LOSE = 4320;
+
+const wyniki = { wygrana: [], przegrana: [] };
+for (const [klucz, poczatek] of [['wygrana', TXT_FIGHT_WIN], ['przegrana', TXT_FIGHT_LOSE]]) {
+  for (let styl = 0; styl < 20; styl += 5) {
+    const piatka = [];
+    for (let i = 0; i < 5; i++) piatka.push(teksty.get(poczatek + styl + i) ?? '');
+    wyniki[klucz].push(piatka);
+  }
+}
+
 const tytuly = {};
 for (const [rodzaj, [poczatek, ile]] of Object.entries(ZAKRESY_TYTULOW)) {
   const lista = [];
@@ -145,6 +165,15 @@ export const POTWORY: string[] = ${JSON.stringify(potwory, null, 2)};
  * Wybor tytulu w zakresie liczy \`tytulWyprawy()\` — patrz \`karczmaUklad.ts\`.
  */
 export const TYTULY_WYPRAW: Record<number, string[]> = ${JSON.stringify(tytuly, null, 2)};
+
+/**
+ * Zdania podsumowujace walke, po piec na kazdy stopien \`fightStyle\`.
+ *
+ * Indeks zewnetrzny to stopien: 0 gdy zwyciezcy zostalo ponad 80% zycia,
+ * 1 ponad 40%, 2 ponad 20%, 3 ponizej. Wewnatrz klient losuje jedno
+ * z pieciu.
+ */
+export const WYNIKI_WALKI: { wygrana: string[][]; przegrana: string[][] } = ${JSON.stringify(wyniki, null, 2)};
 `;
 
 mkdirSync(dirname(cel), { recursive: true });

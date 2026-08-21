@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PODPISY, POTWORY } from '../../gra/karczma-teksty';
+import { PODPISY, POTWORY, WYNIKI_WALKI } from '../../gra/karczma-teksty';
 import { Portret } from '../../gra/Portret';
 import {
   OBRAZ_PASKA_ZYCIA,
@@ -43,6 +43,7 @@ import {
   WALKA_BRON_LEKKA_Y,
   WALKA_OBRAZENIA_ODSTEP,
   WALKA_OBRAZENIA_Y,
+  WALKA_PODSUMOWANIE_Y,
   WALKA_PRZYCISK,
   WALKA_SKALA_SPRITE,
   bronCiezkaObrot,
@@ -90,6 +91,24 @@ const PRZERWA_MIEDZY_CIOSAMI = 200;
 
 /** Kto uderzyl: 1 to bohater, 2 przeciwnik. */
 const BOHATER = 1;
+
+/** `SIZE_FIGHT_RESULT_TEXT_X` — szerokosc napisu z podsumowaniem. */
+const SZEROKOSC_PODSUMOWANIA = 490;
+
+/**
+ * Ktora piatka zdan opisze walke — port `fightStyle`.
+ *
+ * Klient patrzy, ile zycia zostalo ZWYCIEZCY: powyzej 80 procent to
+ * zmiazdzenie, powyzej 40 zwykla wygrana, powyzej 20 ciezka, a ponizej
+ * walka na styk. Przy przegranej liczy sie zycie przeciwnika.
+ */
+function stopienWalki(zycie: number, zycieMaks: number): number {
+  const udzial = zycie / Math.max(1, zycieMaks);
+  if (udzial > 0.8) return 0;
+  if (udzial > 0.4) return 1;
+  if (udzial > 0.2) return 2;
+  return 3;
+}
 
 /**
  * Co klient wypisuje zamiast liczby obrazen.
@@ -147,6 +166,28 @@ export function Walka({
   /** Kto zadaje ten cios — z jego broni bierze sie cala animacja. */
   const atakujacy = biezacy && (biezacy.kto === BOHATER ? walka.gracz : walka.potwor);
   const nazwaPotwora = POTWORY[walka.potwor.obrazek - 1] ?? walka.potwor.nazwa;
+
+  /*
+   * Zdanie podsumowujace — losowane RAZ na walke, nie co render.
+   *
+   * `txt[(int(Math.random() * 5) + fightStyle) + (charWin ? TXT_FIGHT_WIN
+   * : TXT_FIGHT_LOSE)]`. Zycie liczy sie z konca walki, wiec bierzemy je
+   * z ostatniego stanu, a nie z tego, co juz odegrano.
+   */
+  const zdanieWyniku = useMemo(() => {
+    let poGraczu = walka.gracz.zycie;
+    let poPotworze = walka.potwor.zycie;
+    for (const cios of walka.ciosy) {
+      if (cios.kto === BOHATER) poPotworze -= cios.obrazenia;
+      else poGraczu -= cios.obrazenia;
+    }
+
+    const stopien = wygrana
+      ? stopienWalki(poGraczu, walka.gracz.zycie)
+      : stopienWalki(poPotworze, walka.potwor.zycie);
+    const piatka = (wygrana ? WYNIKI_WALKI.wygrana : WYNIKI_WALKI.przegrana)[stopien] ?? [];
+    return piatka[Math.floor(Math.random() * piatka.length)] ?? '';
+  }, [walka, wygrana]);
 
   /*
    * Klatki animacji sciagamy Z GORY, zanim pierwszy cios ich zazada.
@@ -283,48 +324,74 @@ export function Walka({
       )}
 
       {koniec && (
-        <div className="walka-podsumowanie">
-          <div className={`walka-wynik ${wygrana ? 'wygrana' : 'przegrana'}`}>
-            {wygrana ? 'Zwycięstwo!' : 'Porażka'}
+        <>
+          {/*
+            Podsumowanie stoi W TEJ RAMCE, ktora przez cala walke jest
+            pusta — `box2.png` na (770 - 254, 505). Klient wpisuje tam
+            `LBL_FIGHT_SUMMARY`: `POS_FIGHT_SUMMARY_Y = 520`, szerokosc
+            `SIZE_FIGHT_RESULT_TEXT_X = 490`, zawijanie wierszy,
+            wysrodkowane na `POS_SCREEN_TITLE_X = 770`.
+          */}
+          <div
+            className="walka-podsumowanie"
+            style={{
+              left: WALKA_SRODEK_X - SZEROKOSC_PODSUMOWANIA / 2,
+              top: WALKA_PODSUMOWANIE_Y,
+              width: SZEROKOSC_PODSUMOWANIA,
+            }}
+          >
+            <div className="walka-wynik">{zdanieWyniku}</div>
+
+            {/*
+              Wiersze z nagrodami sa NASZYM dodatkiem — oryginal pokazuje
+              tu samo zdanie, a zdobycze widac na gornym pasku. Wlasciciel
+              gry poprosil o nie wprost; szczegoly w tabelce swiadomych
+              odstepstw w CLAUDE.md.
+            */}
+            {nagroda && (
+              <div className="walka-nagrody">
+                <span>
+                  {PODPISY.doswiadczenie}: {nagroda.doswiadczenie.toLocaleString('pl-PL')}
+                </span>
+                <span>
+                  {PODPISY.wynagrodzenie} {Math.floor(nagroda.zloto / 100).toLocaleString('pl-PL')}
+                  <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
+                  {String(nagroda.zloto % 100).padStart(2, '0')}
+                  <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+                </span>
+                {nagroda.grzyby > 0 && (
+                  <span>
+                    {nagroda.grzyby}
+                    <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
+                  </span>
+                )}
+              </div>
+            )}
+
+            {awans !== null && <div className="walka-awans">Nowy poziom: {awans}!</div>}
+
+            {zdobytyPrzedmiot && <div className="walka-przedmiot">Zdobyto przedmiot — leży w plecaku.</div>}
+
+            {plecakBylPelny && (
+              <div className="walka-przedmiot ostrzezenie">Nagroda przepadła — plecak był pełny.</div>
+            )}
           </div>
 
-          {nagroda && (
-            <div className="walka-nagrody">
-              <div>
-                {PODPISY.doswiadczenie}: {nagroda.doswiadczenie.toLocaleString('pl-PL')}
-              </div>
-              <div>
-                {PODPISY.wynagrodzenie} {Math.floor(nagroda.zloto / 100).toLocaleString('pl-PL')}
-                <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
-                {String(nagroda.zloto % 100).padStart(2, '0')}
-                <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
-              </div>
-              {nagroda.grzyby > 0 && (
-                <div>
-                  Znalezione grzyby: {nagroda.grzyby}
-                  <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
-                </div>
-              )}
-            </div>
-          )}
-
-          {awans !== null && <div className="walka-awans">Nowy poziom: {awans}!</div>}
-
-          {zdobytyPrzedmiot && <div className="walka-przedmiot">Zdobyto przedmiot — leży w plecaku.</div>}
-
-          {plecakBylPelny && (
-            <div className="walka-przedmiot ostrzezenie">Nagroda przepadła — plecak był pełny.</div>
-          )}
-
+          {/* „OK" staje dokladnie tam, gdzie przed chwila bylo „Pomin". */}
           <button
             type="button"
-            className="przycisk walka-dalej"
-            style={{ width: WALKA_PRZYCISK.szerokosc, minHeight: WALKA_PRZYCISK.wysokosc }}
+            className="przycisk drugi walka-przycisk"
+            style={{
+              left: WALKA_PRZYCISK.lewo,
+              top: WALKA_PRZYCISK.gora,
+              width: WALKA_PRZYCISK.szerokosc,
+              minHeight: WALKA_PRZYCISK.wysokosc,
+            }}
             onClick={onZamknij}
           >
             OK
           </button>
-        </div>
+        </>
       )}
     </div>
   );

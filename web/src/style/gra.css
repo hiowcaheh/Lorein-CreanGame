@@ -1233,32 +1233,42 @@ button.postac-slot:hover img { filter: brightness(1.15); }
  * z ramka, wiec wysrodkowanie w obu osiach czyta sie lepiej niz
  * przyklejenie gornej krawedzi do 520.
  */
+/*
+ * Podsumowanie walki — `LBL_FIGHT_SUMMARY`.
+ *
+ * Wchodzi w te sama ramke `box2.png`, ktora przez cala walke stoi pusta.
+ * Zadnego wlasnego tla ani obramowania: ramka juz jest, napis tylko sie
+ * w niej klada. Polozenie i szerokosc podaje komponent, bo obie liczby
+ * sa stalymi klienta.
+ */
 .walka-podsumowanie {
   position: absolute;
-  /* POS_SCREEN_TITLE_X = 770, czyli 490 px od lewej krawedzi ekranu gry. */
-  left: 490px;
-  top: 50%;
-  transform: translate(-50%, -50%);
   z-index: 8;
-  width: 620px;
-  padding: 20px;
   text-align: center;
-  background: rgba(0, 0, 0, .8);
-  border: 1px solid var(--zloto);
+  pointer-events: none;
 }
 
-.walka-wynik { font-size: 34px; margin-bottom: 12px; }
-.walka-wynik.wygrana { color: var(--dobry); }
-.walka-wynik.przegrana { color: var(--zly); }
+/* `FontFormat_Default`: 20 px, CLR_SFORANGE, zawijanie wierszy. */
+.walka-wynik {
+  font-size: var(--pismo);
+  line-height: 1.25;
+  color: var(--zloto);
+}
 
-.walka-nagrody { line-height: 30px; }
-.walka-nagrody img { width: 24px; height: 20px; vertical-align: -3px; margin: 0 4px; }
+.walka-nagrody {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  font-size: var(--pismo-cechy);
+  color: var(--pergamin);
+}
 
-.walka-awans { margin-top: 10px; font-size: 26px; color: var(--zloto); }
-.walka-przedmiot { margin-top: 8px; color: var(--pergamin); font-size: var(--pismo-cechy); }
+.walka-nagrody img { width: 24px; height: 20px; vertical-align: -3px; margin: 0 3px; }
+
+.walka-awans { margin-top: 4px; color: var(--zloto); }
+.walka-przedmiot { margin-top: 4px; color: var(--pergamin); font-size: var(--pismo-cechy); }
 .walka-przedmiot.ostrzezenie { color: var(--zly); }
-
-.walka-dalej { width: 220px; margin: 18px auto 0; }
 
 /* ------------------------------------------------------ komunikat -- */
 

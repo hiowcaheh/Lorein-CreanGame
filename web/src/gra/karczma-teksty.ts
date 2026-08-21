@@ -337,3 +337,73 @@ export const TYTULY_WYPRAW: Record<number, string[]> = {
     "TO!"
   ]
 };
+
+/**
+ * Zdania podsumowujace walke, po piec na kazdy stopien `fightStyle`.
+ *
+ * Indeks zewnetrzny to stopien: 0 gdy zwyciezcy zostalo ponad 80% zycia,
+ * 1 ponad 40%, 2 ponad 20%, 3 ponizej. Wewnatrz klient losuje jedno
+ * z pieciu.
+ */
+export const WYNIKI_WALKI: { wygrana: string[][]; przegrana: string[][] } = {
+  "wygrana": [
+    [
+      "Wykonanie zadania przyszło z taką łatwością, że warto się zastanowić, czy w przyszłości w ogóle przyjmować takie zlecenia.",
+      "Po zmiażdżeniu przeciwnika, możesz cieszyć się z następującej nagrody.",
+      "Tyłek przeciwnika został porządnie skopany. Z niewzruszoną miną odbierasz swoją nagrodę.",
+      "To przez takie zadania ludziska gadają, że w dzisiejszych czasach każdy obwieś może być bohaterem.",
+      "Spuszczając przeciwnikowi łomot lewą ręką, prawą zasłaniasz sobie usta przy ziewaniu."
+    ],
+    [
+      "Zgodnie z postanowieniami umowy, przeciwnik doznał uszczerbku na zdrowiu, a zleceniobiorca otrzymuje wynagrodzenie.",
+      "Mówią: najpierw praca, potem przyjemności. Tym zleceniem udało ci się zaliczyć obie te rzeczy na raz.",
+      "Brudna robota odwalona. Czas na zapłatę.",
+      "Istna noc długich noży! Cóż, robota musi być wykonana.",
+      "Zwycięstwo nie przyszło ci łatwo, ale za to rozsławi cię w najdalszych krańcach gminy."
+    ],
+    [
+      "Z trudem udało ci się zgładzić przeciwnika. Za to nagrodę odbierasz z łatwością.",
+      "Ten przeciwnik nie należał do tych łatwych, ale jakoś poszło.",
+      "Za tobą ciężka potyczka. Ciężka jak truchło zgładzonego przez ciebie przeciwnika.",
+      "Życie to nie bułka z masłem, a ten przeciwnik był twardy jak stuletni suchar. Jednak, jak na prawdziwego bohatera przystało, udało ci się go pokonać.",
+      "Wyczerpująca walka i jeden szczęśliwy, choć lekko poturbowany zwycięzca -  ty!"
+    ],
+    [
+      "Musisz opowiedzieć o tej walce w karczmie! To, że bohater opowieści ledwo wyszedł z niej cało, możesz pominąć.",
+      "Wydawało ci się, że już z tobą koniec, ale jeszcze tym razem się udało. Jest też nagroda!",
+      "Bardziej pomogło szczęście czy zdolności? Kto by się tam zastanawiał?! Ważne, że zwycięstwo jest po twojej stronie.",
+      "Ledwo co! Warto się dobrze zastanowić przed przyjęciem kolejnej takiej samobójczej misji.",
+      "Walka była bohaterska i zacięta do ostatniej sekundy. Odrobina szczęścia i zaciętość przechyliła jednak szalę na twoją stronę."
+    ]
+  ],
+  "przegrana": [
+    [
+      "Pff! Przegrana z kretesem! Wszyscy się z ciebie śmieją.",
+      "To było ciut ponad twoje możliwości, co?",
+      "Chcesz zobaczyć niedorajdę? Spójrz w lustro!",
+      "Następnym razem spróbuj użyć jakiegoś oręża. Kontratak zamiast uników też by nie zaszkodził.",
+      "Gdyby tylko walka była dla ciebie równie ważna, co jęczenie, to wynik mógłby być zupełnie inny. A tak..."
+    ],
+    [
+      "Lepiej daruj zleceniodawcy szczegóły tej porażki. Słabo!",
+      "Całkowita porażka, żenada, strata czasu... Po prostu brak słów...",
+      "Nie martw się, ktoś musiał spróbować. Choć mógłby to być ktoś, kto dałby z siebie więcej niż ty.",
+      "Teraz wiesz, dlaczego przeciwnik tak ziewał przed walką. Nie chciał się do końca rozbudzać przed zmiażdżeniem cię.",
+      "Spróbuj walczyć jeszcze gorzej, to może przeciwnik umrze ze śmiechu."
+    ],
+    [
+      "Pojedynek nie był łatwy. Niestety dla ciebie odrobinę trudniejszy, niż dla przeciwnika. Może potrzebujesz nowej zbroi?",
+      "Warto potrenować na wypadek takich okoliczności. Wiesz, bohaterowie czasem trenują. Dla leniwych jest też zbrojownia...",
+      "Trochę szkoda łupu, ale spójrzmy prawdzie w oczy - to zlecenie zostało spartaczone.",
+      "Niemalże, niemalże... A za «niemalże» nie ma nagrody. Co najwyżej rada: ucz się na błędach. Hm?",
+      "Wytężony trening i lepsze wyposażenie mogłyby odmienić twój los. A tak co? Kaszana!"
+    ],
+    [
+      "Do samego końca wynik tej batalii owiany był całunem niepewności. Jednak opadając, odsłonił on gorzką dla ciebie prawdę.",
+      "Przeciwnik miał tyle szczęścia, że aż trudno w to uwierzyć. Niemniej trzeba.",
+      "W ostatniej sekundzie walki, przeciwnik zadał ci decydujący cios, który zwalił cię z nóg.",
+      "Teoretycznie szanse na zwycięstwo były takie same, jak na przegraną. Jednak praktyka nie teoretyzuje.",
+      "Przeciwnik nie miał z tobą łatwej przeprawy. Ale odrobinę łatwiejszą, niż ty z nim."
+    ]
+  ]
+};
