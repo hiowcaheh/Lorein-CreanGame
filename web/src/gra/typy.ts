@@ -37,8 +37,25 @@ export interface Gracz {
 
   ekwipunek: Przedmiot[];
 
+  /** Trzy miejsca na dzialajace mikstury; puste maja `rodzaj` rowny zeru. */
+  mikstury: Mikstura[];
+
   /** Osiem odznak, kazda w stopniu 0..4. */
   osiagniecia: number[];
+}
+
+/** Dzialajaca mikstura w jednym z trzech miejsc postaci. */
+export interface Mikstura {
+  /** Numer mikstury, 0 gdy miejsce puste. */
+  rodzaj: number;
+  /** Sila dzialania — procent albo punkty. */
+  wartosc: number;
+  /** Ktora cechę podnosi: 1..5, albo 0 dla Eliksiru Niesmiertelnosci. */
+  cecha: number;
+  /** Kiedy przestanie dzialac — czas uniksowy. */
+  koniec: number;
+  /** Adres ikonki, pusty napis dla wolnego miejsca. */
+  obrazek: string;
 }
 
 /** Przedmiot w ekwipunku albo w plecaku. */

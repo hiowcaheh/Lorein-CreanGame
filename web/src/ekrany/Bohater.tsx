@@ -12,6 +12,13 @@ import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { Portret } from '../gra/Portret';
 import { NAZWY_KLAS, NAZWY_RAS } from '../gra/portret';
 import { PIERWSZY_SLOT_PLECAKA, nazwaPrzedmiotu, slotDlaRodzaju } from '../gra/przedmioty';
+import {
+  NAPIS_DO,
+  NAPIS_TYMCZASOWO,
+  dodatekZMikstury,
+  nazwaMikstury,
+  podpowiedzMikstury,
+} from '../gra/mikstury';
 import { usePrzeciaganie } from '../gra/usePrzeciaganie';
 import {
   BOK_PLUSA,
@@ -24,6 +31,8 @@ import {
   KATALOG_SLOTOW,
   KOLUMNY_CECH,
   MIEJSCA,
+  MIEJSCA_MIKSTUR,
+  PIERWSZE_MIEJSCE_MIKSTURY,
   NAZWA_W_POLU,
   ODSTEP_WIERSZA,
   OPIS,
@@ -43,7 +52,7 @@ import {
   pustaBron,
   type Ramka,
 } from '../gra/ekranPostaci';
-import type { Gracz, Przedmiot } from '../gra/typy';
+import type { Gracz, Mikstura, Przedmiot } from '../gra/typy';
 
 const NAZWY_WIERZCHOWCOW = ['brak', 'Osioł', 'Koń', 'Tygrys', 'Smok'];
 
@@ -68,17 +77,27 @@ function wiersz(i: number): number {
   return WIERSZ_CECHY_Y - 100 + i * ODSTEP_WIERSZA;
 }
 
+/** Rodzaj przedmiotu, ktory sie pije. */
+const RODZAJ_MIKSTURY = 12;
+
 export function Bohater({
   gracz,
   onZapiszOpis,
   onPrzenies,
+  onWypij,
+  onUsunMiksture,
 }: {
   gracz: Gracz;
   onZapiszOpis: (opis: string) => void;
   /** `cel === null` znaczy „zaloz na wlasciwe miejsce". */
   onPrzenies: (zrodlo: number, cel: number | null) => void;
+  /** Wypicie mikstury lezacej w podanym miejscu plecaka. */
+  onWypij: (slot: number) => void;
+  /** Odwolanie dzialania mikstury z miejsca 1..3. */
+  onUsunMiksture: (miejsce: number) => void;
 }) {
   const [pokazany, setPokazany] = useState<Przedmiot | null>(null);
+  const [pokazanaMikstura, setPokazanaMikstura] = useState<number | null>(null);
   const ekran = useRef<HTMLDivElement>(null);
 
   const przeciaganie = usePrzeciaganie({
@@ -86,6 +105,20 @@ export function Bohater({
     onKlik: (przedmiot) => setPokazany((p) => (p?.slot === przedmiot.slot ? null : przedmiot)),
     onUpusc: (przedmiot, cel) => {
       setPokazany(null);
+
+      /*
+       * Mikstury sie nie zaklada — sie ja pije. Oryginal robi to samo
+       * i tym samym ruchem: klient wysyla zwykle przeniesienie na postac,
+       * a serwer dla rodzaju 12 zamiast zakladac przedmiot zapisuje
+       * dzialanie. Upuszczenie wprost na miejsce eliksiru dziala tak samo.
+       */
+      const naMiksture = cel !== null && cel >= PIERWSZE_MIEJSCE_MIKSTURY;
+      if (przedmiot.typ === RODZAJ_MIKSTURY && (cel === null || naMiksture)) {
+        onWypij(przedmiot.slot);
+        return;
+      }
+
+      if (naMiksture) return;
       onPrzenies(przedmiot.slot, cel);
     },
   });
@@ -101,17 +134,18 @@ export function Bohater({
    * podpowiedz tutaj, a zaraz potem otwieralo ja z powrotem.
    */
   useEffect(() => {
-    if (!pokazany) return;
+    if (!pokazany && pokazanaMikstura === null) return;
 
     const zamknij = (e: PointerEvent) => {
       const cel = e.target as Element | null;
       if (cel?.closest('[data-slot]') || cel?.closest('.podpowiedz')) return;
       setPokazany(null);
+      setPokazanaMikstura(null);
     };
 
     document.addEventListener('pointerdown', zamknij);
     return () => document.removeEventListener('pointerdown', zamknij);
-  }, [pokazany]);
+  }, [pokazany, pokazanaMikstura]);
 
   /*
    * Miejsce, ktore oryginal podswietla przy zlapaniu przedmiotu
@@ -124,14 +158,26 @@ export function Bohater({
       : null;
 
   const cechy = [
-    { nazwa: 'Siła', wartosc: String(gracz.cechy.sila) },
-    { nazwa: 'Zręczność', wartosc: String(gracz.cechy.zrecznosc) },
-    { nazwa: 'Inteligencja', wartosc: String(gracz.cechy.intelekt) },
+    { nazwa: 'Siła', wartosc: gracz.cechy.sila },
+    { nazwa: 'Zręczność', wartosc: gracz.cechy.zrecznosc },
+    { nazwa: 'Inteligencja', wartosc: gracz.cechy.intelekt },
     // "Wytrzym." — skrot jest w oryginalnym pliku jezykowym (pozycja 63);
     // pelne slowo nie miesci sie w kolumnie szerokiej na 101 px.
-    { nazwa: 'Wytrzym.', wartosc: String(gracz.cechy.wytrzymalosc) },
-    { nazwa: 'Szczęście', wartosc: String(gracz.cechy.szczescie) },
-  ];
+    { nazwa: 'Wytrzym.', wartosc: gracz.cechy.wytrzymalosc },
+    { nazwa: 'Szczęście', wartosc: gracz.cechy.szczescie },
+  ].map((c, i) => {
+    /*
+     * Dodatek z mikstury stoi w oryginale osobnym wierszem podpowiedzi
+     * cechy: „Dzial. tymczas.  12 (do: 14:05)". Tutaj jest w dymku
+     * przegladarki, bo caly ekran postaci uzywa `title`.
+     */
+    const dodatek = dodatekZMikstury(gracz.mikstury ?? [], i + 1, c.wartosc);
+    return {
+      ...c,
+      wartosc: String(c.wartosc),
+      tytul: dodatek ? `${NAPIS_TYMCZASOWO} ${dodatek.ile} (${NAPIS_DO} ${dodatek.doKiedy})` : '',
+    };
+  });
 
   const pochodne = [
     { nazwa: 'Obrażenia', wartosc: `~${gracz.obrazenia.srednio}`, tytul: `${gracz.obrazenia.min} – ${gracz.obrazenia.max}` },
@@ -206,10 +252,18 @@ export function Bohater({
       */}
       {cechy.map((cecha, i) => (
         <Fragment key={cecha.nazwa}>
-          <span className="postac-cecha" style={{ left: KOLUMNY_CECH[0], top: wiersz(i) }}>
+          <span
+            className="postac-cecha"
+            style={{ left: KOLUMNY_CECH[0], top: wiersz(i) }}
+            title={cecha.tytul}
+          >
             {cecha.nazwa}
           </span>
-          <span className="postac-cecha" style={{ left: KOLUMNY_CECH[1], top: wiersz(i) }}>
+          <span
+            className="postac-cecha"
+            style={{ left: KOLUMNY_CECH[1], top: wiersz(i) }}
+            title={cecha.tytul}
+          >
             {cecha.wartosc}
           </span>
           <button
@@ -283,6 +337,32 @@ export function Bohater({
           <img key={numer} src={`${KATALOG_ODZNAK}ach-${numer}-${gracz.osiagniecia?.[i] ?? 0}.png`} alt="" />
         ))}
       </div>
+
+      {/*
+        Trzy miejsca na dzialajace mikstury. Dwuklik odwoluje dzialanie —
+        tak samo jak `PotionDoubleClick` w oryginale, ktory wysyla
+        `ACT_KILL_POTION` z numerem miejsca.
+      */}
+      {MIEJSCA_MIKSTUR.map((r, i) => (
+        <MiejsceMikstury
+          key={`mikstura${i}`}
+          numer={i + 1}
+          ramka={r}
+          mikstura={gracz.mikstury?.[i]}
+          onKlik={() => setPokazanaMikstura((m) => (m === i ? null : i))}
+          onDwuklik={() => {
+            setPokazanaMikstura(null);
+            onUsunMiksture(i + 1);
+          }}
+        />
+      ))}
+
+      {pokazanaMikstura !== null && gracz.mikstury?.[pokazanaMikstura]?.rodzaj ? (
+        <PodpowiedzMikstury
+          mikstura={gracz.mikstury[pokazanaMikstura]!}
+          ramka={MIEJSCA_MIKSTUR[pokazanaMikstura]!}
+        />
+      ) : null}
 
       {pokazany && (
         <PodpowiedzPrzedmiotu
@@ -371,6 +451,89 @@ function Opis({ wartosc, onZapisz }: { wartosc: string; onZapisz: (opis: string)
         if (tresc !== wartosc) onZapisz(tresc);
       }}
     />
+  );
+}
+
+/**
+ * Jedno z trzech miejsc na dzialajaca miksture.
+ *
+ * Puste miejsce jest przezroczyste — w oryginale stoi tam `C_EMPTY`,
+ * czyli po prostu nic. Klikniecie pokazuje podpowiedz, dwuklik odwoluje
+ * dzialanie (`PotionSingleClick` / `PotionDoubleClick`).
+ */
+function MiejsceMikstury({
+  numer,
+  ramka,
+  mikstura,
+  onKlik,
+  onDwuklik,
+}: {
+  numer: number;
+  ramka: Ramka;
+  mikstura?: Mikstura | undefined;
+  onKlik: () => void;
+  onDwuklik: () => void;
+}) {
+  const slot = PIERWSZE_MIEJSCE_MIKSTURY + numer - 1;
+
+  if (!mikstura || mikstura.rodzaj === 0) {
+    return (
+      <div
+        className="postac-mikstura pusta"
+        style={styl(ramka)}
+        data-slot={slot}
+        title="Wolne miejsce na eliksir"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="postac-mikstura"
+      style={styl(ramka)}
+      data-slot={slot}
+      title={nazwaMikstury(mikstura.rodzaj)}
+      onClick={onKlik}
+      onDoubleClick={onDwuklik}
+    >
+      <img src={mikstura.obrazek} alt={nazwaMikstury(mikstura.rodzaj)} draggable={false} />
+    </button>
+  );
+}
+
+/**
+ * Podpowiedz dzialajacej mikstury — cztery wiersze z `EnablePopup`
+ * klienta: nazwa, podniesiona cecha z sila dzialania, godzina konca
+ * i zdanie o tym, jak dzialanie odwolac.
+ */
+function PodpowiedzMikstury({ mikstura, ramka }: { mikstura: Mikstura; ramka: Ramka }) {
+  const { nazwa, wiersze, jakOdwolac } = podpowiedzMikstury(mikstura);
+
+  const SZEROKOSC = 300;
+  const wysokosc = 16 + (2 + wiersze.length) * 26;
+  const srodek = parseFloat(ramka.lewo) + parseFloat(ramka.szerokosc) / 2;
+
+  return (
+    <div
+      className="podpowiedz"
+      style={{
+        left: Math.min(Math.max(0, srodek - SZEROKOSC / 2), 1000 - SZEROKOSC),
+        top: Math.max(0, parseFloat(ramka.gora) - wysokosc - 8),
+        width: SZEROKOSC,
+      }}
+      role="dialog"
+      aria-label={nazwa}
+    >
+      <div className="nazwa">{nazwa}</div>
+      {wiersze.map((w) => (
+        <div className="wiersz" key={w.etykieta}>
+          <span>{w.etykieta}</span>
+          <span style={{ left: 137 }}>{w.wartosc}</span>
+        </div>
+      ))}
+      <div className="cytat">{jakOdwolac}</div>
+    </div>
   );
 }
 

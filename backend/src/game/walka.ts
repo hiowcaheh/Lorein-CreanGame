@@ -15,6 +15,7 @@
 
 import { PhpMtRand } from '../compat/rng.js';
 import { ceil, intval, round } from '../compat/php.js';
+import { bonusZycia, miksturyGracza, mnoznikiCech } from './mikstury.js';
 
 /** Wspolczynnik zycia zalezny od klasy: wojownik jest najtwardszy. */
 const MNOZNIK_ZYCIA: Record<number, number> = { 1: 5, 2: 2, 3: 4 };
@@ -97,10 +98,10 @@ export function cechaGlowna(w: Pick<Wojownik, 'klasa' | 'sila' | 'intelekt' | 'z
 /**
  * Sklada wojownika z wiersza gracza i jego przedmiotow.
  *
- * Odpowiednik konstruktora `Char`. Pominiete swiadomie: dopalacze
- * z mikstur, bonusy portalu i zaklecia wiedzmy — przyjda razem
- * z ekranami, ktore je wprowadzaja. Kazde z nich to dodatek do wartosci
- * bazowej, wiec dolozenie ich pozniej niczego tu nie przewraca.
+ * Odpowiednik konstruktora `Char`. Pominiete swiadomie: bonusy portalu
+ * i zaklecia wiedzmy — przyjda razem z ekranami, ktore je wprowadzaja.
+ * Kazde z nich to dodatek do wartosci bazowej, wiec dolozenie ich
+ * pozniej niczego tu nie przewraca.
  */
 export function wojownikZGracza(
   wiersz: Record<string, unknown>,
@@ -118,11 +119,21 @@ export function wojownikZGracza(
   }
   const wszystkie = zPrzedmiotow[6] ?? 0;
 
-  const sila = intval(wiersz['attr_str'] ?? 0) + (zPrzedmiotow[1] ?? 0) + wszystkie;
-  const zrecznosc = intval(wiersz['attr_agi'] ?? 0) + (zPrzedmiotow[2] ?? 0) + wszystkie;
-  const intelekt = intval(wiersz['attr_int'] ?? 0) + (zPrzedmiotow[3] ?? 0) + wszystkie;
-  const wytrzymalosc = intval(wiersz['attr_wit'] ?? 0) + (zPrzedmiotow[4] ?? 0) + wszystkie;
-  const szczescie = intval(wiersz['attr_luck'] ?? 0) + (zPrzedmiotow[5] ?? 0) + wszystkie;
+  /*
+   * Mikstury podnosza cechę o procent — w oryginale robi to konstruktor
+   * `Char` zaraz po dodaniu przedmiotow, wiec liczy sie od cechy juz
+   * z ekwipunkiem. Ta sama kolejnosc tutaj.
+   */
+  const mikstury = miksturyGracza(wiersz);
+  const mnozniki = mnoznikiCech(mikstury);
+  const zMikstura = (wartosc: number, cecha: number) =>
+    wartosc + round(wartosc * ((mnozniki[cecha] ?? 1) - 1));
+
+  const sila = zMikstura(intval(wiersz['attr_str'] ?? 0) + (zPrzedmiotow[1] ?? 0) + wszystkie, 1);
+  const zrecznosc = zMikstura(intval(wiersz['attr_agi'] ?? 0) + (zPrzedmiotow[2] ?? 0) + wszystkie, 2);
+  const intelekt = zMikstura(intval(wiersz['attr_int'] ?? 0) + (zPrzedmiotow[3] ?? 0) + wszystkie, 3);
+  const wytrzymalosc = zMikstura(intval(wiersz['attr_wit'] ?? 0) + (zPrzedmiotow[4] ?? 0) + wszystkie, 4);
+  const szczescie = zMikstura(intval(wiersz['attr_luck'] ?? 0) + (zPrzedmiotow[5] ?? 0) + wszystkie, 5);
 
   const bron = przedmioty.find((p) => p.slot === 8) ?? { dmg_min: 1, dmg_max: 2 };
   const tarcza = przedmioty.find((p) => p.slot === 9);
@@ -134,7 +145,8 @@ export function wojownikZGracza(
 
   const glowna = klasa === 1 ? sila : klasa === 2 ? intelekt : klasa === 3 ? zrecznosc : 0;
   const mnoznik = MNOZNIK_ZYCIA[klasa] ?? 1;
-  const zycie = wytrzymalosc * mnoznik * (poziom + 1);
+  const zycie =
+    wytrzymalosc * mnoznik * (poziom + 1) + bonusZycia(mikstury, wytrzymalosc, mnoznik, poziom);
 
   return {
     nazwa: String(wiersz['user_name'] ?? 'Bohater'),

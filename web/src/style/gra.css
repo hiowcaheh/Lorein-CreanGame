@@ -717,6 +717,30 @@ button.postac-slot:hover img { filter: brightness(1.15); }
   white-space: nowrap;
 }
 
+/*
+ * Trzy miejsca na dzialajace mikstury.
+ *
+ * W oryginale to zwykle pojemniki na przedmiot przeskalowane o polowe,
+ * wiec ikonka wypelnia caly kwadrat. Puste miejsce jest niewidoczne
+ * (`C_EMPTY`), ale musi zostac w ukladzie — przyjmuje upuszczony eliksir.
+ */
+.postac-mikstura {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.postac-mikstura img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.postac-mikstura:hover img { filter: brightness(1.15); }
+
 /* Przycisk dodania punktu cechy — oryginalny zloty krzyzyk 33x33. */
 .postac-plus {
   padding: 0;

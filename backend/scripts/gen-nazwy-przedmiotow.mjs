@@ -103,10 +103,30 @@ for (const baza of Object.values(BAZY_WSPOLNE)) dodajZakres(baza, DLUGOSC_TABLIC
 // Przyrostki: 4600 + kod cechy (1,2,4,8,16,32) + prog wartosci (0..250).
 dodajZakres(BAZA_PRZYROSTKOW, 300);
 
-// Nazwy cech przedmiotu i podpisy w podpowiedzi.
+/*
+ * Nazwy cech przedmiotu i podpisy w podpowiedzi.
+ *
+ * Zakres siega trzynastu pozycji, bo mikstury uzywaja cech spoza
+ * zwyklej piatki: 11 to „Okres dzial." (czas dzialania), 12 to
+ * „Punkty zycia". Bez nich podpowiedz mikstury pisala znak zapytania.
+ */
 const NAZWY_CECH = stala('TXT_ITEM_ATTRIB_CLASSES');
-dodajZakres(NAZWY_CECH, 10);
+dodajZakres(NAZWY_CECH, 13);
 for (const n of [stala('TXT_SCHADEN'), stala('TXT_RUESTUNG'), stala('TXT_BLOCKEN')]) potrzebne.add(n);
+
+// Dzien, dni, godzina, godziny — czas dzialania mikstury.
+for (const n of [stala('TXT_DAY'), stala('TXT_DAYS'), stala('TXT_HOUR'), stala('TXT_HOURS')]) {
+  potrzebne.add(n);
+}
+
+/*
+ * Napisy przy DZIALAJACEJ miksturze na ekranie postaci: podpis dodatku
+ * tymczasowego przy cesze, „do:", „Dziala do:" i zdanie o tym, ze
+ * dzialanie odwoluje sie dwuklikiem.
+ */
+for (const n of ['TXT_TEMPORARY', 'TXT_UNTIL', 'TXT_REMAINING', 'TXT_POTION_KILL_INSTRUCTIONS']) {
+  potrzebne.add(stala(n));
+}
 
 const posortowane = [...potrzebne].sort((a, b) => a - b);
 
@@ -141,7 +161,19 @@ const tresc =
   `/** Podpisy w podpowiedzi. */\n` +
   `export const TXT_OBRAZENIA = ${stala('TXT_SCHADEN')};\n` +
   `export const TXT_PANCERZ = ${stala('TXT_RUESTUNG')};\n` +
-  `export const TXT_BLOK = ${stala("TXT_BLOCKEN")};\n`;
+  `export const TXT_BLOK = ${stala("TXT_BLOCKEN")};\n\n` +
+  `/** Dzien, dni, godzina, godziny — czas dzialania mikstury. */\n` +
+  `export const TXT_DZIEN = ${stala('TXT_DAY')};\n` +
+  `export const TXT_DNI = ${stala('TXT_DAYS')};\n` +
+  `export const TXT_GODZINA = ${stala('TXT_HOUR')};\n` +
+  `export const TXT_GODZINY = ${stala('TXT_HOURS')};\n\n` +
+  `/** Napisy przy dzialajacej miksturze. */\n` +
+  `export const TXT_TYMCZASOWO = ${stala('TXT_TEMPORARY')};\n` +
+  `export const TXT_DO = ${stala('TXT_UNTIL')};\n` +
+  `export const TXT_DZIALA_DO = ${stala('TXT_REMAINING')};\n` +
+  `export const TXT_JAK_ODWOLAC_MIKSTURE = ${stala('TXT_POTION_KILL_INSTRUCTIONS')};\n\n` +
+  `/** Poczatek tablicy nazw mikstur (TXT_ITMNAME_12). */\n` +
+  `export const NAZWY_MIKSTUR = ${stala('TXT_ITMNAME_12')};\n`;
 
 mkdirSync(dirname(cel), { recursive: true });
 writeFileSync(cel, tresc, 'utf8');

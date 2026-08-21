@@ -137,6 +137,27 @@ export function App() {
       .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się przełożyć przedmiotu.'));
   }
 
+  /**
+   * Mikstury — wypicie i odwolanie dzialania.
+   *
+   * Tak samo jak przy ekwipunku: o wszystkim decyduje serwer, klient
+   * dostaje gotowy stan postaci. Odmowa (np. „dziala juz mocniejszy
+   * eliksir") przychodzi jako blad i laduje w pasku komunikatow.
+   */
+  function wypijMiksture(slot: number) {
+    setBlad(null);
+    void zapytaj<{ gracz: Gracz }>('/mikstura/wypij', { slot })
+      .then(({ gracz: g }) => setGracz(g))
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się wypić eliksiru.'));
+  }
+
+  function usunMiksture(miejsce: number) {
+    setBlad(null);
+    void zapytaj<{ gracz: Gracz }>('/mikstura/usun', { miejsce })
+      .then(({ gracz: g }) => setGracz(g))
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się odwołać eliksiru.'));
+  }
+
   /*
    * Karczma. Kazda akcja odsyla PELNY stan, wiec klient niczego nie liczy
    * sam — ani tego, czy wyprawa juz sie skonczyla, ani nagrod.
@@ -335,7 +356,13 @@ export function App() {
           />
         )}
         {zakladka === 'bohater' && (
-          <Bohater gracz={gracz} onZapiszOpis={zapiszOpis} onPrzenies={przeniesPrzedmiot} />
+          <Bohater
+            gracz={gracz}
+            onZapiszOpis={zapiszOpis}
+            onPrzenies={przeniesPrzedmiot}
+            onWypij={wypijMiksture}
+            onUsunMiksture={usunMiksture}
+          />
         )}
         {zakladka === 'karczma' && karczma && (
           <Karczma

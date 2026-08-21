@@ -23,6 +23,7 @@ import { PIERWSZY_SLOT_PLECAKA, slotDlaRodzaju } from '../gra/przedmioty';
 import {
   KOLUMNY_CECH,
   MIEJSCA,
+  NAZWA_W_POLU,
   ODSTEP_WIERSZA,
   PLECAK,
   PORTRET,
@@ -176,6 +177,17 @@ export function Sklep({
         <Portret
           wyglad={{ rasa: gracz.rasa, plec: gracz.plec, klasa: gracz.klasa, czesci: gracz.wyglad }}
         />
+      </div>
+
+      {/*
+        Nick i poziom pod portretem.
+        SWIADOME ODSTEPSTWO — patrz tabela w CLAUDE.md. Oryginal nie
+        wklada `CNT_SCR_CHAR_NAME` do `BNC_SCREEN_SHAKES`, wiec w sklepie
+        nazwy postaci nie ma wcale. Miejsce jest to samo, co na ekranie
+        postaci (POS_CHAR_NAME).
+      */}
+      <div className="postac-nazwa" style={styl(przeliczRamke(NAZWA_W_POLU))}>
+        {gracz.nick} (Lv{gracz.poziom})
       </div>
 
       {MIEJSCA.map((m) => (

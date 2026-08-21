@@ -11,12 +11,23 @@ export const TEKSTY: Record<number, string> = {
   119: "Blok",
   160: "Obrażenia",
   163: "Pancerz",
+  309: "Dzień",
+  310: "Dni",
+  311: "Godzina",
+  312: "Godziny",
+  313: "Dział. tymczas:",
+  314: "do:",
+  315: "Działa do:",
+  316: "Aby anulować działanie eliksiru#kliknij dwukrotnie jego#symbol.",
   1031: "Siła",
   1032: "Zręczność",
   1033: "Inteligencja",
   1034: "Wytrzymał.",
   1035: "Szczęście",
   1036: "Wszyst. cechy",
+  1040: "-",
+  1041: "Okres dział",
+  1042: "Punkty życia",
   3000: "Tłuk",
   3001: "Miecz-zabawka",
   3002: "Onucep",
@@ -824,3 +835,18 @@ export const NAZWY_CECH = 1030;
 export const TXT_OBRAZENIA = 160;
 export const TXT_PANCERZ = 163;
 export const TXT_BLOK = 119;
+
+/** Dzien, dni, godzina, godziny — czas dzialania mikstury. */
+export const TXT_DZIEN = 309;
+export const TXT_DNI = 310;
+export const TXT_GODZINA = 311;
+export const TXT_GODZINY = 312;
+
+/** Napisy przy dzialajacej miksturze. */
+export const TXT_TYMCZASOWO = 313;
+export const TXT_DO = 314;
+export const TXT_DZIALA_DO = 315;
+export const TXT_JAK_ODWOLAC_MIKSTURE = 316;
+
+/** Poczatek tablicy nazw mikstur (TXT_ITMNAME_12). */
+export const NAZWY_MIKSTUR = 8350;

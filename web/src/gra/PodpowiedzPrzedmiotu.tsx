@@ -86,6 +86,13 @@ export function PodpowiedzPrzedmiotu({
         )}
         {cena.srebro}
         <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+        {/* Grzyby doplaca sie DO zlota, a nie zamiast — patrz `genItem()`. */}
+        {cena.grzyby > 0 && (
+          <>
+            {cena.grzyby}
+            <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
+          </>
+        )}
       </div>
     </div>
   );

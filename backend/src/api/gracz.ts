@@ -8,6 +8,15 @@
 
 import { bonusyZPrzedmiotow } from '../game/ekwipunek.js';
 import { barwaPrzedmiotu, plikIkony } from '../game/grafikaPrzedmiotow.js';
+import {
+  RODZAJ_MIKSTURY,
+  bonusZycia,
+  cechaMikstury,
+  miksturyGracza,
+  mnoznikiCech,
+  wygasleMikstury,
+  type MiejsceMikstury,
+} from '../game/mikstury.js';
 import { LEVELS } from '../protocol/gamedata.js';
 import { intval } from '../compat/php.js';
 import type { Sql } from '../db/client.js';
@@ -70,6 +79,15 @@ export interface Gracz {
   ekwipunek: Przedmiot[];
 
   /**
+   * Trzy miejsca na dzialajace mikstury — puste maja `rodzaj` rowny zeru.
+   *
+   * Cechy w polach `cechy` i `bonusy` sa juz o mikstury podniesione,
+   * tak samo jak w oryginale. Ta lista jest po to, zeby ekran umial
+   * pokazac, ktora mikstura dziala i do kiedy.
+   */
+  mikstury: Mikstura[];
+
+  /**
    * Osiem odznak, kazda w stopniu 0..4.
    *
    * DO PRZENIESIENIA: oryginal wylicza stopnie z postepu w lochach,
@@ -77,6 +95,20 @@ export interface Gracz {
    * wiec dzis wynik jest poprawny — ale przy starszych kontach nie bedzie.
    */
   osiagniecia: number[];
+}
+
+/** Dzialajaca mikstura w jednym z trzech miejsc postaci. */
+export interface Mikstura {
+  /** Numer mikstury (`potion_id`), 0 gdy miejsce puste. */
+  rodzaj: number;
+  /** Sila dzialania w procentach. */
+  wartosc: number;
+  /** Ktora cechę podnosi: 1..5, albo 0 dla Eliksiru Niesmiertelnosci. */
+  cecha: number;
+  /** Kiedy przestanie dzialac — czas uniksowy. */
+  koniec: number;
+  /** Adres ikonki, albo pusty napis dla wolnego miejsca. */
+  obrazek: string;
 }
 
 /** Przedmiot w ekwipunku albo w plecaku. */
@@ -203,6 +235,24 @@ export async function wczytajGracza(sql: Sql, wiersz: Record<string, unknown>): 
   const przedmioty = await sql<Record<string, unknown>[]>`
     SELECT * FROM items WHERE owner_id = ${intval(wiersz['user_id'] ?? 0)}
   `;
+
+  /*
+   * Mikstury, ktorym uplynal czas, znikaja przy wczytaniu gracza —
+   * tak samo jak w `loadDefaultData()` oryginalu. Samo liczenie i tak
+   * ich nie doliczy (`miksturyGracza` je pomija), ale bez zapisu
+   * zostawalyby w bazie na zawsze i wracaly przy kazdym odczycie.
+   */
+  const wygasle = wygasleMikstury(wiersz);
+  const kolumny = Object.keys(wygasle);
+
+  if (kolumny.length > 0) {
+    Object.assign(wiersz, wygasle);
+    await sql`
+      UPDATE user_data SET ${sql(wygasle, ...kolumny)}
+      WHERE user_id = ${intval(wiersz['user_id'] ?? 0)}
+    `;
+  }
+
   return zbudujGracza(wiersz, przedmioty.map(zbudujPrzedmiot));
 }
 
@@ -241,6 +291,27 @@ export function zbudujGracza(
     szczescie: intval(wiersz['attr_luck'] ?? 10) + bonusy.szczescie,
   };
 
+  /*
+   * Mikstury podnosza cechę o procent i — tak jak w oryginale — caly
+   * dodatek ladzie w DOKLADCE, nie w cesze wlasnej postaci:
+   *
+   *     $ret[35] += ($ret[35] + $ret[30]) * 0.10;
+   *
+   * czyli dokladka rosnie o procent CALEJ cechy. Dzieki temu ekran umie
+   * pokazac, ile z widocznej liczby jest tymczasowe.
+   */
+  const mikstury = miksturyGracza(wiersz);
+  const mnozniki = mnoznikiCech(mikstury);
+  const CECHY_PO_KOLEI = ['sila', 'zrecznosc', 'intelekt', 'wytrzymalosc', 'szczescie'] as const;
+
+  CECHY_PO_KOLEI.forEach((nazwa, i) => {
+    const udzial = (mnozniki[i + 1] ?? 1) - 1;
+    if (udzial === 0) return;
+    const dodatek = Math.round(cechy[nazwa] * udzial);
+    bonusy[nazwa] += dodatek;
+    cechy[nazwa] += dodatek;
+  });
+
   return {
     id: intval(wiersz['user_id'] ?? 0),
     nick: String(wiersz['user_name'] ?? ''),
@@ -261,7 +332,9 @@ export function zbudujGracza(
     cechy,
     bonusy,
 
-    zycie: policzZycie(klasa, cechy.wytrzymalosc, poziom),
+    zycie:
+      policzZycie(klasa, cechy.wytrzymalosc, poziom) +
+      bonusZycia(mikstury, cechy.wytrzymalosc, mnoznikZycia(klasa), poziom),
 
     opis: odkodujOpis(String(wiersz['user_desc'] ?? '')),
 
@@ -269,7 +342,24 @@ export function zbudujGracza(
 
     wierzchowiec: intval(wiersz['mount'] ?? 0),
     ekwipunek,
+    mikstury: mikstury.map(opiszMiksture),
     osiagniecia: [0, 0, 0, 0, 0, 0, 0, 0],
+  };
+}
+
+/**
+ * Miejsce na miksture w postaci, w ktorej rozumie je ekran.
+ *
+ * Ikonka idzie przez `plikIkony()` tak samo jak kazdy inny przedmiot —
+ * klient robi to samo: `GetItemID(12, potion_id, 0, 0)`.
+ */
+function opiszMiksture(m: MiejsceMikstury): Mikstura {
+  return {
+    rodzaj: m.numer,
+    wartosc: m.wartosc,
+    cecha: cechaMikstury(m.numer),
+    koniec: m.koniec,
+    obrazek: m.numer > 0 ? plikIkony(RODZAJ_MIKSTURY, m.numer, 0) : '',
   };
 }
 

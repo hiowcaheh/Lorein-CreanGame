@@ -160,6 +160,28 @@ export const IKONA_PANCERZA = ramka(795, 595, 40, 40);
 export const PANCERZ = ramka(840, 602, 300, 26);
 export const OSIAGNIECIA = ramka(795, 635, 7 * 55 + 50, 67);
 
+/*
+ * Trzy miejsca na dzialajace mikstury.
+ *
+ *   POS_POTION_X = 1079, POS_POTION_Y = 590, REL_POTION_X = 50
+ *
+ * Klient stawia tam zwykle pojemniki na przedmiot i skaluje je o polowe
+ * (`scaleX = scaleY = 0.5`), wiec ikonka 90x90 ma tam 45 pikseli boku.
+ */
+export const BOK_MIKSTURY = BOK_SLOTU / 2;
+export const MIEJSCA_MIKSTUR: Ramka[] = [0, 1, 2].map((i) =>
+  ramka(1079 + 50 * i, 590, BOK_MIKSTURY, BOK_MIKSTURY),
+);
+
+/**
+ * Numery `data-slot` dla miejsc na mikstury.
+ *
+ * Miejsca na przedmioty maja numery z bazy (0..14), wiec mikstury dostaja
+ * osobny zakres — inaczej upuszczenie eliksiru na miejsce nr 1 wygladaloby
+ * jak zakladanie zbroi.
+ */
+export const PIERWSZE_MIEJSCE_MIKSTURY = 300;
+
 export const KATALOG_ODZNAK = '/res/sfgame/scr/char/ach/';
 /** Ikony klas: 1 wojownik, 2 mag, 3 lowca — tak jak w oryginale. */
 export const IKONY_KLAS: Record<number, string> = {

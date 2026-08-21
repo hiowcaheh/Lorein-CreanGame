@@ -15,6 +15,7 @@ import { SF } from '../protocol/constants.js';
 import { LEVELS, portalMonsterHp } from '../protocol/gamedata.js';
 import { intval, round, time } from '../compat/php.js';
 import { loadDefaultStats, mountMultiplier } from './stats.js';
+import { cechaMikstury, udzialMikstury } from './mikstury.js';
 import type { Sql } from '../db/client.js';
 
 /** Wiersz gracza wraz z danymi doliczanymi podzapytaniami. */
@@ -514,15 +515,16 @@ export async function loadDefaultData(
   res.set(444, db['golden_frame'] ?? 0);
 
   // --- bonusy z mikstur ---------------------------------------------------
-  // Mikstury 1-5 daja +10%, 6-10 +15%, 11-15 +25% do jednej statystyki.
+  // Mikstury 1-5 daja +10%, 6-10 +15%, 11-15 +25% do jednej cechy.
   for (let i = 1; i < 4; i++) {
     const potionId = intval(db[`potion_id${i}`] ?? 0);
-    if (potionId < 1 || potionId > 15) {
+    const cecha = cechaMikstury(potionId);
+    if (cecha === 0) {
       continue;
     }
 
-    const statIndex = (potionId - 1) % 5; // 0..4 → sila, zrecznosc, ...
-    const factor = potionId <= 5 ? 0.1 : potionId <= 10 ? 0.15 : 0.25;
+    const statIndex = cecha - 1; // 0..4 → sila, zrecznosc, ...
+    const factor = udzialMikstury(potionId);
 
     const bonusField = 35 + statIndex;
     const baseField = 30 + statIndex;

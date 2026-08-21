@@ -24,6 +24,7 @@ import { config } from './config.js';
 import { konto } from './api/konto.js';
 import { karczma } from './api/karczma.js';
 import { sklep } from './api/sklep.js';
+import { mikstury } from './api/mikstury.js';
 import type { GameRequest } from './protocol/request.js';
 import type { Sql } from './db/client.js';
 
@@ -120,6 +121,7 @@ app.onError(async (err, c) => {
 app.route('/api', konto);
 app.route('/api', karczma);
 app.route('/api', sklep);
+app.route('/api', mikstury);
 
 /**
  * Najprostszy mozliwy dowod zycia — bez bazy, bez zadnej pracy.

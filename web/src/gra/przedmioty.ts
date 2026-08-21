@@ -19,6 +19,10 @@ import {
   BAZY_WSPOLNE,
   BEZ_PRZYROSTKA,
   NAZWY_CECH,
+  TXT_DNI,
+  TXT_DZIEN,
+  TXT_GODZINA,
+  TXT_GODZINY,
   PRZESUNIECIE_EPICKICH,
   TEKSTY,
   TXT_BLOK,
@@ -160,11 +164,49 @@ export function wierszeOpisu(p: Przedmiot): WierszOpisu[] {
     if (a.wartosc <= 0) continue;
     wiersze.push({
       etykieta: tekst(NAZWY_CECH + a.rodzaj) ?? '?',
-      wartosc: `+ ${a.wartosc}`,
+      wartosc: wartoscCechy(p, a.rodzaj, a.wartosc),
     });
   }
 
   return wiersze;
+}
+
+/** Cecha „czas dzialania" i cecha „punkty zycia" — numery z oryginalu. */
+const CECHA_CZAS = 11;
+const CECHA_ZYCIE = 12;
+const RODZAJ_MIKSTURA = 12;
+
+/**
+ * Jak zapisac wartosc cechy w podpowiedzi.
+ *
+ * Klient ma tu trzy przypadki (`EnablePopup`): czas dzialania rozpisuje
+ * na dni i godziny, punkty zycia i mikstury podaje w procentach, a przy
+ * miksturze mocniejszej niz 25 wraca do zwyklej liczby. Reszta to samo
+ * „+ liczba".
+ */
+function wartoscCechy(p: Przedmiot, rodzaj: number, wartosc: number): string {
+  if (rodzaj === CECHA_CZAS) return czasDzialania(wartosc);
+  if (rodzaj === CECHA_ZYCIE) return `+ ${wartosc}%`;
+  if (p.typ === RODZAJ_MIKSTURA) return wartosc <= 25 ? `+ ${wartosc}%` : `+ ${wartosc}`;
+  return `+ ${wartosc}`;
+}
+
+/**
+ * Godziny rozpisane na dni i godziny — dokladnie jak w oryginale:
+ *
+ *     int(hours / 24) + " " + (== 1 ? TXT_DAY : TXT_DAYS)
+ *       + (hours % 24 > 0 ? ", " : "")
+ *       + (hours % 24) + " " + (== 1 ? TXT_HOUR : TXT_HOURS)
+ */
+function czasDzialania(godziny: number): string {
+  const dni = Math.floor(godziny / 24);
+  const reszta = godziny % 24;
+  const czesci: string[] = [];
+
+  if (dni > 0) czesci.push(`${dni} ${tekst(dni === 1 ? TXT_DZIEN : TXT_DNI) ?? 'dni'}`);
+  if (reszta > 0) czesci.push(`${reszta} ${tekst(reszta === 1 ? TXT_GODZINA : TXT_GODZINY) ?? 'godz.'}`);
+
+  return czesci.join(', ');
 }
 
 /**
