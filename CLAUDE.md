@@ -35,6 +35,7 @@ wzgledem oryginalu jest bledem do naprawienia, a nie decyzja.
 | Gdzie | Na czym polega | Dlaczego |
 | --- | --- | --- |
 | `web/src/ekrany/karczma/Walka.tsx` — `walka-nagrody` | W ramce z podsumowaniem walki, pod zdaniem z oryginalu, stoi jeszcze wiersz z doswiadczeniem, wynagrodzeniem i grzybami | Oryginal pokazuje tam samo zdanie, a zdobycze widac na gornym pasku. Wlasciciel gry poprosil wprost o widoczne doswiadczenie i awans po walce. Zdanie i jego wybor (`fightStyle`) sa przepisane jeden do jednego. |
+| `backend/src/game/karczma.ts` — `wylosujZadania()` | Przez dlugosc wyprawy mnozy sie CALA nagroda, a nie tylko czlon zalezny od poziomu | `req.php` dokłada ryczalt (`basexp` 200-300, `basegold` 30-70) POZA mnozeniem. Do okolo trzydziestego poziomu ryczalt przykrywa dlugosc i wyprawa za 20 minut placi tyle samo, co za 5 — a kosztuje cztery razy wiecej awanturniczosci. Kolejnosc losowan bez zmian, wiec dalej trafiaja sie wyprawy hojniejsze w zloto niz w doswiadczenie. |
 | `backend/src/game/walka.ts` — `WzorObrazenPotwora` | Potwor z wyprawy liczy obrazenia wzorem `bron x (1 + glowna/10)` ze swojej cechy glownej, a nie `bron x glowna_gracza / 50` z `getQuestMonster()` | Wzor z `req.php` daje potworowi okolo 1/5 sily ciosu gracza na kazdym poziomie — 300 walk na 300 wygranych przy ubytku 7% zycia. Reszta `req.php` (gracz, arena, kopie z wiezy) liczy wlasnie `x (1 + glowna/10)`. Oryginalny wzor zostaje w kodzie pod `'oryginalne'` i to na nim pracuje test roznicowy. |
 
 ## Scena

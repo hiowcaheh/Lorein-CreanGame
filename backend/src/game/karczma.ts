@@ -182,8 +182,29 @@ export function wylosujZadania(
     // i dopiero powyzej piecdziesiatego poziomu.
     const premia = rng.rand(1, 50) === 1 && poziom > 49 ? 145 : 0;
 
-    const zloto = poziom * (poziom / 40) * (poziom / 40) * m * dlugosc + bazoweZloto;
-    const dosw = doswiadczenieZaZadanie(poziom) * m * dlugosc + bazoweDosw;
+    /*
+     * Nagroda za wyprawe. ODSTEPSTWO OD `req.php` — patrz tabelka
+     * swiadomych odstepstw w `CLAUDE.md`.
+     *
+     * Oryginal mnozy przez dlugosc tylko czlon zalezny od poziomu,
+     * a ryczalt dokłada z boku:
+     *
+     *     ($lvl * ($lvl/40) * ($lvl/40) * $m * $l) + $basegold
+     *     (getQuestExperience($lvl) * $m * $l)     + $basexp
+     *
+     * Przy `basexp = rand(200, 300)` i czlonie poziomowym rzedu kilku
+     * punktow na czwartym poziomie ryczalt przykrywa wszystko: wyprawa
+     * za 20 minut daje tyle samo, co za 5, i tak mniej wiecej do
+     * trzydziestego poziomu. Dlugosc kosztuje jednak awanturniczosc
+     * proporcjonalnie, wiec dluzsza wyprawa byla po prostu gorszym
+     * interesem.
+     *
+     * U nas przez dlugosc mnozy sie CALA nagroda. Reszta wzoru zostaje
+     * nietknieta, wiec dalej trafia sie wyprawa hojniejsza w zloto niz
+     * w doswiadczenie — bierze sie to z osobnych losowan obu ryczaltow.
+     */
+    const zloto = (poziom * (poziom / 40) * (poziom / 40) * m + bazoweZloto) * dlugosc;
+    const dosw = (doswiadczenieZaZadanie(poziom) * m + bazoweDosw) * dlugosc;
 
     zadania.push({
       numer: (i + 1) as 1 | 2 | 3,

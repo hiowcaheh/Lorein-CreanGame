@@ -87,6 +87,45 @@ describe('zasady karczmy', () => {
     }
   });
 
+  /*
+   * ODSTEPSTWO: cala nagroda mnozy sie przez dlugosc, a nie tylko czlon
+   * zalezny od poziomu (patrz `CLAUDE.md`). Test pilnuje, ze dluzsza
+   * wyprawa naprawde placi proporcjonalnie — w oryginale na niskich
+   * poziomach ryczalt przykrywal dlugosc i wychodzilo tyle samo.
+   */
+  it('nagroda rosnie proporcjonalnie do dlugosci wyprawy', () => {
+    for (const poziom of [4, 20, 60]) {
+      const naJednostke: number[] = [];
+
+      for (let ziarno = 1; ziarno <= 60; ziarno++) {
+        for (const z of wylosujZadania(poziom, 6000, new PhpMtRand(ziarno))) {
+          naJednostke.push(z.doswiadczenie / z.dlugosc);
+        }
+      }
+
+      // Doswiadczenie na jednostke czasu ma byc mniej wiecej stale —
+      // rozrzut bierze sie juz tylko z losowanego ryczaltu 200..300.
+      const najmniej = Math.min(...naJednostke);
+      const najwiecej = Math.max(...naJednostke);
+      expect(najwiecej / najmniej).toBeLessThan(2);
+    }
+  });
+
+  it('dwa razy dluzsza wyprawa placi mniej wiecej dwa razy tyle', () => {
+    // To samo ziarno, ta sama pozycja na liscie: rozni sie tylko dlugosc,
+    // bo wytrzymalosc przycina jej zakres.
+    const dlugie = wylosujZadania(60, 6000, new PhpMtRand(2024));
+    const krotkie = wylosujZadania(60, 150, new PhpMtRand(2024));
+
+    for (let i = 0; i < 3; i++) {
+      const d = dlugie[i]!;
+      const k = krotkie[i]!;
+      expect(k.dlugosc).toBe(1);
+      // Nagroda na jednostke czasu jest ta sama po obu stronach.
+      expect(d.doswiadczenie / d.dlugosc).toBeCloseTo(k.doswiadczenie, -1);
+    }
+  });
+
   it('resztka wytrzymalosci przycina dlugosc do jednej jednostki', () => {
     for (let ziarno = 1; ziarno <= 20; ziarno++) {
       for (const z of wylosujZadania(50, 150, new PhpMtRand(ziarno))) {
