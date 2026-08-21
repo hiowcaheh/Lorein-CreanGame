@@ -26,6 +26,17 @@ export const PELNA_WYTRZYMALOSC = 6000;
 /** Jedna jednostka dlugosci zadania to piec minut. */
 export const SEKUND_NA_JEDNOSTKE = 300;
 
+/**
+ * Rodzaje trzech wypraw, w kolejnosci.
+ *
+ * `req.php` wpisuje je na stale — `$ret[$SF_QUEST_DESC_1] = 3`,
+ * `$ret[$SF_QUEST_DESC_2] = 1`, `$ret[$SF_QUEST_DESC_3] = 5` — czyli
+ * pierwsza wyprawa jest zawsze rodzaju „przynies", druga „zwiedz",
+ * a trzecia „przewiez". To nie jest nasze uproszczenie, tylko dokladnie
+ * to, co robi oryginalny serwer.
+ */
+export const RODZAJE_WYPRAW: readonly number[] = [3, 1, 5];
+
 /** Ile wytrzymalosci dokłada jedno piwo — dwadziescia minut. */
 export const WYTRZYMALOSC_Z_PIWA = 1200;
 
@@ -116,6 +127,15 @@ export interface Zadanie {
   /** Numer lokacji 1-21 — decyduje o tle i nazwie miejsca. */
   lokacja: number;
   /**
+   * Rodzaj wyprawy — z niego bierze sie jej TYTUL.
+   *
+   * Oryginalny serwer nie losuje tego: `req.php` wpisuje na stale
+   * `$ret[$SF_QUEST_DESC_1] = 3`, `..._2 = 1`, `..._3 = 5`, czyli
+   * „przynies", „zwiedz" i „przewiez". Klient wybiera po tym numerze
+   * zakres tytulow (`GetQuestTitle`).
+   */
+  rodzaj: number;
+  /**
    * Premia procentowa rzadkiego zadania (`quest_red_N` w bazie).
    *
    * Oryginal daje ja jednemu na piecdziesiat zadan i tylko powyzej
@@ -172,6 +192,7 @@ export function wylosujZadania(
       zloto: Math.trunc(zloto),
       doswiadczenie: Math.trunc(dosw),
       lokacja: rng.rand(1, 21),
+      rodzaj: RODZAJE_WYPRAW[i] ?? 1,
       premia,
     });
   }
@@ -232,6 +253,7 @@ export function zadaniaZWiersza(wiersz: Record<string, unknown>): Zadanie[] {
       zloto: intval(wiersz[`quest_gold_${n}`] ?? 0),
       doswiadczenie: intval(wiersz[`quest_exp_${n}`] ?? 0),
       lokacja: Math.max(1, intval(wiersz[`quest_location_${n}`] ?? 1)),
+      rodzaj: RODZAJE_WYPRAW[n - 1] ?? 1,
       premia: intval(wiersz[`quest_red_${n}`] ?? 0),
     };
   });

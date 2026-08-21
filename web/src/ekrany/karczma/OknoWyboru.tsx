@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react';
+import { PodpowiedzPrzedmiotu } from '../../gra/PodpowiedzPrzedmiotu';
 import { KRAINY, PODPISY } from '../../gra/karczma-teksty';
 import {
   ODSTEP_NAGROD,
@@ -19,8 +20,10 @@ import {
   OKNO_POWROT,
   OKNO_START,
   OKNO_WYBOR,
+  OKNO_PRZEDMIOT,
   PORTRETY_ZADAN,
   czas,
+  tytulWyprawy,
 } from '../../gra/karczmaUklad';
 import type { StanKarczmy, Zadanie } from '../../gra/typy';
 
@@ -41,6 +44,7 @@ export function OknoWyboru({
   onZamknij: () => void;
 }) {
   const [wybrane, setWybrane] = useState<Zadanie | null>(stan.zadania[0] ?? null);
+  const [pokazanyPrzedmiot, setPokazanyPrzedmiot] = useState(false);
   if (!wybrane) return null;
 
   const zaKrotkaWytrzymalosc = stan.wytrzymalosc < wybrane.sekundy;
@@ -60,11 +64,16 @@ export function OknoWyboru({
         onError={(e) => { e.currentTarget.style.display = 'none'; }}
       />
 
+      {/*
+        Naglowek to TYTUL wyprawy, a nie staly napis — tak jak
+        `LBL_QO_QUESTNAME` w oryginale, wysrodkowany w punkcie
+        REL_QO_QUESTNAME_X = 480.
+      */}
       <div
         className="karczma-okno-naglowek"
         style={{ left: OKNO_NAGLOWEK.lewo - OKNO.lewo, top: OKNO_NAGLOWEK.gora - OKNO.gora }}
       >
-        {PODPISY.wybierzZadanie}
+        {tytulWyprawy(wybrane) || PODPISY.wybierzZadanie}
       </div>
 
       <div
@@ -75,6 +84,12 @@ export function OknoWyboru({
           width: OKNO_OPIS.szerokosc,
         }}
       >
+        {/*
+          DO PRZENIESIENIA: oryginal sklada tu cale zdanie z kilku
+          czesci (`GetQuestText`) — cytat zleceniodawcy, nazwa krainy
+          i tresc zadania, kazda z osobnego zakresu pliku jezykowego.
+          Na razie stoi sama nazwa krainy, ktora jest najwazniejsza.
+        */}
         {kraina(wybrane.lokacja)}
       </div>
 
@@ -92,47 +107,84 @@ export function OknoWyboru({
           }}
           onClick={() => setWybrane(zadanie)}
         >
-          {kraina(zadanie.lokacja)}
+          {/*
+            Na liscie stoi TYTUL wyprawy — `LBL_QO_CHOICE1.text =
+            GetQuestTitle(i)` w oryginale. Nazwa krainy jest dluga i jej
+            miejsce jest w opisie obok, nie tutaj.
+          */}
+          {tytulWyprawy(zadanie) || kraina(zadanie.lokacja)}
         </button>
       ))}
 
       {/* --- co z tego bedzie --- */}
-      <div
-        className="karczma-nagrody"
-        style={{
-          left: OKNO_NAGRODY.lewo - OKNO.lewo,
-          top: OKNO_NAGRODY.gora - OKNO.gora,
-          width: OKNO_NAGRODY.szerokosc,
-        }}
-      >
-        <div>
-          {PODPISY.czasTrwania}: {czas(wybrane.sekundy)}
-        </div>
-        <div style={{ marginTop: ODSTEP_NAGROD - 26 }}>
-          {PODPISY.doswiadczenie}: {wybrane.doswiadczenie.toLocaleString('pl-PL')}
-        </div>
-        <div style={{ marginTop: ODSTEP_NAGROD - 26 }}>
-          {PODPISY.wynagrodzenie} {Math.floor(wybrane.zloto / 100).toLocaleString('pl-PL')}
+      {/*
+        Cztery wiersze w jednej kolumnie, co 40 px — jak w oryginale:
+        napis „Wynagrodzenie", zloto ze srebrem, doswiadczenie, czas.
+      */}
+      {[
+        <>{PODPISY.wynagrodzenie}</>,
+        <>
+          {Math.floor(wybrane.zloto / 100).toLocaleString('pl-PL')}
           <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
           {String(wybrane.zloto % 100).padStart(2, '0')}
           <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+        </>,
+        <>
+          {PODPISY.doswiadczenie}: {wybrane.doswiadczenie.toLocaleString('pl-PL')}
+        </>,
+        <>
+          {PODPISY.czasTrwania}: {czas(wybrane.sekundy)}
+        </>,
+      ].map((tresc, i) => (
+        <div
+          key={i}
+          className="karczma-nagrody"
+          style={{
+            left: OKNO_NAGRODY.lewo - OKNO.lewo,
+            top: OKNO_NAGRODY.gora - OKNO.gora + i * ODSTEP_NAGROD,
+            width: OKNO_NAGRODY.szerokosc,
+          }}
+        >
+          {tresc}
         </div>
-      </div>
+      ))}
 
       {/*
-        Przedmiot do zdobycia. Serwer mowi tylko, CZY przy zadaniu cos
-        czeka — jego wartosci gracz poznaje dopiero po powrocie, tak jak
-        w oryginale.
+        Przedmiot do zdobycia stoi w swoim miejscu (REL_QO_SLOT) jako
+        zwykla ikona — klikniecie pokazuje ta sama podpowiedz, co
+        w plecaku. Oryginal robi dokladnie to samo: `CNT_QUEST_SLOT`
+        z `ItemPopup`.
       */}
       {wybrane.nagrodaPrzedmiotowa && (
-        <div className="karczma-nagroda-przedmiot">
-          Do zdobycia: przedmiot
-          {!stan.wolneMiejsceWPlecaku && (
-            <span className="karczma-ostrzezenie">
-              {' '}— plecak pełny, nagroda przepadnie
-            </span>
-          )}
-        </div>
+        <button
+          type="button"
+          className={`karczma-nagroda-slot${stan.wolneMiejsceWPlecaku ? '' : ' przepadnie'}`}
+          style={{
+            left: OKNO_PRZEDMIOT.lewo - OKNO.lewo,
+            top: OKNO_PRZEDMIOT.gora - OKNO.gora,
+            width: OKNO_PRZEDMIOT.szerokosc,
+            height: OKNO_PRZEDMIOT.wysokosc,
+          }}
+          title={
+            stan.wolneMiejsceWPlecaku
+              ? 'Do zdobycia — kliknij, żeby zobaczyć'
+              : 'Plecak pełny — ta nagroda przepadnie'
+          }
+          onClick={() => setPokazanyPrzedmiot((p) => !p)}
+        >
+          <img src={wybrane.nagrodaPrzedmiotowa.obrazek} alt="" draggable={false} />
+        </button>
+      )}
+
+      {pokazanyPrzedmiot && wybrane.nagrodaPrzedmiotowa && (
+        <PodpowiedzPrzedmiotu
+          przedmiot={wybrane.nagrodaPrzedmiotowa}
+          miejsce={{
+            x: OKNO_PRZEDMIOT.lewo - OKNO.lewo + OKNO_PRZEDMIOT.szerokosc / 2,
+            y: OKNO_PRZEDMIOT.gora - OKNO.gora,
+          }}
+          onZamknij={() => setPokazanyPrzedmiot(false)}
+        />
       )}
 
       <button

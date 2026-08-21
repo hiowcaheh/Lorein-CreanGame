@@ -32,6 +32,8 @@ import {
   PODSWIETLENIE_BARU,
   SWIECE,
   TLO,
+  tloKrainy,
+  tytulWyprawy,
   WYPELNIENIE_PASKA,
   czas,
   wariantGrupy,
@@ -40,6 +42,7 @@ import {
 import { OknoWyboru } from './karczma/OknoWyboru';
 import { OknoPiwa } from './karczma/OknoPiwa';
 import { PostepWyprawy } from './karczma/PostepWyprawy';
+import { kraina } from './karczma/OknoWyboru';
 import { Walka } from './karczma/Walka';
 import type { Gracz, Rozliczenie, StanKarczmy } from '../gra/typy';
 
@@ -95,22 +98,35 @@ export function Karczma({
   }
 
   const naWyprawie = stan.status === 2;
+  const wyprawa = naWyprawie ? stan.zadania[stan.wybraneZadanie - 1] : undefined;
 
   return (
     <div className="karczma">
-      <img className="karczma-tlo" src={TLO} alt="" />
-      <img style={styl(SWIECE)} src={OBRAZ_SWIEC} alt="" />
+      {/*
+        Podczas wyprawy bohatera nie ma w karczmie — oryginal pokazuje
+        wtedy KRAINE, w ktora poszedl (`ShowQuestScreen` z tlem
+        `scr/quest/locations/locationN.jpg`), a nad paskiem czasu tytul
+        wyprawy. Widok karczmy wraca dopiero po powrocie.
+      */}
+      {naWyprawie && wyprawa ? (
+        <>
+          <img className="karczma-tlo" src={tloKrainy(wyprawa.lokacja)} alt="" />
+          <div className="karczma-tytul-wyprawy">{tytulWyprawy(wyprawa)}</div>
+          <div className="karczma-kraina-wyprawy">{kraina(wyprawa.lokacja)}</div>
+        </>
+      ) : (
+        <>
+          <img className="karczma-tlo" src={TLO} alt="" />
+          <img style={styl(SWIECE)} src={OBRAZ_SWIEC} alt="" />
 
-      {/* --- grupa przy stole: to ona rozdaje zadania --- */}
-      <img style={styl(GRUPA_ZADAN)} src={KLATKI_GRUPY[wariant]} alt="" />
+          {/* --- grupa przy stole: to ona rozdaje zadania --- */}
+          <img style={styl(GRUPA_ZADAN)} src={KLATKI_GRUPY[wariant]} alt="" />
 
-      <img
-        style={styl(KARCZMARZ)}
-        src={KLATKI_KARCZMARZA[karczmarz]}
-        alt=""
-      />
+          <img style={styl(KARCZMARZ)} src={KLATKI_KARCZMARZA[karczmarz]} alt="" />
 
-      {mruga && <img style={styl(OCZY_NAGANIACZA)} src={OBRAZ_MRUGNIECIA} alt="" />}
+          {mruga && <img style={styl(OCZY_NAGANIACZA)} src={OBRAZ_MRUGNIECIA} alt="" />}
+        </>
+      )}
 
       {!naWyprawie && (
         <>

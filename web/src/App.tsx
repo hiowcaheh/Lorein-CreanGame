@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { BladApi, zapomnijToken, zapiszToken, token, zapytaj } from './gra/api';
 import { useSkalaSceny } from './gra/useSkalaSceny';
+import { czas } from './gra/karczmaUklad';
 import { Bohater } from './ekrany/Bohater';
 import { Karczma } from './ekrany/Karczma';
 import { Diagnostyka } from './ekrany/Diagnostyka';
@@ -62,6 +63,7 @@ export function App() {
   const [pracuje, setPracuje] = useState(false);
   const [blad, setBlad] = useState<string | null>(null);
   const [karczma, setKarczma] = useState<StanKarczmy | null>(null);
+  const odliczanie = useOdliczanieWyprawy(karczma);
 
   /** Zapisany token moze byc juz niewazny — sprawdzamy go przy starcie. */
   useEffect(() => {
@@ -266,7 +268,13 @@ export function App() {
                   title={GOTOWE.includes(poz.klucz) ? undefined : 'Jeszcze nie gotowe'}
                   onClick={() => setZakladka(poz.klucz)}
                 >
-                  {poz.nazwa}
+                  {/*
+                    Kiedy bohater jest na wyprawie, przycisk karczmy
+                    odlicza czas jej konca zamiast pokazywac nazwe — tak
+                    samo robi oryginal, zeby nie trzeba bylo wchodzic do
+                    karczmy tylko po to, zeby sprawdzic zegar.
+                  */}
+                  {poz.klucz === 'karczma' && odliczanie !== null ? odliczanie : poz.nazwa}
                 </button>
               </li>
             );
@@ -327,6 +335,39 @@ function Komunikat({ tresc, onZnika }: { tresc: string; onZnika?: (() => void) |
       {tresc}
     </div>
   );
+}
+
+/**
+ * Ile zostalo do konca wyprawy, w postaci gotowej na przycisk menu.
+ *
+ * Zwraca `null`, kiedy bohater nie jest na wyprawie. Zegar jest
+ * SERWEROWY: bierzemy roznice miedzy czasem serwera a przegladarki
+ * w chwili odczytu stanu i odliczamy juz lokalnie, zeby nie pytac
+ * serwera co sekunde.
+ */
+function useOdliczanieWyprawy(stan: StanKarczmy | null): string | null {
+  const naWyprawie = stan?.status === 2;
+  const koniec = stan?.koniec ?? 0;
+  const teraz = stan?.teraz ?? 0;
+
+  const [zostalo, setZostalo] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!naWyprawie) {
+      setZostalo(null);
+      return;
+    }
+
+    const przesuniecie = teraz * 1000 - Date.now();
+    const przelicz = () =>
+      setZostalo(Math.max(0, koniec - (Date.now() + przesuniecie) / 1000));
+
+    przelicz();
+    const licznik = setInterval(przelicz, 1000);
+    return () => clearInterval(licznik);
+  }, [naWyprawie, koniec, teraz]);
+
+  return zostalo === null ? null : czas(zostalo);
 }
 
 /*

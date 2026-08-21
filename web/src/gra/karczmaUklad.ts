@@ -21,6 +21,8 @@ function ramka(x: number, y: number, sz: number, wy: number): Ramka {
   return { lewo: x - POCZATEK_X, gora: y - POCZATEK_Y, szerokosc: sz, wysokosc: wy };
 }
 
+import { TYTULY_WYPRAW } from './karczma-teksty';
+
 export const KATALOG = '/res/sfgame/scr/taverne/';
 
 /** Tlo karczmy ma dokladnie tyle, ile obszar gry. */
@@ -99,11 +101,32 @@ export const OKNO_PORTRET = ramka(410 + 20, 230 + 20, 200, 200);
 export const OKNO_NAGLOWEK = ramka(410 + 480, 230 + 20, 0, 0);
 /** Opis: REL_QO_QUESTTEXT = (250, 60), szerokosc SIZE_LBL_QO_TEXT_X = 470. */
 export const OKNO_OPIS = ramka(410 + 250, 230 + 60, 470, 200);
-/** „Wybierz wyprawe": REL_QO_CHOOSE = (20, 280); wybory co REL_QO_CHOICES_Y = 40. */
-export const OKNO_WYBOR = ramka(410 + 20, 230 + 280, 400, 30);
+/*
+ * Trzy wyprawy do wyboru: REL_QO_CHOOSE = (20, 280), co REL_QO_CHOICES_Y = 40.
+ *
+ * Szerokosc konczy sie tam, gdzie zaczyna sie kolumna nagrod (x = 660),
+ * czyli 220 px. W oryginale sa to etykiety bez ograniczenia szerokosci,
+ * ale mieszcza sie, bo pokazuja krotkie TYTULY wypraw — a nie dlugie
+ * nazwy krain, ktore stoja w opisie.
+ */
+export const OKNO_WYBOR = ramka(410 + 20, 230 + 280, 220, 30);
 export const ODSTEP_WYBOROW = 40;
-/** Naglowek nagrod: REL_QO_REWARD_Y = 280, wiersze co REL_QO_REWARDS_Y = 40. */
-export const OKNO_NAGRODY = ramka(410 + 400, 230 + 280, 300, 30);
+/*
+ * Nagrody.
+ *
+ * Stoja w TEJ SAMEJ kolumnie, co opis wyprawy — `REL_QO_QUESTTEXT_X = 250`,
+ * czyli x = 660. Kazdy wiersz nizej o `REL_QO_REWARDS_Y = 40`:
+ *
+ *   y = 510   napis „Wynagrodzenie"
+ *   y = 550   zloto i srebro
+ *   y = 590   doswiadczenie
+ *   y = 630   czas trwania
+ *
+ * Wczesniej bylo tu x = 810 i szerokosc 300, wiec kolumna siegala 1110 —
+ * a przyciski zaczynaja sie na 960. Napisy wchodzily na nie i dluzsze
+ * liczby stawaly sie nieczytelne.
+ */
+export const OKNO_NAGRODY = ramka(410 + 250, 230 + 280, 165, 30);
 export const ODSTEP_NAGROD = 40;
 /** Miejsce na przedmiot do zdobycia: REL_QO_SLOT = (400, 335). */
 export const OKNO_PRZEDMIOT = ramka(410 + 400, 230 + 335, 90, 90);
@@ -127,6 +150,110 @@ export const POSTEP = ramka(390, 580, 776, 119);
 export const POSTEP_WYPELNIENIE = ramka(390 + 110, 580 + 44, 555, 27);
 export const POSTEP_NAPIS = ramka(778, 625, 0, 0);
 export const POSTEP_PRZERWIJ = ramka(780, 700, 180, 50);
+
+/** Tlo krainy podczas wyprawy — `scr/quest/locations/locationN.jpg`, 1000x700. */
+export function tloKrainy(lokacja: number): string {
+  return `/res/sfgame/scr/quest/locations/location${Math.max(1, Math.min(21, lokacja))}.jpg`;
+}
+
+/*
+ * Ekran walki — stale `POS_FIGHT_*` i `POS_OPPIMG_*` klienta.
+ *
+ *   POS_FIGHT_CHARIMG_X = 315, POS_OPPIMG = (930, 130)   portrety 300x300
+ *   lifebar.png 300x46 pod portretem, 15 px nizej (REL_LIFEBAR_Y)
+ *   POS_FIGHT_CHAR_PROP_Y = 520, wiersze co REL_FIGHT_CHAR_PROP_Y = 32
+ *   kolumny: 324 i 450 (gracz), 1059 i 1185 (przeciwnik)
+ *   box1.png pod statystykami, przesuniete o REL_FIGHT_BOX1 = (-17, -15)
+ */
+export const WALKA_PORTRET_GRACZA = ramka(315, 130, 300, 300);
+export const WALKA_PORTRET_POTWORA = ramka(930, 130, 300, 300);
+/** Ramka portretu `character_border.png` ma 320x320 — o 10 px szersza. */
+export const WALKA_RAMKA_PORTRETU = 10;
+
+export const WALKA_PASEK_GRACZA = ramka(315, 130 + 300 + 15, 300, 46);
+export const WALKA_PASEK_POTWORA = ramka(930, 130 + 300 + 15, 300, 46);
+
+/*
+ * Imie i poziom: `LBL_NAMERANK_*` jest WYSRODKOWANE pod portretem —
+ * `x = POS_..._X + 150 - textWidth/2`, a dolna krawedz napisu siedzi
+ * na `POS_OPPIMG_Y + 290`, czyli tuz nad paskiem zycia.
+ */
+export const WALKA_NAZWA_GRACZA = ramka(315, 130 + 290 - 30, 300, 30);
+export const WALKA_NAZWA_POTWORA = ramka(930, 130 + 290 - 30, 300, 30);
+
+export const WALKA_STATY_Y = 520 - POCZATEK_Y;
+export const WALKA_ODSTEP_STATOW = 32;
+export const WALKA_KOLUMNY_GRACZA = [324 - POCZATEK_X, 450 - POCZATEK_X];
+export const WALKA_KOLUMNY_POTWORA = [1059 - POCZATEK_X, 1185 - POCZATEK_X];
+/** `box1.png` 194x177 — jedna pod kazdym kompletem statystyk. */
+export const WALKA_RAMKA_STATOW_GRACZA = ramka(324 - 17, 520 - 15, 194, 177);
+export const WALKA_RAMKA_STATOW_POTWORA = ramka(1059 - 17, 520 - 15, 194, 177);
+/** `box2.png` 508x177 na srodku: POS_SCREEN_TITLE_X = 770, minus 254. */
+export const WALKA_RAMKA_SRODKOWA = ramka(770 - 254, 520 - 15, 508, 177);
+
+/** Bron leci na wysokosci POS_FIGHT_WEAPONS_Y = 350. */
+export const WALKA_WYSOKOSC_BRONI = 350 - POCZATEK_Y;
+/** Srodek sceny walki — wokol niego kraza obrazki broni. */
+export const WALKA_SRODEK_X = 770 - POCZATEK_X;
+
+export const OBRAZ_RAMKI_PORTRETU = '/res/sfgame/scr/fight/character_border.png';
+export const OBRAZ_PASKA_ZYCIA = '/res/sfgame/scr/fight/lifebar.png';
+export const OBRAZ_WYPELNIENIA_ZYCIA = '/res/sfgame/scr/fight/lifebar_red.png';
+export const OBRAZ_RAMKI_STATOW = '/res/sfgame/scr/fight/box1.png';
+export const OBRAZ_RAMKI_SRODKOWEJ = '/res/sfgame/scr/fight/box2.png';
+/** Szesc klatek uderzenia piescia — `smash1.png`..`smash6.png`, 286x202. */
+export const KLATKI_UDERZENIA = [1, 2, 3, 4, 5, 6].map((n) => `/res/sfgame/scr/fight/smash${n}.png`);
+/**
+ * Portret potwora.
+ *
+ * Numer z serwera liczy od jedynki, a plik od dwojki: klient definiuje
+ * obrazek jako `monster{i + 1}.jpg` dla pozycji `i` w tablicy, a serwer
+ * wysyla te pozycje wprost. Stad przesuniecie o jeden.
+ */
+export function obrazPotwora(numer: number): string {
+  return `/res/sfgame/scr/fight/monster/monster${numer + 1}.jpg`;
+}
+
+/**
+ * Tytul wyprawy — port `GetQuestTitle()` i `GetQuestRandom()`.
+ *
+ * Tytul nie jest losowany. Klient liczy sume kontrolna z WSZYSTKICH
+ * danych zadania i bierze ja modulo dlugosc zakresu tytulow dla danego
+ * rodzaju. Dzieki temu ten sam komplet zadan zawsze pokazuje te same
+ * tytuly — odswiezenie strony niczego nie podmienia, a serwer nie musi
+ * ich przechowywac.
+ */
+export function tytulWyprawy(zadanie: {
+  rodzaj: number;
+  lokacja: number;
+  dlugosc: number;
+  doswiadczenie: number;
+  zloto: number;
+  premia: number;
+  nagrodaPrzedmiotowa?: { typ: number; numer: number } | null;
+}): string {
+  const zakres = TYTULY_WYPRAW[zadanie.rodzaj];
+  if (!zakres || zakres.length === 0) return '';
+
+  /*
+   * Skladniki sumy sa dokladnie te, co w `GetQuestRandom`: poziom zadania,
+   * rodzaj, przeciwnik, lokacja, dlugosc, doswiadczenie, zloto oraz rodzaj
+   * i numer przedmiotu-nagrody. Poziom zadania tego serwera jest zawsze
+   * zerowy — `req.php` nie wypelnia tego pola.
+   */
+  const nagroda = zadanie.nagrodaPrzedmiotowa;
+  const suma =
+    Math.abs(zadanie.rodzaj) +
+    Math.abs(zadanie.premia) +
+    Math.abs(zadanie.lokacja) +
+    Math.abs(zadanie.dlugosc) +
+    Math.abs(zadanie.doswiadczenie) +
+    Math.abs(zadanie.zloto) +
+    Math.abs(nagroda?.typ ?? 0) +
+    Math.abs(nagroda?.numer ?? 0);
+
+  return zakres[suma % zakres.length] ?? '';
+}
 
 /** Portrety rozdajacych zadania — po jednym na wariant grupy. */
 export const PORTRETY_ZADAN = [1, 2, 3, 4, 5].map((n) => `${KATALOG}portrait_questgeber_${n}.png`);

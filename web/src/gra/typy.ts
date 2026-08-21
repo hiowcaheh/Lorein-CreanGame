@@ -74,18 +74,48 @@ export interface Zadanie {
   doswiadczenie: number;
   /** Numer krainy 1..21. */
   lokacja: number;
+  /** Rodzaj wyprawy — z niego bierze sie jej tytul. */
+  rodzaj: number;
   /** Premia rzadkiego zadania w procentach; zero przy zwyklym. */
   premia: number;
-  /** Czy przy zadaniu czeka przedmiot do zdobycia. */
-  nagrodaPrzedmiotowa: boolean;
+  /** Przedmiot czekajacy przy zadaniu, albo `null`. */
+  nagrodaPrzedmiotowa: Przedmiot | null;
 }
 
 /** Przebieg walki odegrany po zakonczonej wyprawie. */
+/** Cechy pokazywane pod portretem w walce. */
+export interface CechyWalki {
+  sila: number;
+  zrecznosc: number;
+  intelekt: number;
+  wytrzymalosc: number;
+  szczescie: number;
+}
+
+export interface StronaWalki {
+  nazwa: string;
+  zycie: number;
+  klasa: number;
+  poziom: number;
+  cechy: CechyWalki;
+  /**
+   * Czym bije. Zero to gole piesci, wartosc dodatnia — bron, ujemna —
+   * pazury i kly potwora (`$weapons` w `getQuestMonster`).
+   */
+  bron: number;
+}
+
 export interface PrzebiegWalki {
-  gracz: { nazwa: string; zycie: number; klasa: number; poziom: number };
-  potwor: { nazwa: string; zycie: number; klasa: number; poziom: number; obrazek: number };
-  /** Kolejne ciosy: kto uderzyl i ile zabral zycia. */
-  ciosy: { kto: number; obrazenia: number }[];
+  gracz: StronaWalki;
+  potwor: StronaWalki & { obrazek: number };
+  /**
+   * Kolejne ciosy.
+   *
+   * `rodzaj`: 0 zwykly, 1 blok tarcza, 2 unik, 3 cios krytyczny. Przy
+   * bloku i uniku obrazenia sa zerowe — i wtedy nie wypisujemy zera,
+   * tylko slowo, tak jak oryginal.
+   */
+  ciosy: { kto: number; obrazenia: number; rodzaj: number; zycieObroncy: number }[];
 }
 
 /** Rozliczenie zakonczonej wyprawy. */

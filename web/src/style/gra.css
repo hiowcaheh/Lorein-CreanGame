@@ -931,15 +931,85 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 /* Rzadkie zadanie oryginal rysuje na czerwono. */
 .karczma-wybor.rzadkie { color: #e8734a; }
 
-.karczma-nagrody { line-height: 26px; text-shadow: 0 1px 3px #000; }
+/*
+ * Nagrody: cztery osobne wiersze w jednej kolumnie, kazdy ustawiony
+ * wprost na swojej wysokosci. Wczesniej byl to jeden blok z marginesami
+ * — i przy dluzszych liczbach rozjezdzal sie na przyciski.
+ */
+.karczma-nagrody {
+  position: absolute;
+  line-height: 30px;
+  white-space: nowrap;
+  /*
+   * Pismo o dwa punkty mniejsze niz reszta okna.
+   *
+   * Kolumna nagrod ma 165 px — tyle zostaje miedzy jej poczatkiem (660)
+   * a miejscem na przedmiot (830). Polskie podpisy sa dluzsze niz
+   * niemieckie z oryginalu i przy 20 px wchodzilyby pod ikone nagrody.
+   */
+  font-size: 17px;
+  color: var(--zloto);
+  text-shadow: 0 1px 3px #000;
+}
+
 .karczma-nagrody img { width: 24px; height: 20px; vertical-align: -3px; margin: 0 4px; }
 
-.karczma-nagroda-przedmiot {
-  left: 20px;
-  bottom: 12px;
-  font-size: var(--pismo-cechy);
+/*
+ * Przedmiot do zdobycia stoi w swoim miejscu z oryginalu (REL_QO_SLOT)
+ * i zachowuje sie jak kazdy inny przedmiot: klikniecie pokazuje
+ * podpowiedz z nazwa i wartosciami.
+ */
+.karczma-nagroda-slot {
+  position: absolute;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.karczma-nagroda-slot img { width: 100%; height: 100%; object-fit: contain; }
+.karczma-nagroda-slot:hover img { filter: brightness(1.2); }
+
+/* Pelny plecak znaczy, ze nagroda przepadnie — widac to od razu. */
+.karczma-nagroda-slot.przepadnie img { filter: grayscale(1) brightness(.7); }
+
+.karczma-nagroda-slot.przepadnie::after {
+  content: '!';
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  color: #fff;
+  background: var(--zly);
+  border-radius: 50%;
+  font-size: 18px;
+}
+
+/* --- wyprawa w toku: kraina zamiast karczmy --- */
+
+.karczma-tytul-wyprawy {
+  position: absolute;
+  left: 0;
+  top: 30px;
+  width: 1000px;
+  text-align: center;
+  font-size: 28px;
+  font-style: italic;
+  color: var(--zloto);
+  text-shadow: 0 2px 4px #000, 0 0 12px #000;
+}
+
+.karczma-kraina-wyprawy {
+  position: absolute;
+  left: 150px;
+  top: 78px;
+  width: 700px;
+  text-align: center;
   color: var(--pergamin);
-  text-shadow: 0 1px 3px #000;
+  text-shadow: 0 2px 4px #000, 0 0 12px #000;
 }
 
 .karczma-ostrzezenie { color: var(--zly); }
@@ -952,66 +1022,120 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 .walka { position: relative; overflow: hidden; font-size: var(--pismo); cursor: pointer; }
 .walka-tlo { position: absolute; left: 0; top: 0; width: 1000px; height: 700px; object-fit: cover; }
 
-.walka-strona {
-  position: absolute;
-  top: 30px;
-  width: 300px;
-  text-align: center;
-  transition: transform .16s;
-}
-
-.walka-strona.lewa { left: 35px; }
-.walka-strona.prawa { left: 650px; }
-
-/* Uderzajacy wychyla sie w strone przeciwnika. */
-.walka-strona.lewa.uderza { transform: translateX(40px); }
-.walka-strona.prawa.uderza { transform: translateX(-40px); }
-
+/*
+ * Portrety, paski zycia i tabelki cech stoja na swoich miejscach
+ * z oryginalu — kazdy element dostaje polozenie wprost z `karczmaUklad`.
+ */
 .walka-portret {
-  position: relative;
-  width: 300px;
-  height: 300px;
-  object-fit: contain;
-  border: 4px solid rgba(0, 0, 0, .5);
-  background: rgba(0, 0, 0, .35);
-  overflow: hidden;
-}
-
-/* Portret bohatera sklada sie z warstw, wiec wchodzi jako element. */
-.walka-portret .portret { width: 100%; height: 100%; aspect-ratio: auto; }
-
-.walka-nazwa { margin-top: 10px; color: var(--zloto); text-shadow: 0 2px 3px #000; }
-
-.walka-zycie {
-  position: relative;
-  height: 28px;
-  margin-top: 8px;
-  background: rgba(0, 0, 0, .6);
-  border: 1px solid rgba(200, 220, 255, .3);
-  overflow: hidden;
-}
-
-.walka-zycie .wypelnienie {
   position: absolute;
-  inset: 0 auto 0 0;
-  background: linear-gradient(#c0402f, #7d2018);
+  overflow: hidden;
+  background: rgba(0, 0, 0, .35);
+}
+
+.walka-portret img,
+.walka-portret .portret {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  aspect-ratio: auto;
+}
+
+/* Ozdobne obrazy z oryginalu: ramka portretu, pasek zycia, tabelki. */
+.walka-ramka { position: absolute; pointer-events: none; }
+
+.walka-podpis {
+  position: absolute;
+  text-align: center;
+  line-height: 30px;
+  color: var(--zloto);
+  text-shadow: 0 2px 3px #000, 0 0 8px #000;
+  white-space: nowrap;
+}
+
+/* Wypelnienie paska zycia to kafelek `lifebar_red.png`, jak w oryginale. */
+.walka-zycie-wypelnienie {
+  position: absolute;
+  background-repeat: repeat-x;
+  background-size: auto 100%;
   transition: width .3s ease;
 }
 
-.walka-zycie span {
-  position: relative;
-  line-height: 26px;
+.walka-zycie-napis {
+  position: absolute;
+  text-align: center;
+  line-height: 36px;
+  /* FontFormat_LifeBar = 20 px, bialy. */
+  font-size: 20px;
   color: #fff;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000;
+}
+
+/* Cechy pod portretem — te same kolumny, co na ekranie postaci. */
+.walka-cecha {
+  position: absolute;
+  font-size: var(--pismo-cechy);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--zloto);
   text-shadow: 0 1px 2px #000;
 }
 
-/* Liczba obrazen odskakuje w gore i gasnie. */
+/* Lecaca bron i uderzenie piescia. */
+.walka-bron,
+.walka-uderzenie {
+  position: absolute;
+  pointer-events: none;
+}
+
+.walka-bron { width: 90px; height: 90px; object-fit: contain; }
+.walka-uderzenie { width: 286px; height: 202px; }
+
+.walka-bron.w-prawo { animation: bron-w-prawo .6s ease-out forwards; }
+.walka-bron.w-lewo { animation: bron-w-lewo .6s ease-out forwards; }
+.walka-uderzenie.w-prawo { animation: uderzenie-w-prawo .6s ease-out forwards; }
+.walka-uderzenie.w-lewo { animation: uderzenie-w-lewo .6s ease-out forwards; }
+
+/*
+ * Bron leci lukiem od atakujacego do celu i obraca sie po drodze —
+ * odpowiednik `rotation = 280 + 100 * strikeVal` z oryginalu.
+ */
+@keyframes bron-w-prawo {
+  from { transform: translate(-230px, 0) rotate(280deg); opacity: 0; }
+  30% { opacity: 1; }
+  to { transform: translate(230px, -60px) rotate(380deg); opacity: 0; }
+}
+
+@keyframes bron-w-lewo {
+  from { transform: translate(230px, 0) rotate(-280deg); opacity: 0; }
+  30% { opacity: 1; }
+  to { transform: translate(-230px, -60px) rotate(-380deg); opacity: 0; }
+}
+
+@keyframes uderzenie-w-prawo {
+  from { transform: translate(-120px, 0) scale(.5); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: translate(140px, 0) scale(1.1); opacity: 0; }
+}
+
+@keyframes uderzenie-w-lewo {
+  from { transform: translate(120px, 0) scale(.5) scaleX(-1); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: translate(-140px, 0) scale(1.1) scaleX(-1); opacity: 0; }
+}
+
+/*
+ * Liczba obrazen — albo slowo, gdy cios zostal odbity.
+ *
+ * Stoi NAD portretem tego, kto oberwal, i ponad lecaca bronia: inaczej
+ * chowa sie za obrazkiem uderzenia i nie widac, ile poszlo zycia.
+ */
 .walka-obrazenia {
   position: absolute;
-  top: 300px;
+  top: 120px;
+  z-index: 5;
   width: 300px;
   text-align: center;
-  font-size: 44px;
+  font-size: 40px;
   color: #ffd76a;
   text-shadow: 0 2px 4px #000, 0 0 10px #000;
   animation: walka-cios .6s ease-out forwards;
@@ -1020,6 +1144,10 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 
 .walka-obrazenia.lewa { left: 35px; }
 .walka-obrazenia.prawa { left: 650px; }
+
+/* Cios krytyczny jest wiekszy i czerwony — jak w oryginale. */
+.walka-obrazenia.krytyk { color: #ff6a4a; font-size: 30px; }
+.walka-krytyk-liczba { font-size: 46px; color: #ffd76a; }
 
 @keyframes walka-cios {
   from { opacity: 1; transform: none; }

@@ -34,7 +34,13 @@ import {
   type Zadanie,
 } from '../game/karczma.js';
 import { wylosujPrzedmiot } from '../game/generatorPrzedmiotow.js';
-import { potworNaZadanie, rozegrajWalke, wojownikZGracza, type Przedmiot } from '../game/walka.js';
+import {
+  potworNaZadanie,
+  rozegrajWalke,
+  wojownikZGracza,
+  type Przedmiot,
+  type Wojownik,
+} from '../game/walka.js';
 import { wczytajGracza } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
 import type { Context } from 'hono';
@@ -144,6 +150,35 @@ async function zapiszZadania(sql: Sql, userId: number, zadania: Zadanie[]): Prom
   `;
 }
 
+/**
+ * Przedmiot w postaci, ktora rozumie klient.
+ *
+ * Ten sam ksztalt, co ekwipunek na ekranie postaci — dzieki temu okno
+ * wyboru zadania moze pokazac nagrode dokladnie tak samo, jak plecak
+ * pokazuje rzeczy juz zdobyte, razem z podpowiedzia.
+ */
+function przedmiotZWiersza(w: Record<string, unknown>) {
+  const typ = liczba(w['item_type']);
+  const identyfikator = liczba(w['item_id']);
+  const podtyp = Math.floor(identyfikator / 1000) + 1;
+  const numer = identyfikator % 1000;
+
+  return {
+    slot: -1,
+    typ,
+    podtyp,
+    numer,
+    ulepszenie: liczba(w['upgrade_level']),
+    obrazek: `/res/sfgame/itm/${typ}-${podtyp}/itm${typ}-${podtyp}-${numer}-1.png`,
+    obrazenia: { min: liczba(w['dmg_min']), max: liczba(w['dmg_max']) },
+    atrybuty: [1, 2, 3]
+      .map((n) => ({ rodzaj: liczba(w[`atr_type_${n}`]), wartosc: liczba(w[`atr_val_${n}`]) }))
+      .filter((a) => a.rodzaj > 0),
+    zloto: liczba(w['gold']),
+    grzyby: liczba(w['mush']),
+  };
+}
+
 /** Nagrody czekajace przy zadaniach — po jednej na zadanie albo wcale. */
 async function nagrodyZadan(sql: Sql, userId: number) {
   const wiersze = await sql<Record<string, unknown>[]>`
@@ -198,6 +233,12 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   const przedmioty = await przedmiotyGracza(sql, wiersz.user_id);
   const gracz = wojownikZGracza(wiersz, przedmioty);
   const potwor = potworNaZadanie(gracz, rng);
+
+  /*
+   * Czym bije gracz. Zero znaczy gole piesci — i tak wlasnie animuje to
+   * oryginal, uderzeniem dloni zamiast lotem broni.
+   */
+  const bronGracza = przedmioty.find((p) => p.slot === 8) ? 1 : 0;
 
   const zycieGraczaPrzed = gracz.zycie;
   const zyciePotworaPrzed = potwor.zycie;
@@ -303,16 +344,43 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
       : null,
     zdobytyPrzedmiot,
     plecakBylPelny,
+    /*
+     * Zapis walki do odegrania.
+     *
+     * Obie strony ida z KOMPLETEM cech, bo oryginalny ekran walki
+     * wypisuje je pod portretami (`LBL_FIGHT_CHAR_STAERKE`
+     * i `LBL_FIGHT_OPP_STAERKE`, piec wierszy po obu stronach). Numer
+     * broni sluzy animacji ciosu: ujemne wartosci to pazury i kly
+     * potworow, dodatnie to zwykle przedmioty.
+     */
     walka: {
-      gracz: { nazwa: gracz.nazwa, zycie: zycieGraczaPrzed, klasa: gracz.klasa, poziom: gracz.poziom },
-      potwor: {
-        nazwa: potwor.nazwa,
-        zycie: zyciePotworaPrzed,
-        klasa: potwor.klasa,
-        poziom: potwor.poziom,
-        obrazek: potwor.obrazek,
-      },
+      gracz: opisWojownika(gracz, zycieGraczaPrzed, bronGracza),
+      potwor: { ...opisWojownika(potwor, zyciePotworaPrzed, potwor.bron), obrazek: potwor.obrazek },
       ciosy: walka.ciosy,
+    },
+  };
+}
+
+/**
+ * Wojownik w postaci, ktora rozumie ekran walki.
+ *
+ * `bron` to numer przedmiotu: dodatni dla broni gracza, ujemny dla
+ * pazurow i klow potwora (`$weapons` w `getQuestMonster`). Zero znaczy
+ * gole piesci — wtedy oryginal animuje uderzenie dlonia.
+ */
+function opisWojownika(w: Wojownik, zycie: number, bron: number) {
+  return {
+    nazwa: w.nazwa,
+    klasa: w.klasa,
+    poziom: w.poziom,
+    zycie,
+    bron,
+    cechy: {
+      sila: w.sila,
+      zrecznosc: w.zrecznosc,
+      intelekt: w.intelekt,
+      wytrzymalosc: w.wytrzymalosc,
+      szczescie: w.szczescie,
     },
   };
 }
@@ -344,12 +412,21 @@ async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<strin
     teraz,
     /** Miejsce w plecaku — klient uprzedza, ze nagroda przepadnie. */
     wolneMiejsceWPlecaku: wolneMiejsceWPlecaku(zajete) !== null,
-    zadania: zadania.map((z) => ({
-      ...z,
-      // Czas i koszt zaleza od wierzchowca, wiec licza sie tutaj.
-      sekundy: czasWyprawy(z.dlugosc, koniowanie),
-      nagrodaPrzedmiotowa: nagrody.some((n) => n.zadanie === z.numer),
-    })),
+    zadania: zadania.map((z) => {
+      const nagroda = nagrody.find((n) => n.zadanie === z.numer);
+      return {
+        ...z,
+        // Czas i koszt zaleza od wierzchowca, wiec licza sie tutaj.
+        sekundy: czasWyprawy(z.dlugosc, koniowanie),
+        /*
+         * Przedmiot czekajacy przy zadaniu. Oryginal pokazuje go w oknie
+         * wyboru w calosci — z obrazkiem i wartosciami — bo gracz ma
+         * wiedziec, o co walczy. Wysylamy wiec komplet danych, a nie
+         * sama informacje, ze cos tam jest.
+         */
+        nagrodaPrzedmiotowa: nagroda ? przedmiotZWiersza(nagroda.wiersz) : null,
+      };
+    }),
     ...dodatki,
   };
 }

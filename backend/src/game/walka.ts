@@ -163,7 +163,10 @@ export function wojownikZGracza(
  * podzielone przez losowy wspolczynnik 2,00-3,00. Dlatego zadania sa
  * wykonalne na kazdym poziomie, ale nigdy pewne.
  */
-export function potworNaZadanie(gracz: Wojownik, rng: PhpMtRand): Wojownik & { obrazek: number } {
+export function potworNaZadanie(
+  gracz: Wojownik,
+  rng: PhpMtRand,
+): Wojownik & { obrazek: number; bron: number } {
   const poziom = gracz.poziom + rng.rand(0, 2);
   const klasa = rng.rand(1, 3);
 
@@ -177,6 +180,12 @@ export function potworNaZadanie(gracz: Wojownik, rng: PhpMtRand): Wojownik & { o
   let intelekt: number;
   let dzielnikObrazen: number;
   let mnoznikZycia: number;
+  /*
+   * Z czego potwor bije. Oryginal wybiera z trzech mozliwosci zaleznie od
+   * klasy (`$weapons` w `getQuestMonster`): ujemne numery to pazury, kly
+   * i maczugi potworow, dodatni 1004 to prawdziwa rozdzka maga.
+   */
+  let dostepneBronie: number[];
 
   if (klasa === 1) {
     sila = ceil(glownaGracza / dziel());
@@ -184,18 +193,21 @@ export function potworNaZadanie(gracz: Wojownik, rng: PhpMtRand): Wojownik & { o
     intelekt = ceil(gracz.intelekt / dziel() / 4);
     dzielnikObrazen = 50;
     mnoznikZycia = 4;
+    dostepneBronie = [-4, -2, -1];
   } else if (klasa === 2) {
     sila = ceil(gracz.sila / dziel() / 4);
     zrecznosc = ceil(gracz.zrecznosc / dziel() / 4);
     intelekt = ceil(glownaGracza / dziel());
     dzielnikObrazen = 40;
     mnoznikZycia = 2;
+    dostepneBronie = [-2, -1, 1004];
   } else {
     sila = ceil(gracz.sila / dziel() / 4);
     zrecznosc = ceil(glownaGracza / dziel());
     intelekt = ceil(gracz.intelekt / dziel() / 4);
     dzielnikObrazen = 45;
     mnoznikZycia = 3;
+    dostepneBronie = [-4, -2, -1];
   }
 
   const wytrzymalosc = ceil(gracz.wytrzymalosc / dziel());
@@ -209,10 +221,7 @@ export function potworNaZadanie(gracz: Wojownik, rng: PhpMtRand): Wojownik & { o
 
   const zycie = ceil(wytrzymalosc * mnoznikZycia * (poziom + 1));
 
-  // Oryginal losuje tu jeszcze bron potwora. Nie uzywamy jej jeszcze do
-  // niczego, ale losowanie musi zostac: bez niego kolejne wywolania
-  // generatora rozjechalyby sie z oryginalem i porownanie straciloby sens.
-  rng.rand(0, 2);
+  const bron = dostepneBronie[rng.rand(0, 2)] ?? -1;
 
   return {
     nazwa: 'Potwór',
@@ -231,6 +240,11 @@ export function potworNaZadanie(gracz: Wojownik, rng: PhpMtRand): Wojownik & { o
     bronBazowaMax: bronMax,
     pancerz: 0,
     tarcza: 0,
+    bron,
+    /*
+     * Numer potwora 1..158 — decyduje o obrazku i o nazwie. Nazwa lezy
+     * w pliku jezykowym pod `TXT_MONSTER_NAME + numer - 1`.
+     */
     obrazek: rng.rand(1, 158),
   };
 }
@@ -286,19 +300,46 @@ function zadajCios(
   let obrazenia = losoweObrazenia(atakujacy, rng) * krytyk * oslonaPancerza(obronca, atakujacy);
   let rodzaj: Cios['rodzaj'] = krytyk === 2 ? 3 : 0;
 
+  /*
+   * Kolejnosc jest tu wazna dla ZGODNOSCI LOSOWANIA, nie tylko dla wyniku.
+   *
+   * Oryginal (`setHit` w req.php) losuje ZAWSZE, gdy obronca jest lowca
+   * albo wojownikiem — sprawdzenie tarczy stoi PO losowaniu:
+   *
+   *   if ($this->getClass() == 3)      { if (rand(0,100) > 50) ... }
+   *   elseif ($this->getClass() == 1)  { if (rand(0,100) < $shield && $this->hasShield()) ... }
+   *
+   * Gdyby wojownik bez tarczy pomijal losowanie, kolejne liczby z generatora
+   * przesunelyby sie o jedna i caly dalszy przebieg walki rozjechalby sie
+   * z oryginalem.
+   */
   if (atakujacy.klasa !== 2) {
-    const tarcza = obronca.tarcza === 0 ? 25 : obronca.tarcza;
-
-    if (obronca.klasa === 3 && rng.rand(0, 100) > 50) {
-      obrazenia = 0;
-      rodzaj = 2;
-    } else if (obronca.klasa === 1 && obronca.tarcza !== 0 && rng.rand(0, 100) < tarcza) {
-      obrazenia = 0;
-      rodzaj = 1;
+    if (obronca.klasa === 3) {
+      if (rng.rand(0, 100) > 50) {
+        obrazenia = 0;
+        rodzaj = 2;
+      }
+    } else if (obronca.klasa === 1) {
+      // Brak tarczy daje w oryginale 25 — ale i tak nic nie blokuje, bo
+      // `hasShield()` jest drugim warunkiem.
+      const tarcza = obronca.tarcza === 0 ? 25 : obronca.tarcza;
+      if (rng.rand(0, 100) < tarcza && obronca.tarcza !== 0) {
+        obrazenia = 0;
+        rodzaj = 1;
+      }
     }
   }
 
-  const zadane = round(obrazenia);
+  /*
+   * Zaokraglenie jak w oryginale: `(int)round($hit)`.
+   *
+   * Zwykly cios nigdy nie wychodzi zerowy — `getRandomDPS` ma dolna
+   * granice 1, a najsilniejsza oslona pancerza to polowa (limit 50 dla
+   * wojownika), wiec najmniejszy mozliwy wynik to round(0,5) = 1. Zero
+   * pojawia sie WYLACZNIE przy uniku i bloku, i wtedy nie jest to cios
+   * za zero, tylko cios odbity — klient ma to pokazac slowem, nie liczba.
+   */
+  const zadane = rodzaj === 1 || rodzaj === 2 ? 0 : Math.max(1, round(obrazenia));
   obronca.zycie -= zadane;
 
   return { kto, obrazenia: zadane, rodzaj, zycieObroncy: Math.max(0, obronca.zycie) };
