@@ -881,8 +881,25 @@ button.postac-slot:hover img { filter: brightness(1.15); }
   pointer-events: none;
 }
 
-.karczma-przerwij, .karczma-przyspiesz { position: absolute; width: auto; }
-.karczma-grzyb { width: 25px; height: 24px; vertical-align: -4px; margin-left: 8px; }
+/*
+ * Przyciski pod paskiem wyprawy.
+ *
+ * `display: flex` z wysrodkowaniem — bez tego napis „Pomin" razem
+ * z ikona grzyba stal niesymetrycznie, bo ikona przesuwala caly tekst
+ * w lewo.
+ */
+.karczma-przerwij,
+.karczma-przyspiesz {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  padding: 10px 20px;
+}
+
+.karczma-grzyb { width: 25px; height: 24px; margin: 0; }
 
 /* ------------------------------------------------------ okna karczmy -- */
 
@@ -1019,8 +1036,18 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 
 /* ------------------------------------------------------------ walka -- */
 
-.walka { position: relative; overflow: hidden; font-size: var(--pismo); cursor: pointer; }
+.walka { position: relative; overflow: hidden; font-size: var(--pismo); }
 .walka-tlo { position: absolute; left: 0; top: 0; width: 1000px; height: 700px; object-fit: cover; }
+
+/*
+ * `BLACK_SQUARE` z oryginalu — walka toczy sie na przyciemnionym widoku
+ * krainy, a nie na osobnym obrazku pola bitwy.
+ */
+.walka-zaciemnienie {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+}
 
 /*
  * Portrety, paski zycia i tabelki cech stoja na swoich miejscach
@@ -1080,85 +1107,113 @@ button.postac-slot:hover img { filter: brightness(1.15); }
   text-shadow: 0 1px 2px #000;
 }
 
-/* Lecaca bron i uderzenie piescia. */
-.walka-bron,
-.walka-uderzenie {
+/*
+ * ANIMACJA CIOSU
+ *
+ * Polozenia, skale, obroty i przezroczystosci licza sie w JavaScripcie
+ * ze `strikeVal`, tik po tiku, jak w kliencie Flash — tutaj zostaje
+ * tylko to, czego nie da sie podac stylem w locie. Zadnych `@keyframes`:
+ * probowalismy i zawsze wychodzil ruch podobny, ale nie ten sam.
+ */
+
+/* Galaz lekka: klatka zaczepiona LEWYM GORNYM rogiem, w naturalnej skali. */
+.walka-bron-lekka {
   position: absolute;
+  z-index: 4;
+  transform-origin: 0 0;
   pointer-events: none;
 }
 
-.walka-bron { width: 90px; height: 90px; object-fit: contain; }
-.walka-uderzenie { width: 286px; height: 202px; }
-
-.walka-bron.w-prawo { animation: bron-w-prawo .6s ease-out forwards; }
-.walka-bron.w-lewo { animation: bron-w-lewo .6s ease-out forwards; }
-.walka-uderzenie.w-prawo { animation: uderzenie-w-prawo .6s ease-out forwards; }
-.walka-uderzenie.w-lewo { animation: uderzenie-w-lewo .6s ease-out forwards; }
-
 /*
- * Bron leci lukiem od atakujacego do celu i obraca sie po drodze —
- * odpowiednik `rotation = 280 + 100 * strikeVal` z oryginalu.
+ * Galaz ciezka: kontener bez wlasnych rozmiarow, obracany i skalowany
+ * wzgledem swojego punktu zaczepienia. Ikona broni wisi w nim srodkiem
+ * w (-30, -30), czyli lewym gornym rogiem w (-75, -75).
  */
-@keyframes bron-w-prawo {
-  from { transform: translate(-230px, 0) rotate(280deg); opacity: 0; }
-  30% { opacity: 1; }
-  to { transform: translate(230px, -60px) rotate(380deg); opacity: 0; }
+.walka-bron-ciezka {
+  position: absolute;
+  z-index: 4;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
 }
 
-@keyframes bron-w-lewo {
-  from { transform: translate(230px, 0) rotate(-280deg); opacity: 0; }
-  30% { opacity: 1; }
-  to { transform: translate(-230px, -60px) rotate(-380deg); opacity: 0; }
+.walka-bron-ciezka img {
+  position: absolute;
+  left: -75px;
+  top: -75px;
+  /*
+   * Rozmiar podany wprost, bo kontener ma zerowa szerokosc, a globalne
+   * `img { max-width: 100% }` zwinelo by przez to ikone do zera.
+   */
+  width: 90px;
+  height: 90px;
+  max-width: none;
+  object-fit: contain;
 }
 
-@keyframes uderzenie-w-prawo {
-  from { transform: translate(-120px, 0) scale(.5); opacity: 0; }
-  40% { opacity: 1; }
-  to { transform: translate(140px, 0) scale(1.1); opacity: 0; }
+/* Tarcza obroncy — ikona z ekwipunku, wysrodkowana na punkcie z klienta. */
+.walka-tarcza {
+  position: absolute;
+  z-index: 5;
+  object-fit: contain;
+  pointer-events: none;
 }
 
-@keyframes uderzenie-w-lewo {
-  from { transform: translate(120px, 0) scale(.5) scaleX(-1); opacity: 0; }
-  40% { opacity: 1; }
-  to { transform: translate(-140px, 0) scale(1.1) scaleX(-1); opacity: 0; }
+/* Wybuch „SMASH" — `smash1..6.png`, 286x202, skalowany od srodka. */
+.walka-ono {
+  position: absolute;
+  z-index: 5;
+  width: 286px;
+  height: 202px;
+  transform-origin: center;
+  pointer-events: none;
 }
 
 /*
  * Liczba obrazen — albo slowo, gdy cios zostal odbity.
  *
- * Stoi NAD portretem tego, kto oberwal, i ponad lecaca bronia: inaczej
- * chowa sie za obrazkiem uderzenia i nie widac, ile poszlo zycia.
+ * Oryginal stawia ja na SRODKU sceny, przesunieta o 200 px w strone tego,
+ * kto oberwal (`x = POS_SCREEN_TITLE_X + (opponent ? -1 : 1) * 200`,
+ * `y = POS_FIGHT_WEAPONS_Y - 100`), pismem `FontFormat_Damage`: 30 px,
+ * `CLR_WHITE`. Przy ciosie krytycznym wchodzi `FontFormat_CriticalDamage`
+ * — 34 px i `CLR_RED = 0xff4444`. Unoszenie o 2 px na tik i gasniecie
+ * licza sie w JavaScripcie, wiec tu ich nie ma.
  */
 .walka-obrazenia {
   position: absolute;
-  top: 120px;
-  z-index: 5;
-  width: 300px;
+  z-index: 6;
+  width: 400px;
   text-align: center;
-  font-size: 40px;
-  color: #ffd76a;
+  font-size: 30px;
+  color: #fff;
   text-shadow: 0 2px 4px #000, 0 0 10px #000;
-  animation: walka-cios .6s ease-out forwards;
   pointer-events: none;
 }
 
-.walka-obrazenia.lewa { left: 35px; }
-.walka-obrazenia.prawa { left: 650px; }
-
-/* Cios krytyczny jest wiekszy i czerwony — jak w oryginale. */
-.walka-obrazenia.krytyk { color: #ff6a4a; font-size: 30px; }
-.walka-krytyk-liczba { font-size: 46px; color: #ffd76a; }
-
-@keyframes walka-cios {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(-50px); }
+.walka-obrazenia.krytyk {
+  font-size: 34px;
+  color: #ff4444;
 }
 
+/* Przycisk „Pomin" podczas walki — na dole, wysrodkowany. */
+.walka-przycisk { position: absolute; z-index: 6; }
+
+/*
+ * Wynik walki — na SRODKU ekranu gry.
+ *
+ * Oryginal rozklada to na dwa elementy: napis na `POS_FIGHT_SUMMARY_Y`
+ * i przycisk „OK" nizej, na `POS_FIGHT_BTN_Y`. U nas jest to jedno okno
+ * z ramka, wiec wysrodkowanie w obu osiach czyta sie lepiej niz
+ * przyklejenie gornej krawedzi do 520.
+ */
 .walka-podsumowanie {
   position: absolute;
-  left: 50%;
-  top: 400px;
-  transform: translateX(-50%);
+  /* POS_SCREEN_TITLE_X = 770, czyli 490 px od lewej krawedzi ekranu gry. */
+  left: 490px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 8;
   width: 620px;
   padding: 20px;
   text-align: center;

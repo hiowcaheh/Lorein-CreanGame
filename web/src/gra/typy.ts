@@ -103,6 +103,14 @@ export interface StronaWalki {
    * pazury i kly potwora (`$weapons` w `getQuestMonster`).
    */
   bron: number;
+  /**
+   * Ikona zalozonej broni. W oryginale to wlasnie ona leci przez ekran
+   * przy ciezkiej galezi animacji — `null` znaczy, ze klient ma uzyc
+   * grafiki zastepczej (piesc, kij, kosc, machniecie).
+   */
+  bronObrazek: string | null;
+  /** Ikona tarczy — staje po stronie obroncy, kiedy odbije cios. */
+  tarczaObrazek: string | null;
 }
 
 export interface PrzebiegWalki {
@@ -121,6 +129,8 @@ export interface PrzebiegWalki {
 /** Rozliczenie zakonczonej wyprawy. */
 export interface Rozliczenie {
   wygrana: boolean;
+  /** Kraina, w ktorej doszlo do starcia — jej obraz jest tlem walki. */
+  lokacja: number;
   awans: number | null;
   nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
   zdobytyPrzedmiot: { nazwaSlotu: number } | null;

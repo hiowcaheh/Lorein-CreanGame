@@ -15,11 +15,10 @@
  *   kolumny 324/450 (bohater) i 1059/1185 (przeciwnik)
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PODPISY, POTWORY } from '../../gra/karczma-teksty';
 import { Portret } from '../../gra/Portret';
 import {
-  KLATKI_UDERZENIA,
   OBRAZ_PASKA_ZYCIA,
   OBRAZ_RAMKI_PORTRETU,
   OBRAZ_RAMKI_SRODKOWEJ,
@@ -40,28 +39,56 @@ import {
   WALKA_RAMKA_STATOW_POTWORA,
   WALKA_STATY_Y,
   WALKA_SRODEK_X,
-  WALKA_WYSOKOSC_BRONI,
+  KLATKI_UDERZENIA,
+  WALKA_BRON_LEKKA_Y,
+  WALKA_OBRAZENIA_ODSTEP,
+  WALKA_OBRAZENIA_Y,
+  WALKA_ONO_Y,
+  WALKA_PRZYCISK,
+  WALKA_SKALA_SPRITE,
+  bronCiezkaObrot,
+  bronCiezkaX,
+  bronCiezkaY,
+  bronLekkaX,
+  klatkiLekkiegoCiosu,
+  lekkiCios,
+  obrazCiezkiegoCiosu,
   obrazPotwora,
+  onoX,
+  tarczaX,
+  tarczaY,
+  tloKrainy,
   type Ramka,
 } from '../../gra/karczmaUklad';
 import type { CechyWalki, Gracz, Rozliczenie } from '../../gra/typy';
 
-/** Ile trwa jeden cios. */
-const TEMPO_CIOSU = 620;
+/*
+ * Zegar animacji ciosu.
+ *
+ * Oryginal odlicza cios `StrikeAniTimer`em co 40 ms, a miedzy ciosami
+ * czeka `DoStrikeTimer` — 200 ms. Zadna z tych liczb nie jest tu
+ * przyblizeniem: caly przebieg ponizej to przepisany `StrikeAniTimerEvent`,
+ * tik po tiku, wiec dlugosc ciosu wychodzi sama z siebie (760 ms przy
+ * lekkiej galezi, 960 ms przy ciezkiej).
+ */
+const TIK = 40;
+const PRZERWA_MIEDZY_CIOSAMI = 200;
 
 /** Kto uderzyl: 1 to bohater, 2 przeciwnik. */
 const BOHATER = 1;
 
 /**
- * Rodzaje ciosow z silnika walki (`setHit` w oryginale).
+ * Co klient wypisuje zamiast liczby obrazen.
  *
- * Przy bloku i uniku obrazenia sa zerowe. Wypisanie tam „0" bylo mylace —
- * wygladalo na cios, ktory nic nie zrobil, a to jest cios ODBITY.
+ * `LBL_DAMAGE_INDICATOR` dostaje „-" i liczbe, a kiedy ta liczba wyjdzie
+ * zero — slowo: `TXT_GEBLOCKT` (164) przy bloku, `TXT_AUSGEWICHEN` (106)
+ * przy uniku. Cios krytyczny NIE ma wlasnego napisu: to ta sama liczba,
+ * tylko `FontFormat_CriticalDamage` — 34 px zamiast 30 i czerwien
+ * `CLR_RED = 0xff4444`.
  */
 const NAZWY_CIOSOW: Record<number, string> = {
   1: 'Blok!',
   2: 'Unik!',
-  3: 'Cios krytyczny!',
 };
 
 /** Pieciowierszowa tabelka cech — te same podpisy, co na ekranie postaci. */
@@ -83,34 +110,62 @@ export function Walka({
   onZamknij: () => void;
 }) {
   const { walka, wygrana, nagroda, awans, zdobytyPrzedmiot, plecakBylPelny } = rozliczenie;
-  const [zadanych, setZadanych] = useState(0);
 
-  // Ciosy ida po kolei; po ostatnim pokazuje sie podsumowanie.
-  useEffect(() => {
-    if (zadanych >= walka.ciosy.length) return;
-    const licznik = setTimeout(() => setZadanych((n) => n + 1), TEMPO_CIOSU);
-    return () => clearTimeout(licznik);
-  }, [zadanych, walka.ciosy.length]);
+  /*
+   * `odgrywany` to numer ciosu, ktory wlasnie leci; `zaliczonych` — ile
+   * ciosow zdazylo juz ubrac zycie. To nie to samo: oryginal przestawia
+   * paski dopiero w chwili trafienia (`SetLifeBars` w fazie 1), a nie
+   * przy rozpoczeciu zamachu.
+   */
+  const [odgrywany, setOdgrywany] = useState(0);
+  const [zaliczonych, setZaliczonych] = useState(0);
 
-  const koniec = zadanych >= walka.ciosy.length;
+  const koniec = odgrywany >= walka.ciosy.length;
 
-  // Zycie po kazdej ze stron liczymy z ciosow, ktore juz padly.
   let zycieGracza = walka.gracz.zycie;
   let zyciePotwora = walka.potwor.zycie;
-  for (const cios of walka.ciosy.slice(0, zadanych)) {
+  for (const cios of walka.ciosy.slice(0, zaliczonych)) {
     if (cios.kto === BOHATER) zyciePotwora -= cios.obrazenia;
     else zycieGracza -= cios.obrazenia;
   }
 
-  const ostatni = zadanych > 0 ? walka.ciosy[zadanych - 1] : undefined;
+  const biezacy = koniec ? undefined : walka.ciosy[odgrywany];
   const nazwaPotwora = POTWORY[walka.potwor.obrazek - 1] ?? walka.potwor.nazwa;
 
-  /** Obrazek broni bohatera — z tego, co ma zalozone w slocie broni. */
-  const bronBohatera = gracz.ekwipunek.find((p) => p.slot === 8)?.obrazek;
+  /*
+   * Klatki animacji sciagamy Z GORY, zanim pierwszy cios ich zazada.
+   *
+   * Oryginal robi dokladnie to samo przed walka — `Load(IMG_WEAPON_CLAW,
+   * IMG_WEAPON_CLAW2, ...)`. Bez tego przegladarka przerywa poprzednie
+   * pobranie przy kazdej podmianie `src` i klatki mrugaja.
+   */
+  useEffect(() => {
+    const wszystkie = [
+      ...klatkiLekkiegoCiosu(walka.gracz.bron),
+      ...klatkiLekkiegoCiosu(walka.potwor.bron),
+      ...KLATKI_UDERZENIA,
+    ];
+    for (const adres of new Set(wszystkie)) {
+      const obraz = new Image();
+      obraz.src = adres;
+    }
+  }, [walka.gracz.bron, walka.potwor.bron]);
+
+  function pomin() {
+    setZaliczonych(walka.ciosy.length);
+    setOdgrywany(walka.ciosy.length);
+  }
 
   return (
-    <div className="walka" onClick={() => (koniec ? onZamknij() : setZadanych(walka.ciosy.length))}>
-      <img className="walka-tlo" src="/res/sfgame/scr/fight/schlachtfeld.jpg" alt="" />
+    <div className="walka">
+      {/*
+        Oryginal NIE ma osobnego tla walki. `BNC_SCREEN_FIGHT` sklada sie
+        z `BLACK_SQUARE` polozonego na biezacym ekranie — czyli na
+        krainie, w ktorej wyprawa sie odbywala. Stad tlo jest zawsze
+        inne, zaleznie od tego, gdzie poszedl bohater.
+      */}
+      <img className="walka-tlo" src={tloKrainy(rozliczenie.lokacja)} alt="" />
+      <div className="walka-zaciemnienie" />
 
       <Strona
         strona="lewa"
@@ -162,15 +217,45 @@ export function Walka({
         alt=""
       />
 
-      {ostatni && !koniec && (
+      {biezacy && (
         <Cios
-          key={zadanych}
-          kto={ostatni.kto}
-          rodzaj={ostatni.rodzaj}
-          obrazenia={ostatni.obrazenia}
-          bronGracza={walka.gracz.bron > 0 ? bronBohatera : undefined}
-          bronPotwora={walka.potwor.bron}
+          key={odgrywany}
+          kto={biezacy.kto}
+          rodzaj={biezacy.rodzaj}
+          obrazenia={biezacy.obrazenia}
+          bron={biezacy.kto === BOHATER ? walka.gracz.bron : walka.potwor.bron}
+          bronObrazek={biezacy.kto === BOHATER ? walka.gracz.bronObrazek : walka.potwor.bronObrazek}
+          /*
+           * Tarcza nalezy do OBRONCY: przy ciosie bohatera broni sie
+           * potwor, przy ciosie potwora — bohater.
+           */
+          tarczaObroncy={
+            biezacy.kto === BOHATER ? walka.potwor.tarczaObrazek : walka.gracz.tarczaObrazek
+          }
+          onTrafienie={() => setZaliczonych(odgrywany + 1)}
+          onKoniec={() => setOdgrywany(odgrywany + 1)}
         />
+      )}
+
+      {/*
+        Przycisk „Pomin" stoi na dole, wysrodkowany — POS_FIGHT_BTN_Y = 710
+        i `x = POS_SCREEN_TITLE_X - width/2`. Po walce w tym samym miejscu
+        jest „OK".
+      */}
+      {!koniec && (
+        <button
+          type="button"
+          className="przycisk drugi walka-przycisk"
+          style={{
+            left: WALKA_PRZYCISK.lewo,
+            top: WALKA_PRZYCISK.gora,
+            width: WALKA_PRZYCISK.szerokosc,
+            minHeight: WALKA_PRZYCISK.wysokosc,
+          }}
+          onClick={pomin}
+        >
+          {PODPISY.pomin}
+        </button>
       )}
 
       {koniec && (
@@ -207,8 +292,13 @@ export function Walka({
             <div className="walka-przedmiot ostrzezenie">Nagroda przepadła — plecak był pełny.</div>
           )}
 
-          <button type="button" className="przycisk walka-dalej" onClick={onZamknij}>
-            {PODPISY.wroc}
+          <button
+            type="button"
+            className="przycisk walka-dalej"
+            style={{ width: WALKA_PRZYCISK.szerokosc, minHeight: WALKA_PRZYCISK.wysokosc }}
+            onClick={onZamknij}
+          >
+            OK
           </button>
         </div>
       )}
@@ -308,60 +398,287 @@ function Strona({
 }
 
 /**
- * Jeden cios: lecaca bron albo uderzenie piescia, a nad celem liczba
- * obrazen — albo slowo, gdy cios zostal odbity.
+ * Stan animacji ciosu — nazwy zmiennych jak w `StrikeAniTimerEvent`.
+ */
+interface StanCiosu {
+  /** `strikePhase`: 0 zamach, 1 dolot, 2 gasniecie. */
+  faza: number;
+  /** `strikeVal`: 0 na poczatku zamachu, 1 w chwili trafienia. */
+  s: number;
+  /** `StrikeAlpha` — przezroczystosc broni. */
+  aBron: number;
+  /** `ShieldAlpha` — tarcza obroncy. */
+  aTarcza: number;
+  /** `DamageAlpha` — liczba obrazen. */
+  aObrazen: number;
+  /** `OnoAlpha` i skala wybuchu „SMASH". */
+  aOno: number;
+  skalaOno: number;
+  /** Napis z obrazeniami wedruje w gore po 2 px na tik. */
+  yObrazen: number;
+  widacObrazenia: boolean;
+}
+
+const POCZATEK_CIOSU: StanCiosu = {
+  faza: 0,
+  s: 0,
+  aBron: 1,
+  aTarcza: 0,
+  aObrazen: 0,
+  aOno: 0,
+  skalaOno: 0.6,
+  yObrazen: 0,
+  widacObrazenia: false,
+};
+
+/**
+ * Jeden tik zegara — przepisany `switch (strikePhase)` z klienta.
  *
- * Oryginal animuje bron lukiem od atakujacego do celu
- * (`POS_FIGHT_WEAPONS_Y` i obrot 280..380 stopni), a przy golych piesciach
- * pokazuje `smash1.png`..`smash6.png`.
+ * Galaz lekka i ciezka roznia sie krokiem `strikeVal` i progami, wiec
+ * dlugosc ciosu wychodzi rozna: lekki 2 + 3 + 14 tikow (760 ms),
+ * ciezki 8 + 2 + 14 (960 ms).
+ */
+function tikCiosu(st: StanCiosu, lekki: boolean, blok: boolean): StanCiosu {
+  const n = { ...st };
+
+  if (n.faza === 0) {
+    n.s += lekki ? 0.2 : 0.1;
+    if (blok && n.s >= (lekki ? 0.4 : 0.5)) n.aTarcza = 1;
+    if (n.s >= (lekki ? 0.4 : 0.8)) n.faza = 1;
+    return n;
+  }
+
+  if (n.faza === 1) {
+    n.s += lekki ? 0.2 : 0.15;
+    if (n.s >= 1) {
+      n.s = 1;
+      n.faza = 2;
+      n.widacObrazenia = true;
+      n.aObrazen = 1;
+      if (!lekki) {
+        n.aOno = 1;
+        n.skalaOno = 0.6;
+      }
+    }
+    return n;
+  }
+
+  n.aObrazen = Math.max(0, n.aObrazen - 0.075);
+  n.aBron = Math.max(0, n.aBron - 0.2);
+  n.aTarcza = Math.max(0, n.aTarcza - 0.2);
+  if (n.aOno > 0) {
+    n.skalaOno += 0.2;
+    n.aOno = Math.max(0, n.aOno - 0.2);
+  }
+  n.yObrazen -= 2;
+  return n;
+}
+
+/**
+ * Jeden cios — port `WeaponStrike()`.
+ *
+ * Bron leci jedna z dwoch galezi (patrz `lekkiCios`), po stronie
+ * obroncy staje tarcza, kiedy flaga ciosu ma wartosc 1, a przy ciosie
+ * zwyklym i krytycznym wybucha „SMASH". Wszystkie polozenia licza sie
+ * ze `strikeVal` tymi samymi wzorami, co w kliencie.
  */
 function Cios({
   kto,
   rodzaj,
   obrazenia,
-  bronGracza,
-  bronPotwora,
+  bron,
+  bronObrazek,
+  tarczaObroncy,
+  onTrafienie,
+  onKoniec,
 }: {
   kto: number;
   rodzaj: number;
   obrazenia: number;
-  bronGracza?: string | undefined;
-  bronPotwora: number;
+  bron: number;
+  bronObrazek: string | null;
+  tarczaObroncy: string | null;
+  onTrafienie: () => void;
+  onKoniec: () => void;
 }) {
   const odBohatera = kto === BOHATER;
+  const lekki = lekkiCios(bron);
+  const blok = rodzaj === 1;
+  const krytyczny = rodzaj === 3;
 
-  /*
-   * Czym leci cios.
-   *
-   * Bohater bez broni i potwor z UJEMNYM numerem broni (pazury, kly,
-   * maczugi z `$weapons` w `getQuestMonster`) uderzaja wprost — oryginal
-   * pokazuje wtedy `smash*.png` zamiast lecacego przedmiotu.
-   */
-  const obrazBroni = odBohatera ? bronGracza : undefined;
-  const piescia = obrazBroni === undefined || bronPotwora < 0;
+  const [stan, setStan] = useState(POCZATEK_CIOSU);
+
+  /* Klatka wybuchu losowana raz na cios — `int(Math.random() * 6)`. */
+  const [ono] = useState(
+    () => KLATKI_UDERZENIA[Math.floor(Math.random() * KLATKI_UDERZENIA.length)] as string,
+  );
+
+  const trafienie = useRef(onTrafienie);
+  const koniec = useRef(onKoniec);
+  trafienie.current = onTrafienie;
+  koniec.current = onKoniec;
+
+  useEffect(() => {
+    let biezacy = POCZATEK_CIOSU;
+    let dobity = false;
+
+    const zegar = setInterval(() => {
+      const poprzedniaFaza = biezacy.faza;
+      biezacy = tikCiosu(biezacy, lekki, blok);
+      setStan(biezacy);
+
+      // Wejscie w faze 2 to chwila trafienia — wtedy spadaja paski zycia.
+      if (poprzedniaFaza === 1 && biezacy.faza === 2) trafienie.current();
+
+      if (biezacy.faza === 2 && biezacy.aObrazen <= 0 && !dobity) {
+        dobity = true;
+        clearInterval(zegar);
+        setTimeout(() => koniec.current(), PRZERWA_MIEDZY_CIOSAMI);
+      }
+    }, TIK);
+
+    return () => clearInterval(zegar);
+  }, [lekki, blok]);
 
   return (
     <>
-      {piescia ? (
-        <img
-          className={`walka-uderzenie ${odBohatera ? 'w-prawo' : 'w-lewo'}`}
-          style={{ top: WALKA_WYSOKOSC_BRONI - 100, left: WALKA_SRODEK_X - 143 }}
-          src={KLATKI_UDERZENIA[0]}
-          alt=""
+      {lekki ? <BronLekka bron={bron} odBohatera={odBohatera} blok={blok} stan={stan} /> : null}
+      {!lekki ? (
+        <BronCiezka
+          bron={bron}
+          bronObrazek={bronObrazek}
+          odBohatera={odBohatera}
+          blok={blok}
+          krytyczny={krytyczny}
+          stan={stan}
         />
-      ) : (
+      ) : null}
+
+      {/*
+        Tarcza obroncy. `visible = (opponent ? oppFlag : charFlag) == 1`,
+        skala 1.5, odbita lustrzanie po stronie potwora.
+      */}
+      {blok && tarczaObroncy && stan.aTarcza > 0 && (
         <img
-          className={`walka-bron ${odBohatera ? 'w-prawo' : 'w-lewo'}`}
-          style={{ top: WALKA_WYSOKOSC_BRONI - 45, left: WALKA_SRODEK_X - 45 }}
-          src={obrazBroni}
+          className="walka-tarcza"
+          src={tarczaObroncy}
           alt=""
+          style={{
+            left: tarczaX(odBohatera, stan.s, !lekki) - (90 * WALKA_SKALA_SPRITE) / 2,
+            top: tarczaY(stan.s) - (90 * WALKA_SKALA_SPRITE) / 2,
+            width: 90 * WALKA_SKALA_SPRITE,
+            height: 90 * WALKA_SKALA_SPRITE,
+            opacity: stan.aTarcza,
+            transform: odBohatera ? 'scaleX(-1)' : undefined,
+          }}
         />
       )}
 
-      <div className={`walka-obrazenia ${odBohatera ? 'prawa' : 'lewa'}${rodzaj === 3 ? ' krytyk' : ''}`}>
-        {NAZWY_CIOSOW[rodzaj] ?? `-${obrazenia.toLocaleString('pl-PL')}`}
-        {rodzaj === 3 && <div className="walka-krytyk-liczba">-{obrazenia.toLocaleString('pl-PL')}</div>}
-      </div>
+      {/* „SMASH" — tylko galaz ciezka i tylko przy ciosie, ktory doszedl. */}
+      {!lekki && (rodzaj === 0 || rodzaj === 3) && stan.aOno > 0 && (
+        <img
+          className="walka-ono"
+          src={ono}
+          alt=""
+          style={{
+            left: onoX(odBohatera) - 143,
+            top: WALKA_ONO_Y - 101,
+            opacity: stan.aOno,
+            transform: `scale(${stan.skalaOno})`,
+          }}
+        />
+      )}
+
+      {stan.widacObrazenia && (
+        <div
+          className={`walka-obrazenia${krytyczny ? ' krytyk' : ''}`}
+          style={{
+            top: WALKA_OBRAZENIA_Y + stan.yObrazen,
+            left: WALKA_SRODEK_X + (odBohatera ? 1 : -1) * WALKA_OBRAZENIA_ODSTEP - 200,
+            opacity: stan.aObrazen,
+          }}
+        >
+          {NAZWY_CIOSOW[rodzaj] ?? `-${obrazenia.toLocaleString('pl-PL')}`}
+        </div>
+      )}
     </>
+  );
+}
+
+/**
+ * Galaz lekka: plaska klatka postawiona przy celu.
+ *
+ * `scaleY = 1` — bez `SPRITE_SCALE` — a punkt zaczepienia to LEWY GORNY
+ * rog obrazka, bo klient wola tu `SetCnt` bez srodkowania. Bohaterowi
+ * obrazek odbija sie w poziomie, potworowi nie.
+ */
+function BronLekka({
+  bron,
+  odBohatera,
+  blok,
+  stan,
+}: {
+  bron: number;
+  odBohatera: boolean;
+  blok: boolean;
+  stan: StanCiosu;
+}) {
+  const klatki = klatkiLekkiegoCiosu(bron);
+  const mnoznik = bron === -1 ? 3.9 : 2.9;
+  const numer = Math.min(klatki.length - 1, Math.max(0, Math.floor(stan.s * mnoznik)));
+
+  return (
+    <img
+      className="walka-bron-lekka"
+      src={klatki[numer] as string}
+      alt=""
+      style={{
+        left: bronLekkaX(odBohatera, blok),
+        top: WALKA_BRON_LEKKA_Y,
+        opacity: stan.aBron,
+        transform: odBohatera ? 'scaleX(-1)' : undefined,
+      }}
+    />
+  );
+}
+
+/**
+ * Galaz ciezka: ikona broni leci lukiem i obraca sie po drodze.
+ *
+ * Kontener stoi w punkcie `(x, y)`, a obrazek 90x90 wisi w nim ze
+ * srodkiem w `(-30, -30)` — dokladnie tak, jak ustawia to
+ * `SetCnt(CNT_WEAPON_CHAR, ..., -30, -30, true)`. Obrot i skala licza
+ * sie wzgledem punktu kontenera, nie srodka obrazka, i to wlasnie daje
+ * ten charakterystyczny zamach.
+ */
+function BronCiezka({
+  bron,
+  bronObrazek,
+  odBohatera,
+  blok,
+  krytyczny,
+  stan,
+}: {
+  bron: number;
+  bronObrazek: string | null;
+  odBohatera: boolean;
+  blok: boolean;
+  krytyczny: boolean;
+  stan: StanCiosu;
+}) {
+  const skalaX = (odBohatera ? -1 : 1) * WALKA_SKALA_SPRITE;
+
+  return (
+    <div
+      className="walka-bron-ciezka"
+      style={{
+        left: bronCiezkaX(odBohatera, blok, stan.s),
+        top: bronCiezkaY(stan.s, krytyczny),
+        opacity: stan.aBron,
+        transform: `rotate(${bronCiezkaObrot(odBohatera, stan.s)}deg) scale(${skalaX}, ${WALKA_SKALA_SPRITE})`,
+      }}
+    >
+      <img src={obrazCiezkiegoCiosu(bron, bronObrazek)} alt="" width={90} height={90} />
+    </div>
   );
 }

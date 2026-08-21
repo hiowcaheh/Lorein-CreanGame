@@ -41,7 +41,7 @@ import {
   type Przedmiot,
   type Wojownik,
 } from '../game/walka.js';
-import { wczytajGracza } from './gracz.js';
+import { wczytajGracza, zbudujPrzedmiot } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
 import type { Context } from 'hono';
 
@@ -209,6 +209,8 @@ async function zadaniaGracza(sql: Sql, wiersz: WierszGracza): Promise<Zadanie[]>
 
 interface Rozliczenie {
   wygrana: boolean;
+  /** Kraina, w ktorej doszlo do starcia — jej obraz jest tlem walki. */
+  lokacja: number;
   awans: number | null;
   nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
   /** Przedmiot, ktory wpadl do plecaka — albo powod, dla ktorego nie wpadl. */
@@ -235,10 +237,29 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   const potwor = potworNaZadanie(gracz, rng);
 
   /*
-   * Czym bije gracz. Zero znaczy gole piesci — i tak wlasnie animuje to
-   * oryginal, uderzeniem dloni zamiast lotem broni.
+   * Bron i tarcza gracza — dla ekranu walki, nie dla obliczen.
+   *
+   * Klient Flash dostaje w `weaponData` cztery przedmioty: bron gracza,
+   * bron przeciwnika, tarcze gracza i tarcze przeciwnika. Bron leci
+   * przez ekran jako WLASNA IKONA (`SetCnt(CNT_WEAPON_CHAR,
+   * GetItemID(0, 0, weaponData), ...)`), a tarcza staje po stronie
+   * obroncy, kiedy odbije cios. Stad obok numeru idzie sciezka do
+   * obrazka — bez niej nie da sie odtworzyc ani jednego, ani drugiego.
+   *
+   * Numer zero znaczy gole piesci: `charHasWeapon` w oryginale wymaga
+   * dodatniego typu I dodatniego numeru przedmiotu.
    */
-  const bronGracza = przedmioty.find((p) => p.slot === 8) ? 1 : 0;
+  const doRysowania = await sql<Record<string, unknown>[]>`
+    SELECT slot, item_type, item_id, upgrade_level, dmg_min, dmg_max,
+           atr_type_1, atr_type_2, atr_type_3, atr_val_1, atr_val_2, atr_val_3,
+           gold, mush
+    FROM items WHERE owner_id = ${wiersz.user_id} AND slot IN (8, 9)
+  `;
+  const bronWSlocie = doRysowania.find((p) => liczba(p['slot']) === 8);
+  const tarczaWSlocie = doRysowania.find((p) => liczba(p['slot']) === 9);
+  const bronGracza = bronWSlocie ? liczba(bronWSlocie['item_id']) : 0;
+  const ikonaBroniGracza = bronWSlocie ? zbudujPrzedmiot(bronWSlocie).obrazek : null;
+  const ikonaTarczyGracza = tarczaWSlocie ? zbudujPrzedmiot(tarczaWSlocie).obrazek : null;
 
   const zycieGraczaPrzed = gracz.zycie;
   const zyciePotworaPrzed = potwor.zycie;
@@ -333,6 +354,15 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
 
   return {
     wygrana,
+    /*
+     * Kraina, w ktorej doszlo do starcia.
+     *
+     * Oryginal nie ma osobnego tla walki: `BNC_SCREEN_FIGHT` sklada sie
+     * z `BLACK_SQUARE` polozonego na biezacym ekranie, czyli na krainie
+     * wyprawy. Klient musi wiec wiedziec, gdzie ta walka sie odbyla —
+     * nowy komplet zadan jest juz wylosowany i ma inne lokacje.
+     */
+    lokacja: zadanie.lokacja,
     awans: poziom > poziomPrzed ? poziom : null,
     nagroda: wygrana
       ? {
@@ -354,8 +384,23 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
      * potworow, dodatnie to zwykle przedmioty.
      */
     walka: {
-      gracz: opisWojownika(gracz, zycieGraczaPrzed, bronGracza),
-      potwor: { ...opisWojownika(potwor, zyciePotworaPrzed, potwor.bron), obrazek: potwor.obrazek },
+      gracz: {
+        ...opisWojownika(gracz, zycieGraczaPrzed, bronGracza),
+        bronObrazek: ikonaBroniGracza,
+        tarczaObrazek: ikonaTarczyGracza,
+      },
+      potwor: {
+        ...opisWojownika(potwor, zyciePotworaPrzed, potwor.bron),
+        obrazek: potwor.obrazek,
+        /*
+         * Potwor z wyprawy nigdy nie ma ikony broni ani tarczy.
+         * `getQuestMonster` konczy sie `new Monster(..., $wpnid, -1)`,
+         * a `hasShield()` zwraca 0 przy `shilid == -1` — czyli potwor
+         * NIE blokuje i nie ma czego pokazac.
+         */
+        bronObrazek: null,
+        tarczaObrazek: null,
+      },
       ciosy: walka.ciosy,
     },
   };

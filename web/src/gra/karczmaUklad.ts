@@ -193,16 +193,148 @@ export const WALKA_RAMKA_SRODKOWA = ramka(770 - 254, 520 - 15, 508, 177);
 
 /** Bron leci na wysokosci POS_FIGHT_WEAPONS_Y = 350. */
 export const WALKA_WYSOKOSC_BRONI = 350 - POCZATEK_Y;
-/** Srodek sceny walki — wokol niego kraza obrazki broni. */
+/** Srodek sceny walki — POS_SCREEN_TITLE_X = 770. */
 export const WALKA_SRODEK_X = 770 - POCZATEK_X;
+
+/*
+ * Napis z obrazeniami stoi na SRODKU sceny, przesuniety o 200 px w strone
+ * tego, kto oberwal — `x = POS_SCREEN_TITLE_X + (opponent ? -1 : 1) * 200`,
+ * `y = POS_FIGHT_WEAPONS_Y - 100`. Nie nad portretem, jak bylo u nas.
+ */
+export const WALKA_OBRAZENIA_Y = 350 - 100 - POCZATEK_Y;
+export const WALKA_OBRAZENIA_ODSTEP = 200;
+
+/** Przycisk „Pomin" i „OK": POS_FIGHT_BTN_Y = 710, wysrodkowane w 770. */
+export const WALKA_PRZYCISK = ramka(770 - 90, 710, 180, 50);
+/** Podsumowanie walki: POS_FIGHT_SUMMARY_Y = 520, wysrodkowane. */
+export const WALKA_PODSUMOWANIE_Y = 520 - POCZATEK_Y;
+
+/*
+ * ANIMACJA CIOSU — port `WeaponStrike()` z `MainTimeline.as`.
+ *
+ * Oryginal odlicza ja zegarem `StrikeAniTimer` co 40 ms i ma DWIE galezie
+ * o roznym tempie i roznej geometrii. O tym, ktora gra, decyduje numer
+ * broni:
+ *
+ *   (weapon < 0 && weapon > -4) || weapon < -6   galaz „lekka"
+ *   reszta (0, -4, -5, -6 i kazda prawdziwa bron) galaz „ciezka"
+ *
+ * Lekka to plaska klatka wyswietlona przy celu (pazur, machniecie).
+ * Ciezka to obrazek broni, ktory leci lukiem od atakujacego do celu,
+ * obracajac sie — i to wlasnie tam widac IKONE zalozonej broni.
+ */
+
+/** `SPRITE_SCALE` z klienta — skala broni i tarczy w galezi ciezkiej. */
+export const WALKA_SKALA_SPRITE = 1.5;
+
+/**
+ * Ktora galezia leci cios.
+ *
+ * Warunek przepisany znak w znak z `StrikeAniTimerEvent`.
+ */
+export function lekkiCios(numer: number): boolean {
+  return (numer < 0 && numer > -4) || numer < -6;
+}
+
+const ITM = '/res/sfgame/itm/';
+
+/**
+ * Klatki galezi lekkiej.
+ *
+ * Pazur (-1) ma cztery klatki, plusniecie (-3) i ogien (-7) po trzy,
+ * a wszystko inne — machniecie `swoosh`. Klient wybiera klatke jako
+ * `int(strikeVal * 3.9)` przy pazurze i `int(strikeVal * 2.9)` przy
+ * pozostalych, stad rozne dlugosci tablic.
+ */
+export function klatkiLekkiegoCiosu(numer: number): string[] {
+  if (numer === -1) return [1, 2, 3, 4].map((n) => `${ITM}kampf_kralle${n}.png`);
+  if (numer === -3) return [1, 2, 3].map((n) => `${ITM}kampf_splat${n}.png`);
+  if (numer === -7) return [1, 2, 3].map((n) => `${ITM}kampf_feuer${n}.png`);
+  return [1, 2, 3].map((n) => `${ITM}kampf_swoosh${n}.png`);
+}
+
+/**
+ * Obrazek galezi ciezkiej.
+ *
+ * `ikona` to sciezka do ikony zalozonej broni — klient stawia w
+ * kontenerze ciosu dokladnie ten sam obrazek, ktory widac w ekwipunku
+ * (`SetCnt(CNT_WEAPON_CHAR, GetItemID(0, 0, weaponData), -30, -30, true)`).
+ * Bez broni w rece leci piesc, a potwory maja swoje kije i kosci.
+ *
+ * Numer dodatni bez ikony zdarza sie tylko przy potworze-magu (bron
+ * 1004). Oryginal wchodzi wtedy w galaz luku, ktorej ten komplet
+ * zasobow nie ma: nie ma ani katalogu `itm/8-2/`, ani grafik strzal.
+ * Zamiast rysowac cokolwiek z glowy zostaje machniecie.
+ */
+export function obrazCiezkiegoCiosu(numer: number, ikona: string | null): string {
+  if (numer === -4) return `${ITM}kampf_stock.png`;
+  if (numer === -5) return `${ITM}kampf_knochen.png`;
+  if (numer === -6) return `${ITM}kampf_steinfaust.png`;
+  if (numer <= 0) return `${ITM}kampf_faust.png`;
+  return ikona ?? `${ITM}kampf_swoosh1.png`;
+}
+
+/**
+ * Polozenie kontenera broni, oba warianty.
+ *
+ * Wszystkie liczby wprost z klienta; `POS_SCREEN_TITLE_X = 770`,
+ * `POS_FIGHT_WEAPONS_Y = 350`. `odBohatera` odpowiada zanegowanemu
+ * `opponent` z oryginalu.
+ */
+export function bronLekkaX(odBohatera: boolean, blok: boolean): number {
+  const znak = odBohatera ? 1 : -1;
+  return 770 + (odBohatera ? 0 : 231) - 115 + znak * 560 * (blok ? 0.7 : 1) - POCZATEK_X;
+}
+
+/** Galaz lekka trzyma bron na stalej wysokosci `POS_FIGHT_WEAPONS_Y - 240`. */
+export const WALKA_BRON_LEKKA_Y = 350 - 240 - POCZATEK_Y;
+
+export function bronCiezkaX(odBohatera: boolean, blok: boolean, s: number): number {
+  const znak = odBohatera ? 1 : -1;
+  return 770 + (odBohatera ? 0 : 231) - 115 + znak * 230 * s * (blok ? 0.7 : 1) - POCZATEK_X;
+}
+
+export function bronCiezkaY(s: number, krytyczny: boolean): number {
+  return 350 - Math.cos((s * Math.PI) / 2) * (75 + (krytyczny ? 75 : 0)) - POCZATEK_Y;
+}
+
+export function bronCiezkaObrot(odBohatera: boolean, s: number): number {
+  return (280 + 100 * s) * (odBohatera ? 1 : -1);
+}
+
+/**
+ * Tarcza obroncy.
+ *
+ * Stoi po DRUGIEJ stronie niz bron — `(opponent ? 0 : 231)` zamiast
+ * `(opponent ? 231 : 0)` — i lekko sie kolysze.
+ */
+export function tarczaX(odBohatera: boolean, s: number, ciezki: boolean): number {
+  const znak = odBohatera ? 1 : -1;
+  const rozped = s > 0.9 && ciezki ? s + 0.2 : 1;
+  return 770 + (odBohatera ? 231 : 0) - 115 + znak * 50 * rozped - POCZATEK_X;
+}
+
+export function tarczaY(s: number): number {
+  return 350 - Math.cos(s * 2 * Math.PI) * 20 - 20 - POCZATEK_Y;
+}
+
+/**
+ * Wybuch „SMASH" — `CNT_FIGHT_ONO`, szesc klatek `smash1..6.png`
+ * (286x202). Pojawia sie TYLKO w galezi ciezkiej i tylko przy ciosie
+ * zwyklym albo krytycznym; przy bloku i uniku klient go chowa.
+ * Zaczyna od skali 0.6 i rosnie po 0.2 na tik, gasnac.
+ */
+export const KLATKI_UDERZENIA = [1, 2, 3, 4, 5, 6].map((n) => `/res/sfgame/scr/fight/smash${n}.png`);
+export const WALKA_ONO_Y = 350 - 20 - POCZATEK_Y;
+export function onoX(odBohatera: boolean): number {
+  return 770 + (odBohatera ? 1 : -1) * 200 - POCZATEK_X;
+}
 
 export const OBRAZ_RAMKI_PORTRETU = '/res/sfgame/scr/fight/character_border.png';
 export const OBRAZ_PASKA_ZYCIA = '/res/sfgame/scr/fight/lifebar.png';
 export const OBRAZ_WYPELNIENIA_ZYCIA = '/res/sfgame/scr/fight/lifebar_red.png';
 export const OBRAZ_RAMKI_STATOW = '/res/sfgame/scr/fight/box1.png';
 export const OBRAZ_RAMKI_SRODKOWEJ = '/res/sfgame/scr/fight/box2.png';
-/** Szesc klatek uderzenia piescia — `smash1.png`..`smash6.png`, 286x202. */
-export const KLATKI_UDERZENIA = [1, 2, 3, 4, 5, 6].map((n) => `/res/sfgame/scr/fight/smash${n}.png`);
 /**
  * Portret potwora.
  *
