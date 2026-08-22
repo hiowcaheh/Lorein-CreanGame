@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { wierszObrazen, wierszePochodnych } from '../src/gra/ekranPostaci';
+import {
+  pustaBron,
+  pustaTarcza,
+  wierszObrazen,
+  wierszePochodnych,
+} from '../src/gra/ekranPostaci';
 
 /** Ten sam komplet liczb dla kazdej klasy — rozni je tylko `klasa`. */
 function gracz(klasa: number) {
@@ -66,5 +71,26 @@ describe('prawa kolumna ekranu postaci', () => {
     expect(wierszePochodnych(gracz(1))[3]!.tytul).toContain('* 5 *');
     expect(wierszePochodnych(gracz(2))[3]!.tytul).toContain('* 2 *');
     expect(wierszePochodnych(gracz(3))[3]!.tytul).toContain('* 4 *');
+  });
+});
+
+
+describe('puste miejsca na bron i tarcze', () => {
+  it('sylwetka broni zalezy od klasy', () => {
+    // `IMG_EMPTY_SLOT_9_1/_2/_3` — miecz, laska, luk.
+    expect(pustaBron(1)).toBe('slot9_1.png');
+    expect(pustaBron(2)).toBe('slot9_2.png');
+    expect(pustaBron(3)).toBe('slot9_3.png');
+  });
+
+  it('sylwetke tarczy dostaje TYLKO wojownik', () => {
+    /*
+     * Oryginal podstawia obrazek pod dziesiate miejsce wylacznie przy
+     * `ownerClass == 1`; magowi i zwiadowcy nie podstawia niczego, wiec
+     * kwadrat zostaje pusty.
+     */
+    expect(pustaTarcza(1)).toBe('slot10.png');
+    expect(pustaTarcza(2)).toBeNull();
+    expect(pustaTarcza(3)).toBeNull();
   });
 });

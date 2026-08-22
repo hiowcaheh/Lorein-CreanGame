@@ -72,6 +72,9 @@ import {
   WIERZCHOWIEC_ZYSK,
   wierszePochodnych,
   pustaBron,
+  pustaTarcza,
+  SLOT_BRONI,
+  SLOT_TARCZY,
   type Ramka,
 } from '../gra/ekranPostaci';
 import type { Gracz, Mikstura, Przedmiot } from '../gra/typy';
@@ -108,7 +111,6 @@ const ZACHETA_DO_OPISU = 'W tym miejscu możesz opisać swoją postać.';
 const BOK_MIEJSCA = 90;
 
 /** Miejsce na bron — jego sylwetka zalezy od klasy. */
-const SLOT_BRONI = 8;
 
 /** Ramka w liczbach — `PasekDoswiadczenia` liczy z niej polozenie podpowiedzi. */
 function liczbowaRamka(r: Ramka) {
@@ -297,7 +299,13 @@ export function Bohater({
           slot={m.slot}
           nazwa={m.nazwa}
           ramka={m.ramka}
-          pusty={m.slot === SLOT_BRONI ? pustaBron(gracz.klasa) : m.pusty}
+          pusty={
+            m.slot === SLOT_BRONI
+              ? pustaBron(gracz.klasa)
+              : m.slot === SLOT_TARCZY
+                ? (pustaTarcza(gracz.klasa) ?? undefined)
+                : m.pusty
+          }
           przedmiot={gracz.ekwipunek.find((p) => p.slot === m.slot)}
           ciagniety={ciagniety?.przedmiot}
           sugerowane={sugerowane === m.slot}

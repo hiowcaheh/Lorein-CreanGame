@@ -71,9 +71,34 @@ export const MIEJSCA: MiejsceNaPrzedmiot[] = [
 
 /**
  * Sylwetka pustego miejsca na bron zalezy od klasy: miecz, laska albo luk.
+ *
+ *     if (ownerClass == 1 && slotNum == 9) itemID = IMG_EMPTY_SLOT_9_1;
+ *     if (ownerClass == 2 && slotNum == 9) itemID = IMG_EMPTY_SLOT_9_2;
+ *     if (ownerClass == 3 && slotNum == 9) itemID = IMG_EMPTY_SLOT_9_3;
  */
 export function pustaBron(klasa: number): string {
   return klasa === 2 ? 'slot9_2.png' : klasa === 3 ? 'slot9_3.png' : 'slot9_1.png';
+}
+
+/**
+ * Sylwetka pustego miejsca na tarcze — TYLKO dla wojownika.
+ *
+ * Oryginal podstawia obrazek pod dziesiate miejsce wylacznie wtedy, gdy
+ * `ownerClass == 1`; magowi i zwiadowcy nie podstawia niczego, wiec
+ * kwadrat zostaje pusty:
+ *
+ *     if (ownerClass == 1) { ... itemID = IMG_EMPTY_SLOT_10; }
+ *     else if (ownerClass == 2) { if (slotNum == 9) itemID = IMG_EMPTY_SLOT_9_2; }
+ *     else if (ownerClass == 3) { if (slotNum == 9) itemID = IMG_EMPTY_SLOT_9_3; }
+ *
+ * Tarczy nie nosi zadna z tych klas, wiec nie ma tam czego zapowiadac —
+ * bron ma juz swoje wlasne miejsce obok.
+ */
+export const SLOT_BRONI = 8;
+export const SLOT_TARCZY = 9;
+
+export function pustaTarcza(klasa: number): string | null {
+  return klasa === 1 ? 'slot10.png' : null;
 }
 
 /** Plecak — piec miejsc w dolnym rzedzie. */

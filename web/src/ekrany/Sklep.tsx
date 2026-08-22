@@ -32,6 +32,9 @@ import {
   TLO_LEWE,
   WIERSZ_CECHY_Y,
   pustaBron,
+  pustaTarcza,
+  SLOT_BRONI,
+  SLOT_TARCZY,
   wierszeCech,
   wierszePochodnych,
   type Ramka as RamkaPostaci,
@@ -231,7 +234,13 @@ export function Sklep({
           slot={m.slot}
           nazwa={m.nazwa}
           ramka={przeliczRamke(m.ramka)}
-          pusty={m.slot === 8 ? pustaBron(gracz.klasa) : m.pusty}
+          pusty={
+            m.slot === SLOT_BRONI
+              ? pustaBron(gracz.klasa)
+              : m.slot === SLOT_TARCZY
+                ? (pustaTarcza(gracz.klasa) ?? undefined)
+                : m.pusty
+          }
           przedmiot={wSlocie(m.slot)}
           ciagniety={ciagniety?.przedmiot}
           sugerowane={sugerowane === m.slot}

@@ -75,5 +75,6 @@ Arena, Poczta, Gildia, Sala Chwaly, pelne Opcje, gra w kubki
 
 - [ ] `LOREIN_PANEL_TESTOWY=0` na wdrozeniu — panel testowy u grzybiarza
       to cheaty dostepne dla kazdego, kto ma konto.
-- [ ] `npm run db:migruj` na bazie produkcyjnej — bez tego klaser dziala,
-      ale nie zapisuje dat odblokowania.
+- [ ] `npm run db:migruj` na bazie produkcyjnej — nie jest juz konieczne
+      (backend doklada brakujace kolumny sam, patrz `src/db/kolumny.ts`),
+      ale warto puscic, zeby schemat zgadzal sie z `db/schema.sql`.

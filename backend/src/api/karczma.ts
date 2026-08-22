@@ -44,7 +44,8 @@ import {
 import { wczytajGracza, zbudujPrzedmiot, type Przedmiot as PrzedmiotEkranu } from './gracz.js';
 import { barwaPrzedmiotu, plikIkony, plikPocisku, typAnimacjiBroni } from '../game/grafikaPrzedmiotow.js';
 import { tokenZNaglowka } from './konto.js';
-import { maKolumne } from '../db/kolumny.js';
+import { dolozKolumne } from '../db/kolumny.js';
+import { KOLUMNA_DAT } from '../game/album.js';
 import { zamknieteLochy } from '../game/lochy.js';
 import {
   BEZ_KLASERA,
@@ -462,7 +463,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
 
   // Zapis klasera idzie osobno i tylko wtedy, gdy cos przybylo.
   if (maKlaser && stanKlasera.ile > klaserPrzed) {
-    if (await maKolumne(sql, 'user_data', 'album_dates')) {
+    if (await dolozKolumne(sql, 'user_data', 'album_dates', KOLUMNA_DAT)) {
       await sql`
         UPDATE user_data SET
           album_data = ${stanKlasera.dane},

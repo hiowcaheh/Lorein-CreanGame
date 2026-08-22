@@ -34,6 +34,37 @@ export function maKolumne(sql: Sql, tabela: string, kolumna: string): Promise<bo
   return pytanie;
 }
 
+/**
+ * Upewnia sie, ze kolumna istnieje — a jesli nie, DOKLADA ja.
+ *
+ * `ADD COLUMN IF NOT EXISTS` jest bezpieczne i mozna je puscic wiele
+ * razy. Robimy to samo, co plik z `db/migracje/`, tylko bez czekania,
+ * az ktos przypomni sobie o `npm run db:migruj` — na Supabase nie ma
+ * pod reka `psql`, a bez kolumny gra po cichu gubi funkcje.
+ *
+ * Gdy konto bazy nie ma prawa do zmiany schematu, zapytanie po prostu
+ * sie nie uda i wracamy do dzialania bez kolumny. Nic sie nie psuje.
+ */
+export async function dolozKolumne(
+  sql: Sql,
+  tabela: string,
+  kolumna: string,
+  definicja: string,
+): Promise<boolean> {
+  if (await maKolumne(sql, tabela, kolumna)) return true;
+
+  try {
+    // Nazwy tabeli i kolumny NIE moga isc jako parametry — to czesc
+    // instrukcji, nie wartosc. Ida przez `sql()`, ktore je cytuje.
+    await sql`ALTER TABLE ${sql(tabela)} ADD COLUMN IF NOT EXISTS ${sql(kolumna)} ${sql.unsafe(definicja)}`;
+  } catch {
+    return false;
+  }
+
+  sprawdzone.delete(`${tabela}.${kolumna}`);
+  return maKolumne(sql, tabela, kolumna);
+}
+
 /** Tylko do testow — kasuje zapamietany wynik. */
 export function zapomnijKolumny(): void {
   sprawdzone.clear();

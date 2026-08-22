@@ -168,6 +168,13 @@ export function miejsceWKlaserze(p: PrzedmiotKlasera): number {
  */
 export type DatyKlasera = Record<number, number>;
 
+/**
+ * Definicja kolumny `album_dates`, gdyby jej jeszcze w bazie nie bylo.
+ * Ta sama, co w `db/migracje/001-daty-klasera.sql` — backend doklada ja
+ * sam, zeby daty nie gubily sie w oczekiwaniu na migracje.
+ */
+export const KOLUMNA_DAT = "text NOT NULL DEFAULT ''";
+
 export interface StanKlasera {
   dane: string;
   ile: number;

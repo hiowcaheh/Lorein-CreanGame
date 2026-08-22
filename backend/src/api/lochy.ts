@@ -40,7 +40,8 @@ import {
   zapiszDaty,
   type StanKlasera,
 } from '../game/album.js';
-import { maKolumne } from '../db/kolumny.js';
+import { dolozKolumne } from '../db/kolumny.js';
+import { KOLUMNA_DAT } from '../game/album.js';
 import { maPelneLustro } from '../game/lustro.js';
 import {
   opisWojownika,
@@ -404,7 +405,7 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
   }
 
   if (maKlaser && stanKlasera.ile > klaserPrzed) {
-    if (await maKolumne(sql, 'user_data', 'album_dates')) {
+    if (await dolozKolumne(sql, 'user_data', 'album_dates', KOLUMNA_DAT)) {
       await sql`
         UPDATE user_data SET
           album_data = ${stanKlasera.dane},
