@@ -9,6 +9,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
+import { PasekDoswiadczenia } from '../gra/PasekDoswiadczenia';
 import { Portret } from '../gra/Portret';
 import { NAZWY_KLAS, NAZWY_RAS } from '../gra/portret';
 import { PIERWSZY_SLOT_PLECAKA, nazwaPrzedmiotu, slotDlaRodzaju } from '../gra/przedmioty';
@@ -49,7 +50,6 @@ import {
   WIERSZ_CECHY_Y,
   WIERZCHOWIEC,
   wierszePochodnych,
-  WYPELNIENIE_PASKA,
   pustaBron,
   type Ramka,
 } from '../gra/ekranPostaci';
@@ -68,6 +68,16 @@ const BOK_MIEJSCA = 90;
 
 /** Miejsce na bron — jego sylwetka zalezy od klasy. */
 const SLOT_BRONI = 8;
+
+/** Ramka w liczbach — `PasekDoswiadczenia` liczy z niej polozenie podpowiedzi. */
+function liczbowaRamka(r: Ramka) {
+  return {
+    lewo: parseFloat(r.lewo),
+    gora: parseFloat(r.gora),
+    szerokosc: parseFloat(r.szerokosc),
+    wysokosc: parseFloat(r.wysokosc),
+  };
+}
 
 function styl(r: Ramka): React.CSSProperties {
   return { left: r.lewo, top: r.gora, width: r.szerokosc, height: r.wysokosc };
@@ -234,18 +244,13 @@ export function Bohater({
         {gracz.nick}
       </div>
 
-      <div className="postac-pasek" style={styl(PASEK_DOSWIADCZENIA)} title="Doświadczenie">
-        <div
-          className="wypelnienie"
-          style={{
-            width: `${Math.round(gracz.postepPoziomu * 100)}%`,
-            backgroundImage: `url('${WYPELNIENIE_PASKA}')`,
-          }}
-        />
-        <span>
-          Pzm {gracz.poziom} · {gracz.doswiadczenie} / {gracz.doNastepnegoPoziomu}
-        </span>
-      </div>
+      <PasekDoswiadczenia
+        poziom={gracz.poziom}
+        doswiadczenie={gracz.doswiadczenie}
+        doNastepnegoPoziomu={gracz.doNastepnegoPoziomu}
+        postep={gracz.postepPoziomu}
+        ramka={liczbowaRamka(PASEK_DOSWIADCZENIA)}
+      />
 
       {/*
         Cechy i wartosci pochodne. Kazdy napis stoi w swojej kolumnie

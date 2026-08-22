@@ -30,6 +30,17 @@ export const KOSZT_WYMIANY_TOWARU = 1;
  * Przedmiot w plecaku nosi wiec juz cene ODKUPU, a nie te, ktora gracz
  * zaplacil. Grzyby przepadaja — kupione za grzyby nie wracaja w grzybach.
  */
+/**
+ * Ile grzybow wraca za sprzedany przedmiot epicki.
+ *
+ * SWIADOME ODSTEPSTWO (patrz tabela w CLAUDE.md). Oryginal oddaje przy
+ * sprzedazy dokladnie to, co stoi w kolumnie `mush` przedmiotu — a to
+ * przy rzeczy kupionej w sklepie jest zero, bo zakup zeruje grzyby.
+ * Tutaj epik oddaje dziesiec z pietnastu zaplaconych, zeby dalo sie
+ * wymienic niepotrzebna czesc na nastepna.
+ */
+export const GRZYBY_ZA_SPRZEDAZ_EPIKA = 10;
+
 export const CZESC_CENY_PRZY_ODKUPIE = 0.3;
 
 /**

@@ -92,6 +92,41 @@ describe('wylosujPrzedmiot', () => {
     expect(rzecz.atr_val_2).toBeGreaterThan(0);
   });
 
+  it('zwykly przedmiot nie kosztuje grzybow', () => {
+    /*
+     * SWIADOME ODSTEPSTWO: w oryginale przedmiot z dwiema cechami
+     * kosztowal 10 grzybow, a co trzeci pozostaly — jednego. Przez to
+     * sprzedaz zdobyczy z wyprawy sypala grzybami.
+     *
+     * Losowania zostaly, wiec przedmiot NADAL ma dwie cechy — zmienia
+     * sie tylko cena.
+     */
+    const losuj = zListy([
+      50, //    daleko od progu epika
+      14, 30, // cena
+      1, //     dwie cechy
+      1, //     mikstura zycia (dotyczy tylko gabinetu magii)
+      1, //     dawny „dodatkowy grzyb" — trafiony
+      1, //     numer
+      12, //    pancerz
+      3, 3, //  cechy
+      10, 10, // drgniecia wartosci
+    ]);
+    const rzecz = wylosujPrzedmiot(1, 1, { rodzaj: 4, losuj });
+    expect(rzecz.atr_type_2).toBeGreaterThan(0);
+    expect(rzecz.mush).toBe(0);
+  });
+
+  it('zaden zwykly przedmiot nie kosztuje grzybow, na zadnym poziomie', () => {
+    for (const poziom of [1, 5, 20, 49, 80]) {
+      for (let i = 0; i < 200; i++) {
+        const p = wylosujPrzedmiot(poziom, 1);
+        // Jedyne grzyby, jakie moga wyjsc, to epik i eliksir zycia.
+        if (p.item_id % 1000 < 50) expect(p.mush).toBe(0);
+      }
+    }
+  });
+
   it('obrazenia broni rosna z mnoznikiem klasy', () => {
     // Poziom 21, wojownik (mnoznik 2) kontra mag (mnoznik 4,2).
     const wojownik = wylosujPrzedmiot(21, 1, { rodzaj: 1, losuj: NAJNIZEJ });

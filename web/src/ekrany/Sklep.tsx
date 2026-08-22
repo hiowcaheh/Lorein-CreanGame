@@ -17,6 +17,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { Portret } from '../gra/Portret';
+import { PasekDoswiadczenia } from '../gra/PasekDoswiadczenia';
 import { nazwaPrzedmiotu } from '../gra/przedmioty';
 import { usePrzeciaganie } from '../gra/usePrzeciaganie';
 import { PIERWSZY_SLOT_PLECAKA, slotDlaRodzaju } from '../gra/przedmioty';
@@ -31,7 +32,6 @@ import {
   TLO_LEWE,
   WIERSZ_CECHY_Y,
   pustaBron,
-  WYPELNIENIE_PASKA,
   wierszeCech,
   wierszePochodnych,
   type Ramka as RamkaPostaci,
@@ -195,25 +195,15 @@ export function Sklep({
       {/*
         Pasek doswiadczenia z poziomem — ten sam, co na ekranie postaci.
         Tutaj odstepstwa nie ma: `CA_SCR_CHAR_EXPBAR` NALEZY do
-        `BNC_SCREEN_SHAKES` i `BNC_SCREEN_FIDGET`, wiec pasek stoi
-        w sklepie tak samo jak u bohatera.
+        `BNC_SCREEN_SHAKES` i `BNC_SCREEN_FIDGET`.
       */}
-      <div
-        className="postac-pasek"
-        style={styl(przeliczRamke(PASEK_DOSWIADCZENIA))}
-        title="Doświadczenie"
-      >
-        <div
-          className="wypelnienie"
-          style={{
-            width: `${Math.round(gracz.postepPoziomu * 100)}%`,
-            backgroundImage: `url('${WYPELNIENIE_PASKA}')`,
-          }}
-        />
-        <span>
-          Pzm {gracz.poziom} · {gracz.doswiadczenie} / {gracz.doNastepnegoPoziomu}
-        </span>
-      </div>
+      <PasekDoswiadczenia
+        poziom={gracz.poziom}
+        doswiadczenie={gracz.doswiadczenie}
+        doNastepnegoPoziomu={gracz.doNastepnegoPoziomu}
+        postep={gracz.postepPoziomu}
+        ramka={przeliczRamke(PASEK_DOSWIADCZENIA)}
+      />
 
       {MIEJSCA.map((m) => (
         <Miejsce

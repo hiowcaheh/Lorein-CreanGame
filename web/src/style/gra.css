@@ -675,11 +675,21 @@ button.postac-slot:hover img { filter: brightness(1.15); }
   text-shadow: 0 2px 3px #000;
 }
 
+/*
+ * Pasek doswiadczenia jest przyciskiem, bo klikniecie pokazuje
+ * podpowiedz z liczbami doswiadczenia — w oryginale robil to obszar
+ * klikalny `CA_SCR_CHAR_EXPBAR` i najechanie myszka.
+ */
 .postac-pasek {
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* Wypelnienie to oryginalny kafelek `experience.jpg`, rozciagniety na

@@ -16,6 +16,7 @@ import { getSql } from '../db/client.js';
 import { time } from '../compat/php.js';
 import {
   GABINET_MAGII,
+  GRZYBY_ZA_SPRZEDAZ_EPIKA,
   KOSZT_WYMIANY_TOWARU,
   MIEJSC_W_SKLEPIE,
   ZBROJOWNIA,
@@ -31,6 +32,7 @@ import {
   slotDlaRodzaju,
 } from '../game/ekwipunek.js';
 import { wylosujPrzedmiot } from '../game/generatorPrzedmiotow.js';
+import { czyEpicki } from '../game/grafikaPrzedmiotow.js';
 import { wczytajGracza, zbudujPrzedmiot } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
 import type { Context } from 'hono';
@@ -343,9 +345,13 @@ sklep.post('/sklep/:numer/kup', async (c) => {
 /**
  * Sprzedaz — przeciagniecie przedmiotu na sklep.
  *
- * Oryginal oddaje `gold` i `mush` zapisane PRZY PRZEDMIOCIE i kasuje go.
- * Przy rzeczy kupionej w sklepie jest to juz cena odkupu, bo zakup ja
- * nadpisal.
+ * Zloto to `gold` zapisane PRZY PRZEDMIOCIE; przy rzeczy kupionej
+ * w sklepie jest to juz cena odkupu, bo zakup ja nadpisal.
+ *
+ * Grzyby licza sie inaczej niz w oryginale — patrz
+ * `GRZYBY_ZA_SPRZEDAZ_EPIKA`. Oryginal oddawal kolumne `mush`, przez co
+ * zwykly przedmiot z wyprawy potrafil sypnac grzybem albo dziesiecioma,
+ * a epik kupiony w sklepie nie oddawal nic.
  */
 sklep.post('/sklep/:numer/sprzedaj', async (c) => {
   const dane = await wczytaj(c);
@@ -357,15 +363,19 @@ sklep.post('/sklep/:numer/sprzedaj', async (c) => {
   const slot = liczba(zapytanie.slot);
 
   const [przedmiot] = await sql<Record<string, unknown>[]>`
-    SELECT id, gold, mush FROM items
+    SELECT id, item_type, item_id, gold FROM items
     WHERE owner_id = ${wiersz.user_id} AND slot = ${slot} LIMIT 1
   `;
   if (!przedmiot) return c.json({ blad: 'Nie ma tam nic do sprzedania.' }, 409);
 
+  const grzyby = czyEpicki(liczba(przedmiot['item_type']), liczba(przedmiot['item_id']))
+    ? GRZYBY_ZA_SPRZEDAZ_EPIKA
+    : 0;
+
   await sql`
     UPDATE user_data
     SET silver = silver + ${liczba(przedmiot['gold'])},
-        mushroom = mushroom + ${liczba(przedmiot['mush'])}
+        mushroom = mushroom + ${grzyby}
     WHERE user_id = ${wiersz.user_id}
   `;
   await sql`DELETE FROM items WHERE id = ${liczba(przedmiot['id'])}`;

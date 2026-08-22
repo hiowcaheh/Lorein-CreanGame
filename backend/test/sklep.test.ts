@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { czyEpicki } from '../src/game/grafikaPrzedmiotow.js';
 import {
   CZESC_CENY_PRZY_ODKUPIE,
+  GRZYBY_ZA_SPRZEDAZ_EPIKA,
   KOSZT_WYMIANY_TOWARU,
   MIEJSC_W_SKLEPIE,
   cenaPoZakupie,
@@ -14,6 +16,23 @@ describe('sklep', () => {
     // `for ($a = 0; $a < 6; $a++)` i `mushroom = mushroom - 1`.
     expect(MIEJSC_W_SKLEPIE).toBe(6);
     expect(KOSZT_WYMIANY_TOWARU).toBe(1);
+  });
+
+  it('oddaje dziesiec grzybow za epika i nic za zwykla rzecz', () => {
+    /*
+     * SWIADOME ODSTEPSTWO — oryginal oddaje kolumne `mush`, ktora przy
+     * rzeczy kupionej w sklepie jest zerem. Tu liczy sie to, czym
+     * przedmiot JEST, a nie ile za niego zaplacono.
+     */
+    expect(GRZYBY_ZA_SPRZEDAZ_EPIKA).toBe(10);
+
+    // Numer obrazka od 50 w gore to epik — z klasa w tysiacach i bez.
+    expect(czyEpicki(1, 50)).toBe(true);
+    expect(czyEpicki(3, 1057)).toBe(true);
+    expect(czyEpicki(1, 49)).toBe(false);
+    expect(czyEpicki(1, 2007)).toBe(false);
+    // Zwoje (typ 14) numerow epickich nie maja.
+    expect(czyEpicki(14, 55)).toBe(false);
   });
 
   it('odkupuje za trzy dziesiate ceny', () => {

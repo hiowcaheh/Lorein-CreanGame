@@ -95,6 +95,11 @@ export interface Przedmiot {
 
 export interface Ustawienia {
   /** `ITEMGEN_PMUSH_TWOSTATS` z `game_settings` — cena przedmiotu o dwoch cechach. */
+  /**
+   * NIEUZYWANE po odstepstwie opisanym przy `grzyby` — zostaje, bo to
+   * wartosc z `game_settings` oryginalu i chcemy ja miec pod reka,
+   * gdyby ktos kiedys wrocil do pelnej zgodnosci.
+   */
   grzybyZaDwieCechy: number;
   /** `ITEMGEN_PMUSH_EPIC` — ile grzybow kosztuje przedmiot epicki. */
   grzybyZaEpik: number;
@@ -280,21 +285,28 @@ export function wylosujPrzedmiot(
    * dalszy ciag rozjechalby sie z oryginalem.
    */
   const zaMiksture = losuj(1, 25);
-  const zaGrzyby = losuj(1, 3) === 1;
+  // `$mushRand` — po odstepstwie opisanym nizej nic z niego nie wynika,
+  // ale losowanie musi zostac, zeby ciag liczb sie nie przesunal.
+  losuj(1, 3);
 
   /*
    * Kolejnosc warunkow jest z oryginalu i wyklucza sie nawzajem: tarcza
    * wojownika nigdy nie kosztuje grzybow, epik kosztuje najwiecej i do
    * tego POTRAJA cene w zlocie.
+   *
+   * SWIADOME ODSTEPSTWO (patrz tabela w CLAUDE.md): dwie galezie
+   * oryginalu — `$statNumRand` (co siodmy przedmiot, dwie cechy, 10
+   * grzybow) i `$mushRand` (co trzeci, 1 grzyb) — NIE dokladaja juz
+   * grzybow do ceny. Zostaja same losowania, bo `dwieCechy` decyduje
+   * dalej o liczbie cech, a kazde pominiete losowanie przesunieloby
+   * caly dalszy ciag generatora.
    */
   let grzyby = 0;
   if (klasa === WOJOWNIK && typ === TARCZA) grzyby = 0;
   else if (epicki) {
     grzyby = ustawienia.grzybyZaEpik;
     zloto *= 3;
-  } else if (dwieCechy && typ < KLUCZ) grzyby = ustawienia.grzybyZaDwieCechy;
-  else if (zaGrzyby && typ < KLUCZ) grzyby = 1;
-  else if (typ === MIKSTURA && numerMikstury === 16 && zaMiksture >= 2) {
+  } else if (typ === MIKSTURA && numerMikstury === 16 && zaMiksture >= 2) {
     grzyby = ustawienia.grzybyZaMiksture;
   }
 

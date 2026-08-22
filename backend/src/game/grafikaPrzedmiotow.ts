@@ -63,6 +63,21 @@ export function rozlozNumer(numerPrzedmiotu: number): { klasa: number; obrazek: 
 }
 
 /**
+ * Od tego numeru obrazka przedmiot jest epicki.
+ *
+ * To ten sam prog, po ktorym `GetItemFile()` poznaje epik i po ktorym
+ * `GetItemName()` przeskakuje do osobnej tablicy nazw. Typ 14 (zwoje)
+ * jest wyjatkiem — tam numery powyzej piecdziesiatki nie znacza nic
+ * nadzwyczajnego.
+ */
+export const PIERWSZY_EPICKI = 50;
+
+/** Czy przedmiot jest epicki — po numerze obrazka, nie po cenie. */
+export function czyEpicki(typ: number, numerPrzedmiotu: number): boolean {
+  return rozlozNumer(numerPrzedmiotu).obrazek >= PIERWSZY_EPICKI && typ !== 14;
+}
+
+/**
  * Plik ikony przedmiotu — `GetItemFile(itmTyp, itmPic, itmColor, itmClass)`.
  *
  *     itm/{typ}-{klasa+1}/itm{typ}-{obrazek}-{barwa+1}-{klasa+1}.png   typ 1-7
@@ -76,7 +91,7 @@ export function rozlozNumer(numerPrzedmiotu: number): { klasa: number; obrazek: 
  */
 export function plikIkony(typ: number, numerPrzedmiotu: number, barwa: number): string {
   const { klasa, obrazek } = rozlozNumer(numerPrzedmiotu);
-  const b = obrazek >= 50 && typ !== 14 ? 0 : barwa;
+  const b = obrazek >= PIERWSZY_EPICKI && typ !== 14 ? 0 : barwa;
   const podstawa = `itm${typ}-${obrazek}`;
 
   if (typ === 1 || typ === 2 || (typ >= 3 && typ <= 7)) {
