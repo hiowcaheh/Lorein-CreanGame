@@ -125,6 +125,18 @@ export const PRZESUNIECIE_PLUSA = -3;
 /** `plus.png` ma 33x33. */
 export const BOK_PLUSA = 33;
 
+/**
+ * Cena punktu cechy stoi w kolumnie CZWARTEJ — a ta ma dokladnie te sama
+ * wspolrzedna, co piata (`POS_CHAR_PROP_COLUMN_4_X` i `_5_X` to oba 520).
+ *
+ * To nie pomylka: cena i podpis wartosci pochodnej NIGDY nie sa widoczne
+ * naraz. Oryginal trzyma je w dwoch wiazkach — `BNC_CHAR_PREISE`
+ * i `BNC_CHAR_SECONDPROP` — i przelacza je, gdy kursor wejdzie na
+ * ktorykolwiek przycisk „+" (`BoostBtnOver` / `BoostBtnOut`). Sama
+ * WARTOSC pochodna (kolumna szosta) zostaje na miejscu.
+ */
+export const KOLUMNA_CENY = 520 - POCZATEK_X;
+
 /*
  * Prawa polowa ekranu:
  *

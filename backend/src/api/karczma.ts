@@ -557,6 +557,11 @@ async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<strin
     wybraneZadanie: liczba(wiersz['status_extra']),
     koniec: liczba(wiersz['status_end']),
     teraz,
+    /**
+     * Wierzchowiec, ktory DZIALA — zero, gdy najem wygasl. Ekran
+     * pokazuje przy czasie wyprawy, o ile go skraca.
+     */
+    wierzchowiec: koniowanie,
     /** Miejsce w plecaku — klient uprzedza, ze nagroda przepadnie. */
     wolneMiejsceWPlecaku: wolneMiejsceWPlecaku(zajete) !== null,
     zadania: zadania.map((z) => {

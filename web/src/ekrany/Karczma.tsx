@@ -193,6 +193,7 @@ export function Karczma({
       {otwarte === 'zadania' && (
         <OknoWyboru
           stan={stan}
+          gracz={gracz}
           wariant={wariant}
           onWyrusz={(numer) => {
             setOtwarte(null);

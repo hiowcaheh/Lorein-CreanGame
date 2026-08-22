@@ -10,9 +10,13 @@
  * tlo w miejscu podanym stalymi `REL_STALL_OVL_*`.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  DRZWI,
+  LICZBA_RAK,
   MARGINES_PLANSZY,
+  ODSTEP_RAK_MS,
+  RECE,
   ODSTEP_WIERSZY,
   ODSTEP_ZYSKU,
   OKRES_WYNAJMU,
@@ -25,6 +29,9 @@ import {
   WYNAJMIJ,
   boksy,
   nazwaWierzchowca,
+  plikDrzwi,
+  plikRak,
+  poraDnia,
   opisWierzchowca,
   tloStajni,
   zyskZWierzchowca,
@@ -62,6 +69,21 @@ export function Stajnia({
 }) {
   const [wybrany, setWybrany] = useState<number | null>(null);
 
+  /*
+   * Stajenny macha rekami: `BauerHandEvent` co 200 ms losuje jedna
+   * z pieciu klatek i pokazuje tylko ja. Na tle rak nie ma wcale.
+   */
+  const [reka, setReka] = useState(0);
+  useEffect(() => {
+    const zegar = setInterval(
+      () => setReka(Math.floor(Math.random() * LICZBA_RAK)),
+      ODSTEP_RAK_MS,
+    );
+    return () => clearInterval(zegar);
+  }, []);
+
+  const drzwi = plikDrzwi(poraDnia(new Date(stan.czasSerwera * 1000).getHours()));
+
   const naObrazie = boksy(gracz.rasa);
   const boks = wybrany === null ? null : stan.boksy.find((b) => b.numer === wybrany);
 
@@ -81,6 +103,14 @@ export function Stajnia({
   return (
     <div className="stajnia">
       <img className="stajnia-tlo" src={tloStajni(gracz.rasa)} alt="" />
+
+      {/* Zmierzch albo noc za drzwiami w glebi. W dzien nie ma nic. */}
+      {drzwi && (
+        <img className="stajnia-drzwi" src={drzwi} alt="" style={{ left: DRZWI.x, top: DRZWI.y }} />
+      )}
+
+      {/* Rece stajennego — jedna z pieciu klatek, zmieniana co 200 ms. */}
+      <img className="stajnia-rece" src={plikRak(reka)} alt="" style={{ left: RECE.x, top: RECE.y }} />
 
       {naObrazie.map((b) => (
         <button

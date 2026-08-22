@@ -29,6 +29,13 @@ export interface Gracz {
   opis: string;
 
   obrazenia: { min: number; max: number; srednio: number };
+  /**
+   * Ile srebra kosztuje dokupienie kolejnych trzech punktow kazdej
+   * cechy — piec liczb w kolejnosci sila, zrecznosc, inteligencja,
+   * wytrzymalosc, szczescie.
+   */
+  cenyCech: number[];
+
   /** Polowa sily — pierwszy wiersz prawej kolumny. */
   obrona: number;
   unik: number;
@@ -192,6 +199,8 @@ export interface StanKarczmy {
   koniec: number;
   /** Czas serwera w chwili odpowiedzi — z niego liczymy pozostaly czas. */
   teraz: number;
+  /** Wierzchowiec, ktory dziala; zero znaczy „pieszo". */
+  wierzchowiec: number;
   wolneMiejsceWPlecaku: boolean;
   zadania: Zadanie[];
   rozliczenie?: Rozliczenie | null;

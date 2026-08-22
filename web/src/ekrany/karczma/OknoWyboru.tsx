@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../../gra/PodpowiedzPrzedmiotu';
 import { KRAINY, PODPISY } from '../../gra/karczma-teksty';
+import { nazwaWierzchowca, zyskZWierzchowca } from '../../gra/stajnia';
 import {
   ODSTEP_NAGROD,
   ODSTEP_WYBOROW,
@@ -25,26 +26,39 @@ import {
   czas,
   tytulWyprawy,
 } from '../../gra/karczmaUklad';
-import type { StanKarczmy, Zadanie } from '../../gra/typy';
+import type { Gracz, StanKarczmy, Zadanie } from '../../gra/typy';
 
 /** Nazwa krainy, w ktora wysyla zadanie — `quest_location_N` liczy od jedynki. */
 export function kraina(lokacja: number): string {
   return KRAINY[Math.max(0, Math.min(KRAINY.length - 1, lokacja - 1))] ?? '';
 }
 
+/**
+ * Jedna jednostka dlugosci zadania to piec minut — `quest_dur * 300`.
+ * Wierzchowiec dopiero to skraca, wiec z dlugosci wychodzi czas
+ * „na piechote".
+ */
+const SEKUND_NA_JEDNOSTKE = 300;
+
+/** O ile procent skraca wyprawe kazdy wierzchowiec — `mountMultiplier()`. */
+const SKROCENIE: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50 };
+
 export function OknoWyboru({
   stan,
+  gracz,
   wariant,
   onWyrusz,
   onZamknij,
 }: {
   stan: StanKarczmy;
+  gracz: Gracz;
   wariant: number;
   onWyrusz: (numer: number) => void;
   onZamknij: () => void;
 }) {
   const [wybrane, setWybrane] = useState<Zadanie | null>(stan.zadania[0] ?? null);
   const [pokazanyPrzedmiot, setPokazanyPrzedmiot] = useState(false);
+  const [pokazanyCzas, setPokazanyCzas] = useState(false);
   if (!wybrane) return null;
 
   const zaKrotkaWytrzymalosc = stan.wytrzymalosc < wybrane.sekundy;
@@ -132,9 +146,20 @@ export function OknoWyboru({
         <>
           {PODPISY.doswiadczenie}: {wybrane.doswiadczenie.toLocaleString('pl-PL')}
         </>,
-        <>
+        /*
+          Czas trwania. Klikniecie pokazuje, ile wyprawa zajelaby PIESZO
+          i o ile skraca ja wierzchowiec — tego w oryginale nie ma
+          (patrz tabela odstepstw w CLAUDE.md), ale sama liczba nie mowi
+          nic o tym, za co sie placi najem.
+        */
+        <button
+          type="button"
+          className="karczma-czas-wyprawy"
+          onClick={() => setPokazanyCzas((czy) => !czy)}
+        >
           {PODPISY.czasTrwania}: {czas(wybrane.sekundy)}
-        </>,
+          {stan.wierzchowiec > 0 && ' *'}
+        </button>,
       ].map((tresc, i) => (
         <div
           key={i}
@@ -148,6 +173,36 @@ export function OknoWyboru({
           {tresc}
         </div>
       ))}
+
+      {/*
+        Rozpisany czas wyprawy: ile trwalaby pieszo, ktory wierzchowiec
+        ja skraca i o ile. Stoi tuz pod wierszem z czasem.
+      */}
+      {pokazanyCzas && (
+        <div
+          className="podpowiedz karczma-czas-podpowiedz"
+          style={{
+            left: OKNO_NAGRODY.lewo - OKNO.lewo,
+            /*
+             * NAD wierszem z czasem, zeby nie wyjsc poza ramke okna
+             * (740x440) ani nie zaslonic przyciskow. Dwa wiersze pisma
+             * po 26 px plus margines — tyle, ile ma `.podpowiedz`.
+             */
+            top: OKNO_NAGRODY.gora - OKNO.gora + 3 * ODSTEP_NAGROD - 76,
+            width: 260,
+          }}
+        >
+          <div>
+            Pieszo: {czas(wybrane.dlugosc * SEKUND_NA_JEDNOSTKE)}
+          </div>
+          {stan.wierzchowiec > 0 && (
+            <div>
+              {nazwaWierzchowca(stan.wierzchowiec, gracz.rasa)}:{' '}
+              {zyskZWierzchowca(SKROCENIE[stan.wierzchowiec] ?? 0)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/*
         Przedmiot do zdobycia stoi w swoim miejscu (REL_QO_SLOT) jako

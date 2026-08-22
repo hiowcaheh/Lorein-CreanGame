@@ -93,11 +93,25 @@ NAZWANE = {
     63: 'panel-boczny',       # 280x700  — tlo menu, ozdobna ramka
     66: 'ramka',              # 1000x700 — ramka tresci, srodek przezroczysty
     72: 'okno',               # 520x380  — okno dialogowe
-    204: 'guzik',             # 180x50   — przycisk menu, stan zwykly
-    207: 'guzik-najazd',      # 180x50   — pod kursorem
-    210: 'guzik-wylaczony',   # 180x50   — nieczynny
-    142: 'guzik-maly',        # 174x45
-    145: 'guzik-maly-najazd',
+    # Dwa ROZNE przyciski, przez pomylke nazwane wczesniej jednym:
+    #
+    #   204/207/210 (180x50) to przycisk MENU. Ma po lewej dorysowany
+    #     kawalek okucia, ktorym trzyma sie panelu bocznego — w oknach
+    #     dialogowych wyglada to jak przyklejony smiec.
+    #   142/145/148 (174x45) to zwykly przycisk (`btnClassBasic`): „OK",
+    #     „Pomin", „Przyjmij", „Wynajmij". Czysty prostokat bez okucia.
+    #
+    # Rozroznienie po jasnosci srodka: 204 ma 35, 207 (najazd) 60,
+    # 210 (nieczynny) 17; w drugiej trojce 142 ma 36, 145 rozjasnia
+    # ramke, a 148 przygasza wypelnienie do 22.
+    204: 'guzik-menu',            # 180x50 — przycisk panelu bocznego
+    207: 'guzik-menu-najazd',
+    210: 'guzik-menu-wylaczony',
+    142: 'guzik',                 # 174x45 — zwykly przycisk dialogowy
+    145: 'guzik-najazd',
+    148: 'guzik-wylaczony',
+    153: 'guzik-waski',           # 140x45 — wezszy wariant, dwa stany
+    156: 'guzik-waski-wylaczony',
     88: 'pasek',              # 255x49   — szeroki pas z kamiennymi koncami
     92: 'pasek-najazd',
     45: 'smok1',              # glowy smokow — ozdoba przy przyciskach menu

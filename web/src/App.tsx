@@ -160,6 +160,19 @@ export function App() {
       .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się odwołać eliksiru.'));
   }
 
+  /**
+   * Dokupienie punktow cechy.
+   *
+   * Cene i sprawdzenie kasy robi serwer — klient wysyla sam numer
+   * cechy, tak jak `SendAction(ACT_BUY_ATTRIB, numer)` w oryginale.
+   */
+  function kupCeche(cecha: number) {
+    setBlad(null);
+    void zapytaj<{ gracz: Gracz }>('/cecha/kup', { cecha })
+      .then(({ gracz: g }) => setGracz(g))
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się dokupić punktów.'));
+  }
+
   /*
    * Stajnia. Ceny, dlugosc najmu i to, czy wolno wziac wierzchowca,
    * licza sie na serwerze — klient dostaje gotowe cztery boksy.
@@ -379,6 +392,7 @@ export function App() {
             }
             onSprzedaj={(slot: number) => akcjaSklepu(`/sklep/${sklep.numer}/sprzedaj`, { slot })}
             onWymien={() => akcjaSklepu(`/sklep/${sklep.numer}/wymien`)}
+            onPrzenies={przeniesPrzedmiot}
           />
         )}
         {zakladka === 'stajnia' && stajnia && (
@@ -392,6 +406,7 @@ export function App() {
             onWypij={wypijMiksture}
             onUsunMiksture={usunMiksture}
             onDoStajni={() => setZakladka('stajnia')}
+            onKupCeche={kupCeche}
           />
         )}
         {zakladka === 'karczma' && karczma && (

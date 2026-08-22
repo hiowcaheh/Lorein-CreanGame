@@ -279,15 +279,19 @@ img { max-width: 100%; }
   white-space: nowrap;
   color: var(--zloto);
   text-shadow: 0 1px 2px #000;
-  /* Kamien przycisku ma dokladnie 180x50 i idzie w naturalnym rozmiarze. */
-  background: url('/res/ui/guzik.png') 0 0 / 180px 50px no-repeat;
+  /*
+   * Kamien przycisku MENU ma dokladnie 180x50 i idzie w naturalnym
+   * rozmiarze. Ma po lewej dorysowane okucie, ktorym trzyma sie panelu
+   * bocznego — dlatego okna dialogowe uzywaja innego pliku.
+   */
+  background: url('/res/ui/guzik-menu.png') 0 0 / 180px 50px no-repeat;
   border: none;
   cursor: pointer;
 }
 
 .menu button:hover:not(:disabled),
 .menu button[aria-current='true'] {
-  background-image: url('/res/ui/guzik-najazd.png');
+  background-image: url('/res/ui/guzik-menu-najazd.png');
 }
 
 .menu button:active:not(:disabled) { transform: translateY(1px); }
@@ -447,7 +451,12 @@ img { max-width: 100%; }
   box-shadow: 0 0 0 2px rgba(240, 192, 66, .18);
 }
 
-/* Przycisk to oryginalny kamienny guzik 180x50. */
+/*
+ * Zwykly przycisk — `btnClassBasic` z oryginalu, kamien 174x45.
+ *
+ * NIE ten sam, co w menu: tamten (180x50) ma po lewej okucie panelu
+ * bocznego i w oknie dialogowym wyglada jak przyklejony kawalek czegos.
+ */
 .przycisk {
   appearance: none;
   font: inherit;
@@ -472,10 +481,10 @@ img { max-width: 100%; }
   min-height: 44px;
   flex: 0 0 auto;
   padding: 0;
-  background-image: url('/res/ui/guzik-maly.png');
+  background-image: url('/res/ui/guzik.png');
 }
 
-.przycisk.maly:hover:not(:disabled) { background-image: url('/res/ui/guzik-maly-najazd.png'); }
+.przycisk.maly:hover:not(:disabled) { background-image: url('/res/ui/guzik-najazd.png'); }
 
 .blad {
   color: var(--zly);
@@ -762,10 +771,41 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 .postac-plus:hover:not(:disabled) { background-image: url('/res/ui/plus-najazd.png'); }
 .postac-plus:active:not(:disabled) { background-image: url('/res/ui/plus-wcisniety.png'); }
 
-/* Dopoki rozdawanie punktow nie jest przeniesione, przycisk jest przygaszony. */
+/* Nie stac — `canBoost[i]` falszywe. Oryginal zostawia przycisk na
+   miejscu, tylko przestaje reagowac. */
 .postac-plus:disabled { opacity: .45; cursor: default; }
 
+/*
+ * Cena punktu cechy. Stoi w kolumnie czwartej (520) — tej samej, co
+ * podpis wartosci pochodnej, bo oba nigdy nie sa widoczne naraz.
+ * Uklad z klienta: LICZBA, odstep, IKONA, i tak dwa razy.
+ */
+.postac-cena {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--pismo);
+  line-height: 1;
+  color: var(--zloto);
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
+}
+
+.postac-cena img { width: 24px; height: 20px; margin-right: 10px; }
+.postac-cena img:last-child { margin-right: 0; }
+
 /* --- prawa polowa --- */
+
+/*
+ * Pasek czci: poziom, odstep `REL_CHAR_EHRE_X` = 20 px, czesc.
+ * W oryginale to dwa osobne pola tekstowe stawiane jedno za drugim
+ * (`LBL_SCR_CHAR_EHRE.x = LBL_SCR_CHAR_GILDE.x + textWidth + 20`).
+ */
+.postac-honor {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
 
 .postac-honor,
 .postac-pancerz,
@@ -1581,6 +1621,10 @@ button.postac-wierzchowiec-obraz img {
 
 .stajnia-podswietlenie { pointer-events: none; }
 
+/* Drzwi w glebi i rece stajennego — obie warstwy tylko do patrzenia. */
+.stajnia-drzwi,
+.stajnia-rece { pointer-events: none; }
+
 /* `black_square_neutral` o przezroczystosci 0,65. */
 .stajnia-plansza {
   background: #000;
@@ -1641,4 +1685,27 @@ button.postac-wierzchowiec-obraz img {
   width: 170px;
   min-height: 44px;
   padding: 8px 12px;
+}
+
+/*
+ * Czas wyprawy w oknie wyboru jest klikalny — rozwija sie pod nim,
+ * ile zajelaby pieszo i o ile skraca ja wierzchowiec.
+ * SWIADOME ODSTEPSTWO, patrz tabela w CLAUDE.md.
+ */
+.karczma-czas-wyprawy {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+/* Wyglada jak kazda inna podpowiedz: czarne tlo 0,8 i obwodka CLR_SFORANGE. */
+.karczma-czas-podpowiedz {
+  padding: 8px 10px;
+  font-size: var(--pismo-cechy);
+  line-height: 1.4;
+  white-space: nowrap;
 }

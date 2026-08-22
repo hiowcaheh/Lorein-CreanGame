@@ -7,6 +7,7 @@
  */
 
 import { bonusyZPrzedmiotow } from '../game/ekwipunek.js';
+import { cenaPunktow } from '../game/cechy.js';
 import { barwaPrzedmiotu, plikIkony } from '../game/grafikaPrzedmiotow.js';
 import {
   RODZAJ_MIKSTURY,
@@ -62,6 +63,17 @@ export interface Gracz {
     wytrzymalosc: number;
     szczescie: number;
   };
+
+  /**
+   * Ile srebra kosztuje dokupienie kolejnych trzech punktow kazdej
+   * cechy — piec liczb w kolejnosci sila, zrecznosc, inteligencja,
+   * wytrzymalosc, szczescie.
+   *
+   * Cena zalezy WYLACZNIE od tego, ile punktow danej cechy gracz juz
+   * dokupil ponad wartosc startowa swojej rasy i klasy, wiec liczy sie
+   * z cech WLASNYCH postaci — bez przedmiotow i bez mikstur.
+   */
+  cenyCech: number[];
 
   zycie: number;
 
@@ -286,6 +298,21 @@ export function zbudujGracza(
    * w oryginale odpowiada temu warunek `slot < 168` przy skladaniu
    * odpowiedzi w `req.php`.
    */
+  const rasa = intval(wiersz['race'] ?? 1);
+
+  /*
+   * Cechy WLASNE postaci, bez przedmiotow i mikstur — tylko one licza
+   * sie do ceny kolejnego punktu (`getStatCost` odejmuje od nich
+   * wartosc startowa rasy i klasy).
+   */
+  const cechyWlasne = [
+    intval(wiersz['attr_str'] ?? 10),
+    intval(wiersz['attr_agi'] ?? 10),
+    intval(wiersz['attr_int'] ?? 10),
+    intval(wiersz['attr_wit'] ?? 10),
+    intval(wiersz['attr_luck'] ?? 10),
+  ];
+
   const [bs, bz, bi, bw, bsz] = bonusyZPrzedmiotow(ekwipunek);
 
   const bonusy = {
@@ -330,7 +357,7 @@ export function zbudujGracza(
     nick: String(wiersz['user_name'] ?? ''),
     poziom,
     klasa,
-    rasa: intval(wiersz['race'] ?? 1),
+    rasa,
     plec: intval(wiersz['gender'] ?? 1) === 2 ? 'f' : 'm',
     wyglad: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => intval(wiersz[`face${n}`] ?? 1)),
 
@@ -344,6 +371,9 @@ export function zbudujGracza(
 
     cechy,
     bonusy,
+    cenyCech: [1, 2, 3, 4, 5].map((cecha) =>
+      cenaPunktow(klasa, rasa, cecha, cechyWlasne[cecha - 1] ?? 0),
+    ),
 
     zycie:
       policzZycie(klasa, cechy.wytrzymalosc, poziom) +

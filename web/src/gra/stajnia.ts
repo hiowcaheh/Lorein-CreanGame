@@ -96,6 +96,51 @@ export function tloStajni(rasa: number): string {
 }
 
 /*
+ * Rece stajennego.
+ *
+ * Na tle nie ma ich wcale — sa osobnymi obrazkami `stall_arme1..5.png`
+ * kladzionymi w jednym punkcie (`REL_STALL_ARME_X/_Y`). Klient zmienia
+ * je co 200 ms na losowa z piatki (`BauerHandEvent`), przez co stajenny
+ * bez przerwy gestykuluje.
+ */
+export const RECE: { x: number; y: number } = { x: 373, y: 181 };
+export const LICZBA_RAK = 5;
+export const ODSTEP_RAK_MS = 200;
+
+export function plikRak(numer: number): string {
+  return `${KATALOG}stall_arme${numer + 1}.png`;
+}
+
+/*
+ * Drzwi w glebi stajni — `REL_STALL_TUER_X/_Y`.
+ *
+ * Nad wejsciem leza dwa obrazki: `stall_abend.jpg` (zmierzch)
+ * i `stall_nacht.jpg` (noc), przy czym noc przykrywa zmierzch. Klient
+ * zdejmuje je zaleznie od `Tageszeit()`:
+ *
+ *   0 (21-4)   noc     — zostaja oba, widac noc
+ *   1 (4-8, 18-21) zmierzch — zdjeta noc, widac zmierzch
+ *   2 (8-18)   dzien   — zdjete oba, widac samo tlo
+ */
+export const DRZWI: { x: number; y: number } = { x: 428, y: 96 };
+
+export type PoraDnia = 'noc' | 'zmierzch' | 'dzien';
+
+export function poraDnia(godzina: number): PoraDnia {
+  if (godzina < 4) return 'noc';
+  if (godzina < 8) return 'zmierzch';
+  if (godzina < 18) return 'dzien';
+  if (godzina < 21) return 'zmierzch';
+  return 'noc';
+}
+
+export function plikDrzwi(pora: PoraDnia): string | null {
+  if (pora === 'noc') return `${KATALOG}stall_nacht.jpg`;
+  if (pora === 'zmierzch') return `${KATALOG}stall_abend.jpg`;
+  return null;
+}
+
+/*
  * Ciemna plansza z opisem — `SHP_STALL_BLACK_SQUARE`:
  *
  *   POS_SCREEN_TITLE_X - SIZE_STALL_SQUARE_X / 2, POS_STALL_SQUARE_Y

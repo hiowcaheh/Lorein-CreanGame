@@ -68,6 +68,7 @@ export function Sklep({
   onKup,
   onSprzedaj,
   onWymien,
+  onPrzenies,
 }: {
   stan: StanSklepu;
   gracz: Gracz;
@@ -76,6 +77,13 @@ export function Sklep({
   onKup: (miejsce: number, cel: number | null) => void;
   onSprzedaj: (slot: number) => void;
   onWymien: () => void;
+  /**
+   * Przelozenie WLASNEGO przedmiotu — dokladnie to samo, co na ekranie
+   * postaci. Lewa polowa sklepu to ten sam ekran (`BNC_SCREEN_SHAKES`
+   * dostaje komplet `CNT_CHAR_SLOT_*`), wiec zakladanie i zdejmowanie
+   * ma tu dzialac tak samo.
+   */
+  onPrzenies: (zrodlo: number, cel: number | null) => void;
 }) {
   const [pokazany, setPokazany] = useState<Przedmiot | null>(null);
   const ekran = useRef<HTMLDivElement>(null);
@@ -103,7 +111,15 @@ export function Sklep({
        */
       if (cel !== null && (czyMiejsceTowaru(cel) || czyMiejsceSprzedazy(cel))) {
         onSprzedaj(przedmiot.slot);
+        return;
       }
+
+      /*
+       * Cala reszta to zwykle przekladanie po wlasnym ekwipunku —
+       * zakladanie, zdejmowanie i porzadki w plecaku. Wczesniej sklep
+       * po prostu nic z tym nie robil i przedmiot wracal na miejsce.
+       */
+      onPrzenies(przedmiot.slot, cel);
     },
   });
 
@@ -122,11 +138,15 @@ export function Sklep({
   }, [pokazany]);
 
   /*
-   * Miejsce podswietlane przy zlapaniu towaru — to, w ktore rzecz ma
-   * prawo trafic. Przy sprzedazy podswietlamy caly sklep.
+   * Miejsce podswietlane przy zlapaniu przedmiotu — to, w ktore rzecz ma
+   * prawo trafic (`IMG_SLOT_SUGGESTION`). Dotyczy i towaru z pólki,
+   * i wlasnej rzeczy z plecaka; przedmiot juz zalozony nie ma czego
+   * sugerowac. Przy sprzedazy podswietlamy caly sklep.
    */
   const sugerowane =
-    ciagniety && czyMiejsceTowaru(ciagniety.przedmiot.slot)
+    ciagniety &&
+    (czyMiejsceTowaru(ciagniety.przedmiot.slot) ||
+      ciagniety.przedmiot.slot >= PIERWSZY_SLOT_PLECAKA)
       ? slotDlaRodzaju(ciagniety.przedmiot.typ)
       : null;
   const sprzedaje = ciagniety !== null && !czyMiejsceTowaru(ciagniety.przedmiot.slot);

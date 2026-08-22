@@ -204,8 +204,12 @@ export const WALKA_SRODEK_X = 770 - POCZATEK_X;
 export const WALKA_OBRAZENIA_Y = 350 - 100 - POCZATEK_Y;
 export const WALKA_OBRAZENIA_ODSTEP = 200;
 
-/** Przycisk „Pomin" i „OK": POS_FIGHT_BTN_Y = 710, wysrodkowane w 770. */
-export const WALKA_PRZYCISK = ramka(770 - 90, 710, 180, 50);
+/**
+ * Przycisk „Pomin" i „OK": `POS_FIGHT_BTN_Y = 710`, wysrodkowany
+ * w `POS_SCREEN_TITLE_X` (`x = 770 - width / 2`). Kamien `btnClassBasic`
+ * ma 174x45 — to inny obrazek niz przycisk menu (180x50, z okuciem).
+ */
+export const WALKA_PRZYCISK = ramka(770 - 87, 710, 174, 45);
 /** Podsumowanie walki: POS_FIGHT_SUMMARY_Y = 520, wysrodkowane. */
 export const WALKA_PODSUMOWANIE_Y = 520 - POCZATEK_Y;
 /** Szerokosc zdania o wyniku — `SIZE_FIGHT_RESULT_TEXT_X = 490`. */

@@ -7,9 +7,10 @@
  * oryginalu, bo cala scena jest skalowana jednym `transform`.
  */
 
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { PasekDoswiadczenia } from '../gra/PasekDoswiadczenia';
+import { PUNKTOW_ZA_ZAKUP, cenaPokazywana, opisCeny } from '../gra/cechy';
 import {
   OKRES_NAJMU,
   WIERZCHOWIEC,
@@ -39,6 +40,7 @@ import {
   IKONY_KLAS,
   KATALOG_ODZNAK,
   KATALOG_SLOTOW,
+  KOLUMNA_CENY,
   KOLUMNY_CECH,
   MIEJSCA,
   MIEJSCA_MIKSTUR,
@@ -114,6 +116,7 @@ export function Bohater({
   onWypij,
   onUsunMiksture,
   onDoStajni,
+  onKupCeche,
 }: {
   gracz: Gracz;
   onZapiszOpis: (opis: string) => void;
@@ -125,6 +128,8 @@ export function Bohater({
   onUsunMiksture: (miejsce: number) => void;
   /** Przejscie do stajni — klikniecie portretu wierzchowca. */
   onDoStajni: () => void;
+  /** Dokupienie trzech punktow cechy 1..5. */
+  onKupCeche: (cecha: number) => void;
 }) {
   /*
    * Czas do odliczania najmu wierzchowca. Odswiezamy co pol minuty —
@@ -213,12 +218,62 @@ export function Bohater({
      * przegladarki, bo caly ekran postaci uzywa `title`.
      */
     const dodatek = dodatekZMikstury(gracz.mikstury ?? [], i + 1, c.wartosc);
+
+    /*
+     * Cena kolejnych trzech punktow. Klient rozbija ja na zloto
+     * i srebro (`boostGold = int(price / 100)`, `boostSilver = price % 100`)
+     * i powyzej 9999 przestaje pokazywac koncowke — SERWER pobiera
+     * pelna cene, wiec o tym, czy stac, decyduje ta pelna.
+     */
+    const cena = gracz.cenyCech[i] ?? 0;
+    const pokazywana = cenaPokazywana(cena);
+
     return {
       ...c,
       wartosc: String(c.wartosc),
       tytul: dodatek ? `${NAPIS_TYMCZASOWO} ${dodatek.ile} (${NAPIS_DO} ${dodatek.doKiedy})` : '',
+      zloto: Math.trunc(pokazywana / 100),
+      srebro: pokazywana % 100,
+      stac: gracz.srebro >= cena,
     };
   });
+
+  /*
+   * Kursor nad ktoryms „+" zamienia PODPISY wartosci pochodnych na CENY
+   * punktow — `BoostBtnOver` przelacza wiazki `BNC_CHAR_SECONDPROP`
+   * i `BNC_CHAR_PREISE`. Same wartosci (kolumna szosta) zostaja.
+   */
+  const [pokazCeny, setPokazCeny] = useState(false);
+
+  /*
+   * Przytrzymany „+" kupuje dalej — `BoostBtnRepeatTimer`. Pierwsze
+   * powtorzenie po sekundzie, dwa nastepne co pol sekundy, potem co
+   * cwierc. Zwykle klikniecie kupuje raz, tak jak `BoostAttribute`.
+   */
+  const powtarzanie = useRef<{ zegar: ReturnType<typeof setTimeout>; ile: number } | null>(null);
+
+  const przerwijPowtarzanie = useCallback(() => {
+    if (powtarzanie.current) clearTimeout(powtarzanie.current.zegar);
+    powtarzanie.current = null;
+  }, []);
+
+  useEffect(() => przerwijPowtarzanie, [przerwijPowtarzanie]);
+
+  function zacznijPowtarzanie(cecha: number) {
+    przerwijPowtarzanie();
+
+    const nastepne = () => {
+      const stan = powtarzanie.current;
+      if (!stan) return;
+      stan.ile += 1;
+      onKupCeche(cecha);
+      // `case 1: delay = 500; case 3: delay = 250;`
+      const odstep = stan.ile >= 3 ? 250 : 500;
+      stan.zegar = setTimeout(nastepne, odstep);
+    };
+
+    powtarzanie.current = { zegar: setTimeout(nastepne, 1000), ile: 0 };
+  }
 
   /*
    * Prawa kolumna zalezy od KLASY — sklada ja `wierszePochodnych`,
@@ -303,6 +358,11 @@ export function Bohater({
           >
             {cecha.wartosc}
           </span>
+          {/*
+            Przycisk „+" — `BTN_SCR_CHAR_STEIGERN1 + i` w kolumnie
+            trzeciej, 3 px nad wierszem. Nieczynny, gdy nie stac:
+            `canBoost[i] = boostPrice <= SG_GOLD`.
+          */}
           <button
             type="button"
             className="postac-plus"
@@ -312,17 +372,51 @@ export function Bohater({
               width: BOK_PLUSA,
               height: BOK_PLUSA,
             }}
-            title={`Dodaj punkt: ${cecha.nazwa}`}
-            aria-label={`Dodaj punkt: ${cecha.nazwa}`}
-            disabled
+            title={`${cecha.nazwa} +${PUNKTOW_ZA_ZAKUP}: ${opisCeny(gracz.cenyCech[i] ?? 0)}`}
+            aria-label={`Dokup ${PUNKTOW_ZA_ZAKUP} punkty: ${cecha.nazwa}`}
+            disabled={!cecha.stac}
+            onPointerEnter={() => setPokazCeny(true)}
+            onPointerLeave={() => {
+              setPokazCeny(false);
+              przerwijPowtarzanie();
+            }}
+            onFocus={() => setPokazCeny(true)}
+            onBlur={() => setPokazCeny(false)}
+            onPointerDown={() => cecha.stac && zacznijPowtarzanie(i + 1)}
+            onPointerUp={przerwijPowtarzanie}
+            onPointerCancel={przerwijPowtarzanie}
+            onClick={() => onKupCeche(i + 1)}
           />
-          <span
-            className="postac-cecha"
-            style={{ left: KOLUMNY_CECH[3], top: wiersz(i) }}
-            title={pochodne[i]!.tytul ?? ''}
-          >
-            {pochodne[i]!.nazwa}
-          </span>
+
+          {/*
+            Podpis wartosci pochodnej albo CENA punktu — nigdy oba naraz.
+            Obie stoja w tej samej kolumnie (520) i przelacza je najazd
+            na dowolny „+".
+          */}
+          {pokazCeny ? (
+            <span className="postac-cena" style={{ left: KOLUMNA_CENY, top: wiersz(i) }}>
+              {cecha.zloto > 0 && (
+                <>
+                  {cecha.zloto.toLocaleString('pl-PL')}
+                  <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
+                </>
+              )}
+              {cecha.srebro > 0 && (
+                <>
+                  {cecha.srebro}
+                  <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+                </>
+              )}
+            </span>
+          ) : (
+            <span
+              className="postac-cecha"
+              style={{ left: KOLUMNY_CECH[3], top: wiersz(i) }}
+              title={pochodne[i]!.tytul ?? ''}
+            >
+              {pochodne[i]!.nazwa}
+            </span>
+          )}
           <span className="postac-cecha" style={{ left: KOLUMNY_CECH[4], top: wiersz(i) }}>
             {pochodne[i]!.wartosc}
           </span>
