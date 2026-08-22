@@ -222,22 +222,78 @@ export function wierszeCech(gracz: {
   ];
 }
 
+/**
+ * Prawa kolumna pod portretem — PIEC wierszy, ktore ZALEZA OD KLASY.
+ *
+ * Klient buduje ja zawsze tak samo (podpisy `TXT_CHAR_SCHADEN + i`,
+ * czyli pozycje 65..69 pliku jezykowego):
+ *
+ *   0  Obrona          = Sila / 2
+ *   1  Zdolnosc uniku  = Zrecznosc / 2
+ *   2  Odpornosc       = Inteligencja / 2
+ *   3  Zywotnosc       = Wytrzym. * mnoznik klasy * (poziom + 1)
+ *   4  Cios krytyczny  = Szczescie * 5 / (poziom przeciwnika * 2)
+ *
+ * a potem PODMIENIA ten jeden wiersz, ktory odpowiada cesze glownej
+ * klasy: jego podpis staje sie „Obrazenia" (pozycja 160), a wartosc
+ * srednia ciosu:
+ *
+ *   case 1: SchadenLblID = LBL_SCR_CHAR_SCHADEN_CAPTION;    // wiersz 0, sila
+ *   case 2: SchadenLblID = LBL_SCR_CHAR_LEBEN_CAPTION;      // wiersz 2, inteligencja
+ *   case 3: SchadenLblID = LBL_SCR_CHAR_KAMPFWERT_CAPTION;  // wiersz 1, zrecznosc
+ *   ...
+ *   actor[SchadenLblID].text = txt[TXT_SCHADEN];
+ *   actor[SchadenID].text = "~" + tmpDamageAvg;
+ *
+ * Wojownik ma wiec „Obrazenia" tam, gdzie mag ma „Obrona", a lowca
+ * „Zdolnosc uniku" — i odwrotnie. Wczesniej stalo tu piec wierszy
+ * wojownika dla kazdej klasy i mag nie widzial ani swojej obrony, ani
+ * tego, ze bije inteligencja.
+ */
+
+/** Ktory wiersz prawej kolumny zajmuja obrazenia. Indeks cechy glownej. */
+export function wierszObrazen(klasa: number): number {
+  return klasa === 2 ? 2 : klasa === 3 ? 1 : 0;
+}
+
 export function wierszePochodnych(gracz: {
+  klasa: number;
   obrazenia: { min: number; max: number; srednio: number };
+  obrona: number;
   unik: number;
   odpornosc: number;
   zycie: number;
   ciosKrytyczny: number;
 }) {
-  return [
+  const wiersze = [
+    // Pozycje 65..69 oryginalnego pliku jezykowego.
+    { nazwa: 'Obrona', wartosc: String(gracz.obrona), tytul: 'Siła / 2' },
+    { nazwa: 'Zdolność uniku', wartosc: String(gracz.unik), tytul: 'Zręczność / 2' },
+    { nazwa: 'Odporność', wartosc: String(gracz.odpornosc), tytul: 'Inteligencja / 2' },
     {
-      nazwa: 'Obrażenia',
-      wartosc: `~${gracz.obrazenia.srednio}`,
-      tytul: `${gracz.obrazenia.min} – ${gracz.obrazenia.max}`,
+      nazwa: 'Żywotność',
+      wartosc: String(gracz.zycie),
+      tytul: `Wytrzym. * ${MNOZNIK_ZYCIA[gracz.klasa] ?? 5} * (Poziom + 1)`,
     },
-    { nazwa: 'Zdolność uniku', wartosc: String(gracz.unik), tytul: '' },
-    { nazwa: 'Odporność', wartosc: String(gracz.odpornosc), tytul: '' },
-    { nazwa: 'Żywotność', wartosc: String(gracz.zycie), tytul: '' },
-    { nazwa: 'Cios krytyczny', wartosc: `${gracz.ciosKrytyczny}%`, tytul: '' },
+    {
+      nazwa: 'Cios krytyczny',
+      wartosc: `${gracz.ciosKrytyczny}%`,
+      tytul: 'Szczęście * 5 / (Poziom przeciwnika * 2)',
+    },
   ];
+
+  wiersze[wierszObrazen(gracz.klasa)] = {
+    // Pozycja 160 — ten sam napis, co w podpowiedzi broni.
+    nazwa: 'Obrażenia',
+    wartosc: `~${gracz.obrazenia.srednio}`,
+    tytul: `${gracz.obrazenia.min} – ${gracz.obrazenia.max}`,
+  };
+
+  return wiersze;
 }
+
+/**
+ * Mnoznik zywotnosci — `tmpLifeFactor` z klienta: wojownik 5, mag 2,
+ * lowca 4. Ta sama liczba stoi w `Char::__construct` serwera.
+ */
+const MNOZNIK_ZYCIA: Record<number, number> = { 1: 5, 2: 2, 3: 4 };

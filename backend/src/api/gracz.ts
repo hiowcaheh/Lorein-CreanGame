@@ -70,6 +70,13 @@ export interface Gracz {
 
   /** Wartosci wyliczane — w oryginale liczyl je klient z pol odpowiedzi. */
   obrazenia: { min: number; max: number; srednio: number };
+  /**
+   * Trzy pierwsze wartosci prawej kolumny to po prostu POLOWA cechy —
+   * `int((cecha + dokladka) / 2)` w kliencie. Ktora z nich zostanie
+   * zastapiona obrazeniami, zalezy od klasy; robi to ekran, tak samo
+   * jak oryginal.
+   */
+  obrona: number;
   unik: number;
   odpornosc: number;
   ciosKrytyczny: number;
@@ -388,6 +395,9 @@ function policzWartosci(
 
   return {
     obrazenia: { min, max, srednio: Math.floor((min + max) / 2) },
+    // „Obrona", „Zdolnosc uniku" i „Odpornosc" to polowa sily, zrecznosci
+    // i inteligencji — trzy pierwsze wiersze prawej kolumny.
+    obrona: Math.trunc(cechy.sila / 2),
     unik: Math.trunc(cechy.zrecznosc / 2),
     odpornosc: Math.trunc(cechy.intelekt / 2),
     ciosKrytyczny: krytyk,

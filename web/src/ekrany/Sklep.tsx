@@ -24,12 +24,14 @@ import {
   KOLUMNY_CECH,
   MIEJSCA,
   NAZWA_W_POLU,
+  PASEK_DOSWIADCZENIA,
   ODSTEP_WIERSZA,
   PLECAK,
   PORTRET,
   TLO_LEWE,
   WIERSZ_CECHY_Y,
   pustaBron,
+  WYPELNIENIE_PASKA,
   wierszeCech,
   wierszePochodnych,
   type Ramka as RamkaPostaci,
@@ -180,14 +182,37 @@ export function Sklep({
       </div>
 
       {/*
-        Nick i poziom pod portretem.
+        Nick pod portretem.
         SWIADOME ODSTEPSTWO — patrz tabela w CLAUDE.md. Oryginal nie
         wklada `CNT_SCR_CHAR_NAME` do `BNC_SCREEN_SHAKES`, wiec w sklepie
         nazwy postaci nie ma wcale. Miejsce jest to samo, co na ekranie
         postaci (POS_CHAR_NAME).
       */}
       <div className="postac-nazwa" style={styl(przeliczRamke(NAZWA_W_POLU))}>
-        {gracz.nick} (Lv{gracz.poziom})
+        {gracz.nick}
+      </div>
+
+      {/*
+        Pasek doswiadczenia z poziomem — ten sam, co na ekranie postaci.
+        Tutaj odstepstwa nie ma: `CA_SCR_CHAR_EXPBAR` NALEZY do
+        `BNC_SCREEN_SHAKES` i `BNC_SCREEN_FIDGET`, wiec pasek stoi
+        w sklepie tak samo jak u bohatera.
+      */}
+      <div
+        className="postac-pasek"
+        style={styl(przeliczRamke(PASEK_DOSWIADCZENIA))}
+        title="Doświadczenie"
+      >
+        <div
+          className="wypelnienie"
+          style={{
+            width: `${Math.round(gracz.postepPoziomu * 100)}%`,
+            backgroundImage: `url('${WYPELNIENIE_PASKA}')`,
+          }}
+        />
+        <span>
+          Pzm {gracz.poziom} · {gracz.doswiadczenie} / {gracz.doNastepnegoPoziomu}
+        </span>
       </div>
 
       {MIEJSCA.map((m) => (

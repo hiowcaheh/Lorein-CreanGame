@@ -29,6 +29,8 @@ export interface Gracz {
   opis: string;
 
   obrazenia: { min: number; max: number; srednio: number };
+  /** Polowa sily — pierwszy wiersz prawej kolumny. */
+  obrona: number;
   unik: number;
   odpornosc: number;
   ciosKrytyczny: number;

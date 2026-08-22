@@ -48,6 +48,7 @@ import {
   TLO_PRAWE,
   WIERSZ_CECHY_Y,
   WIERZCHOWIEC,
+  wierszePochodnych,
   WYPELNIENIE_PASKA,
   pustaBron,
   type Ramka,
@@ -179,13 +180,14 @@ export function Bohater({
     };
   });
 
-  const pochodne = [
-    { nazwa: 'Obrażenia', wartosc: `~${gracz.obrazenia.srednio}`, tytul: `${gracz.obrazenia.min} – ${gracz.obrazenia.max}` },
-    { nazwa: 'Zdolność uniku', wartosc: String(gracz.unik) },
-    { nazwa: 'Odporność', wartosc: String(gracz.odpornosc) },
-    { nazwa: 'Żywotność', wartosc: String(gracz.zycie) },
-    { nazwa: 'Cios krytyczny', wartosc: `${gracz.ciosKrytyczny}%` },
-  ];
+  /*
+   * Prawa kolumna zalezy od KLASY — sklada ja `wierszePochodnych`,
+   * ten sam kod, co w sklepach. Wojownik ma „Obrazenia" w wierszu
+   * pierwszym, lowca w drugim, mag w trzecim; wiersz zajety przez
+   * obrazenia traci swoj zwykly podpis („Obrona", „Zdolnosc uniku"
+   * albo „Odpornosc").
+   */
+  const pochodne = wierszePochodnych(gracz);
 
   return (
     <div className="postac" ref={ekran}>
