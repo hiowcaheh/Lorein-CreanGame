@@ -93,6 +93,12 @@ zmienil. **Podmieniona zawartosc pod ta sama nazwa nie dojdzie do nikogo, kto
 raz otworzyl gre.** Poprawka grafiki musi wiec dostac NOWA nazwe pliku —
 inaczej wyglada, jakby zmiana nie zadzialala.
 
+## Co zostalo do zrobienia
+
+`DO-ZROBIENIA.md` — lista tego, czego jeszcze nie ma, a JEST w oryginalnych
+plikach, razem ze wskazaniem zrodla dla kazdej pozycji. Zajrzyj tam, zanim
+zaczniesz cokolwiek nowego, i skresl pozycje po zrobieniu.
+
 ## Sprawdzanie pracy
 
 - `cd web && npm test && npm run build`
