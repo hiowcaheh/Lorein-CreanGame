@@ -2126,7 +2126,8 @@ button.postac-pancerz {
   line-height: 0;
 }
 
-.lochy-kafel:disabled { cursor: default; }
+.lochy-kafel:disabled,
+.lochy-kafel.niegotowy { cursor: default; }
 .lochy-kafel > img { position: absolute; left: 0; top: 0; width: 234px; height: 165px; }
 .lochy-kafel:not(:disabled):hover .obraz { filter: brightness(1.12); }
 

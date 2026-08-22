@@ -11,7 +11,18 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   DZWIEK_OTWARCIA,
   KAFEL,
+  KAFEL_PORTALU,
+  KAFEL_WIEZY,
   KAFLE,
+  KAFLE_DRUGIEJ,
+  KLATEK_PORTALU,
+  ODSTEP_KLATEK_PORTALU_MS,
+  OBRAZ_PORTALU,
+  OBRAZ_PORTAL_ZAMKNIETY,
+  OBRAZ_WIEZY,
+  UKONCZONYCH_NA_DRUGA_PLANSZE,
+  klatkaPortalu,
+  obrazDrugiejPlanszy,
   KROKOW_OTWIERANIA,
   KROK_OTWIERANIA_MS,
   LOCHOW_NA_LISCIE,
@@ -35,10 +46,12 @@ import {
 } from '../gra/lochyUklad';
 import {
   BRAK_KLUCZA,
+  NAZWY_DRUGIEJ_PLANSZY,
   NAZWY_LOCHOW,
   OCZYSZCZONY,
   OPIS_POSTEPU,
   PODPOWIEDZ_GRZYBA,
+  TYTUL_DRUGIEJ_PLANSZY,
   TYTUL_LISTY,
   TYTUL_LOCHU,
 } from '../gra/lochy-teksty';
@@ -62,6 +75,16 @@ export interface StanLochow {
   grzyby: number;
   wolneMiejsceWPlecaku: boolean;
   gracz?: Gracz;
+}
+
+/**
+ * Nazwa i motto lochu. Pierwsza dziewiatka ma je w `TXT_DUNGEON_NAME`,
+ * lochy 10-13 — w `TXT_HL_MAINQUESTS_NAME`, na drugiej planszy.
+ */
+function nazwaLochu(numer: number): { nazwa: string; motto: string } | undefined {
+  return numer <= LOCHOW_NA_LISCIE
+    ? NAZWY_LOCHOW[numer - 1]
+    : NAZWY_DRUGIEJ_PLANSZY[numer - LOCHOW_NA_LISCIE - 1];
 }
 
 /** Nazwa przeciwnika: numer z tablicy albo sam gracz (kopia, numer -1). */
@@ -115,9 +138,20 @@ export function Lochy({
 
   const zaslona = otwierane.length === 0 ? 1 : Math.max(0, 1 - krok / KROKOW_OTWIERANIA);
 
+  /*
+   * Ktora plansza. `Add((countDone >= 9) ? BNC_SCREEN_HLMAINQUESTS
+   * : BNC_SCREEN_MAINQUESTS)` — liczy sie liczba PRZEJSZTYCH lochow,
+   * a nie to, ktore konkretnie.
+   */
+  const ukonczonych = stan.lochy.filter((l) => l.stan >= PRZESZEDL).length;
+  const drugaPlansza = ukonczonych >= UKONCZONYCH_NA_DRUGA_PLANSZE;
+
   const naLiscie = useMemo(
-    () => stan.lochy.filter((l) => l.numer <= LOCHOW_NA_LISCIE),
-    [stan.lochy],
+    () =>
+      stan.lochy.filter((l) =>
+        drugaPlansza ? l.numer > LOCHOW_NA_LISCIE : l.numer <= LOCHOW_NA_LISCIE,
+      ),
+    [stan.lochy, drugaPlansza],
   );
 
   const otwarty = wybrany === null ? null : (stan.lochy.find((l) => l.numer === wybrany) ?? null);
@@ -129,15 +163,18 @@ export function Lochy({
       {otwarty === null ? (
         <>
           <div className="lochy-tytul" style={{ left: TYTUL.srodek, top: TYTUL.gora }}>
-            {TYTUL_LISTY}
+            {drugaPlansza ? TYTUL_DRUGIEJ_PLANSZY : TYTUL_LISTY}
           </div>
 
+          {drugaPlansza && <WiezaIPortal />}
+
           {naLiscie.map((loch, i) => {
-            const kafel = KAFLE[i]!;
+            const kafel = (drugaPlansza ? KAFLE_DRUGIEJ[i] : KAFLE[i])!;
+            if (!kafel) return null;
             const zamkniety = loch.stan <= KLUCZ_UZYTY_LUB_MNIEJ;
             const przeszedl = loch.stan >= PRZESZEDL;
             const swiezy = otwierane.includes(loch.numer);
-            const nazwa = NAZWY_LOCHOW[loch.numer - 1];
+            const nazwa = nazwaLochu(loch.numer);
 
             return (
               <button
@@ -172,7 +209,11 @@ export function Lochy({
                   setWybrany(loch.numer);
                 }}
               >
-                <img className="obraz" src={obrazLochu(loch.numer)} alt={nazwa?.nazwa ?? ''} />
+                <img
+                  className="obraz"
+                  src={drugaPlansza ? obrazDrugiejPlanszy(loch.numer) : obrazLochu(loch.numer)}
+                  alt={nazwa?.nazwa ?? ''}
+                />
                 {zamkniety && (
                   <img
                     className="zaslona"
@@ -205,6 +246,66 @@ export function Lochy({
 /** Stan „jeszcze nie wszedl" — zaslona nad kaflem stoi do dwojki wlacznie. */
 const KLUCZ_UZYTY_LUB_MNIEJ = 1;
 
+/**
+ * Wieza i Portal do piekiel — srodkowa kolumna drugiej planszy.
+ *
+ * Kafle stoja tam, gdzie w oryginale, ale zadnego z tych ekranow jeszcze
+ * nie ma (patrz tabela odstepstw w CLAUDE.md), wiec obie plytki sa
+ * przykryte zaslona i nie daja sie klikac. Portal ma pod nia swoja
+ * animacje — dwanascie klatek z `scr/dungeons/portal/`.
+ */
+function WiezaIPortal() {
+  const [klatka, setKlatka] = useState(0);
+
+  useEffect(() => {
+    const zegar = setInterval(
+      () => setKlatka((k) => (k + 1) % KLATEK_PORTALU),
+      ODSTEP_KLATEK_PORTALU_MS,
+    );
+    return () => clearInterval(zegar);
+  }, []);
+
+  const wieza = NAZWY_DRUGIEJ_PLANSZY[4];
+  const portal = NAZWY_DRUGIEJ_PLANSZY[5];
+
+  return (
+    <>
+      <div
+        className="lochy-kafel niegotowy"
+        style={{
+          left: KAFEL_WIEZY.lewo,
+          top: KAFEL_WIEZY.gora,
+          width: KAFEL.szerokosc,
+          height: KAFEL.wysokosc,
+        }}
+        title={[wieza?.nazwa, wieza?.motto, 'Jeszcze nie ma tu czego zwiedzać.']
+          .filter(Boolean)
+          .join('\n')}
+      >
+        <img className="obraz" src={OBRAZ_WIEZY} alt={wieza?.nazwa ?? ''} />
+        <img className="zaslona" src={OBRAZ_ZAMKNIETY} alt="" />
+      </div>
+
+      <div
+        className="lochy-kafel niegotowy"
+        style={{
+          left: KAFEL_PORTALU.lewo,
+          top: KAFEL_PORTALU.gora,
+          width: KAFEL.szerokosc,
+          height: KAFEL.wysokosc,
+        }}
+        title={[portal?.nazwa, portal?.motto, 'Jeszcze nie ma tu czego zwiedzać.']
+          .filter(Boolean)
+          .join('\n')}
+      >
+        <img className="obraz" src={OBRAZ_PORTALU} alt={portal?.nazwa ?? ''} />
+        <img className="obraz" src={klatkaPortalu(klatka)} alt="" />
+        <img className="zaslona" src={OBRAZ_PORTAL_ZAMKNIETY} alt="" />
+      </div>
+    </>
+  );
+}
+
 function EkranLochu({
   loch,
   stan,
@@ -218,7 +319,7 @@ function EkranLochu({
   onWroc: () => void;
   onWalcz: () => void;
 }) {
-  const nazwa = NAZWY_LOCHOW[loch.numer - 1];
+  const nazwa = nazwaLochu(loch.numer);
   const przeciwnik = nazwaPrzeciwnika(loch.potwor, gracz.nick);
   const zostalo = Math.max(0, stan.przerwaDo - stan.teraz);
   const czekamy = zostalo > 0;

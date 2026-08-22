@@ -49,6 +49,52 @@ export const KAFLE = Array.from({ length: LOCHOW_NA_LISCIE }, (_, i) => ({
 }));
 
 /*
+ * DRUGA PLANSZA — `BNC_SCREEN_HLMAINQUESTS`.
+ *
+ * Klient przelacza sie na nia, gdy gracz ma za soba dziewiec lochow:
+ * `Add((countDone >= 9) ? BNC_SCREEN_HLMAINQUESTS : BNC_SCREEN_MAINQUESTS)`.
+ * Zamiast dziewieciu kafli stoi tu szesc: cztery lochy (10-13) po bokach,
+ * a w srodkowej kolumnie wieza nad portalem.
+ *
+ *   lochy   (POS_MQS_BUTTON_X + REL_MQS_BUTTON_X * 2 * (i % 2),
+ *            POS_MQS_BUTTON_Y + 100 + 200 * (i / 2))
+ *   wieza   (POS_MQS_BUTTON_X + REL_MQS_BUTTON_X, POS_MQS_BUTTON_Y + REL_MQS_BUTTON_Y - 170)
+ *   portal  (POS_MQS_BUTTON_X + REL_MQS_BUTTON_X, POS_MQS_BUTTON_Y + REL_MQS_BUTTON_Y - 5)
+ */
+export const LOCHOW_NA_DRUGIEJ = 4;
+export const UKONCZONYCH_NA_DRUGA_PLANSZE = 9;
+
+export const KAFLE_DRUGIEJ = Array.from({ length: LOCHOW_NA_DRUGIEJ }, (_, i) => ({
+  lewo: 380 + 280 * 2 * (i % 2) - POCZATEK_X,
+  gora: 170 + 100 + 200 * Math.floor(i / 2) - POCZATEK_Y,
+}));
+
+export const KAFEL_WIEZY = { lewo: 380 + 280 - POCZATEK_X, gora: 170 + 195 - 170 - POCZATEK_Y };
+export const KAFEL_PORTALU = { lewo: 380 + 280 - POCZATEK_X, gora: 170 + 195 - 5 - POCZATEK_Y };
+
+/** `scr/dungeons/button{60 + i}.jpg` dla i = 0..3, czyli lochy 10-13. */
+export function obrazDrugiejPlanszy(numer: number): string {
+  return `/res/sfgame/scr/dungeons/button${50 + numer}.jpg`;
+}
+
+export const OBRAZ_WIEZY = '/res/sfgame/scr/dungeons/button_tower.jpg';
+export const OBRAZ_PORTALU = '/res/sfgame/scr/dungeons/button_portal.jpg';
+export const OBRAZ_PORTAL_ZAMKNIETY = '/res/sfgame/scr/dungeons/unknown_portal.png';
+
+/**
+ * Klatki portalu — `portalFrames = 12`, a klient bierze z dwudziestu
+ * czterech plikow co drugi: `portal_dungeons_{floor(i * 24 / 12) + 1}`.
+ */
+export const KLATEK_PORTALU = 12;
+export const KLATEK_W_KATALOGU = 24;
+export const ODSTEP_KLATEK_PORTALU_MS = 90;
+
+export function klatkaPortalu(i: number): string {
+  const numer = Math.floor((i * KLATEK_W_KATALOGU) / KLATEK_PORTALU) + 1;
+  return `/res/sfgame/scr/dungeons/portal/portal_dungeons_${numer}.jpg`;
+}
+
+/*
  * EKRAN JEDNEGO LOCHU.
  *
  * `SHP_MAINQUEST` to przydymiony prostokat w `POS_MQ_SQUARE` o rozmiarze

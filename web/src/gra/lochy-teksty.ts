@@ -21,6 +21,22 @@ export const NAZWY_LOCHOW: { nazwa: string; motto: string }[] = [
   { nazwa: 'Piramida Szaleństwa', motto: '"Nie trać głowy."' },
 ];
 
+/**
+ * Druga plansza — `TXT_HL_MAINQUESTS_NAME + i` dla i = 0..5:
+ * lochy 10-13, potem wieza i portal.
+ */
+export const NAZWY_DRUGIEJ_PLANSZY: { nazwa: string; motto: string }[] = [
+  { nazwa: 'Twierdza', motto: 'Z zewnątrz wygląda na solidną.' },
+  { nazwa: 'Cyrk', motto: 'Skąd dobiega ta radosna melodia?' },
+  { nazwa: 'Piekło', motto: 'Nie może być tam aż tak źle...' },
+  { nazwa: '13. piętro', motto: 'Na sam szczyt!' },
+  { nazwa: 'Wieża', motto: 'Za siedmioma górami i lasami, był sobie dzielny poszukiwacz przygód i jego trzech kompanów...' },
+  { nazwa: 'Portal do piekieł', motto: 'Znasz już ojczyznę demonów?' },
+];
+
+/** `TXT_HL_MAINQUESTS_TITLE` — tytul drugiej planszy. */
+export const TYTUL_DRUGIEJ_PLANSZY = 'Lochy';
+
 /** `TXT_DUNGEON_INFO` — „Poziom: %1/10#Kolejny przeciwnik: %2". */
 export const OPIS_POSTEPU = 'Poziom: %1/10#Kolejny przeciwnik: %2';
 /** `TXT_DUNGEON_INFO + 1` — nad zamknietym lochem. */

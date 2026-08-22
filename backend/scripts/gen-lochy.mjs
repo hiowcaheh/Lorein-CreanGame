@@ -167,6 +167,8 @@ writeFileSync(celPotworow, potworyTs, 'utf8');
 const TXT_DUNGEON_NAME = stala('TXT_DUNGEON_NAME');
 const TXT_DUNGEON_INFO = stala('TXT_DUNGEON_INFO');
 const TXT_MQ_MUSHHINT = stala('TXT_MQ_MUSHHINT');
+const TXT_HL_MAINQUESTS_NAME = stala('TXT_HL_MAINQUESTS_NAME');
+const TXT_HL_MAINQUESTS_TITLE = stala('TXT_HL_MAINQUESTS_TITLE');
 
 const apostrof = (s) => `'${(s ?? '').replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
 
@@ -176,6 +178,18 @@ for (let i = 0; i < 9; i++) {
   const pelna = teksty.get(TXT_DUNGEON_NAME + i) ?? '';
   const [nazwa, motto] = pelna.split('|');
   nazwy.push(`  { nazwa: ${apostrof(nazwa)}, motto: ${apostrof(motto)} },`);
+}
+
+/*
+ * Druga plansza lochow (`BNC_SCREEN_HLMAINQUESTS`): cztery lochy 10-13,
+ * wieza i portal. Nazwy sa rozdzielone pionowa kreska tak samo, jak przy
+ * pierwszej dziewiatce, tylko bez cudzyslowow wokol motta.
+ */
+const nazwyDrugiej = [];
+for (let i = 0; i < 6; i++) {
+  const pelna = teksty.get(TXT_HL_MAINQUESTS_NAME + i) ?? '';
+  const [nazwa, motto] = pelna.split('|');
+  nazwyDrugiej.push(`  { nazwa: ${apostrof(nazwa)}, motto: ${apostrof(motto)} },`);
 }
 
 const tekstyTs = `/*
@@ -192,6 +206,17 @@ const tekstyTs = `/*
 export const NAZWY_LOCHOW: { nazwa: string; motto: string }[] = [
 ${nazwy.join('\n')}
 ];
+
+/**
+ * Druga plansza — \`TXT_HL_MAINQUESTS_NAME + i\` dla i = 0..5:
+ * lochy 10-13, potem wieza i portal.
+ */
+export const NAZWY_DRUGIEJ_PLANSZY: { nazwa: string; motto: string }[] = [
+${nazwyDrugiej.join('\n')}
+];
+
+/** \`TXT_HL_MAINQUESTS_TITLE\` — tytul drugiej planszy. */
+export const TYTUL_DRUGIEJ_PLANSZY = ${apostrof(teksty.get(TXT_HL_MAINQUESTS_TITLE))};
 
 /** \`TXT_DUNGEON_INFO\` — „Poziom: %1/10#Kolejny przeciwnik: %2". */
 export const OPIS_POSTEPU = ${apostrof(teksty.get(TXT_DUNGEON_INFO))};
