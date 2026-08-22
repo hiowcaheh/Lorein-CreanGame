@@ -1069,11 +1069,12 @@ button.postac-wierzchowiec-obraz img {
   line-height: 30px;
   white-space: nowrap;
   /*
-   * Pismo o dwa punkty mniejsze niz reszta okna.
+   * Pismo o trzy punkty mniejsze niz reszta okna.
    *
-   * Kolumna nagrod ma 165 px — tyle zostaje miedzy jej poczatkiem (660)
-   * a miejscem na przedmiot (830). Polskie podpisy sa dluzsze niz
-   * niemieckie z oryginalu i przy 20 px wchodzilyby pod ikone nagrody.
+   * Kolumna nagrod ma 190 px — tyle zostaje miedzy jej poczatkiem (660)
+   * a odsunieta ikona zdobyczy (860). Polskie podpisy sa dluzsze niz
+   * niemieckie z oryginalu, a do doswiadczenia dochodzi jeszcze znaczek
+   * premii; przy 20 px caly wiersz wchodzilby pod ikone.
    */
   font-size: 17px;
   color: var(--zloto);
@@ -1717,7 +1718,7 @@ button.postac-wierzchowiec-obraz img {
   text-align: left;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .karczma-premia:disabled { cursor: default; }
@@ -1728,8 +1729,8 @@ button.postac-wierzchowiec-obraz img {
  * podskakuje, zeby dalo sie ja zauwazyc.
  */
 .karczma-premia img {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .karczma-premia .skacze { animation: podskok 1.6s ease-in-out infinite; }
@@ -2151,9 +2152,14 @@ button.postac-pancerz {
 .lochy-przeciwnik,
 .lochy-ramka { pointer-events: none; }
 
-.lochy-podpowiedz {
-  font-size: var(--pismo-cechy);
-  line-height: 1.3;
-  color: var(--przygaszony);
-  text-shadow: 0 1px 2px #000;
+/*
+ * Ikona waluty w napisie przycisku — `~P`, `~G`, `~S` z oryginalu.
+ * `SetBtnText` wstawia w to miejsce piec spacji i klade na nich obrazek;
+ * my po prostu wstawiamy obrazek w tekst.
+ */
+.napis-ikona {
+  width: 22px;
+  height: 18px;
+  vertical-align: -3px;
+  margin: 0 2px;
 }

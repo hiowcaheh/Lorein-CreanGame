@@ -27,6 +27,7 @@ import {
   tytulWyprawy,
 } from '../../gra/karczmaUklad';
 import type { Gracz, StanKarczmy, Zadanie } from '../../gra/typy';
+import { liczba } from '../../gra/liczby';
 
 /** Nazwa krainy, w ktora wysyla zadanie — `quest_location_N` liczy od jedynki. */
 export function kraina(lokacja: number): string {
@@ -160,7 +161,7 @@ export function OknoWyboru({
       {[
         <>{PODPISY.wynagrodzenie}</>,
         <>
-          {Math.floor(wybrane.zloto / 100).toLocaleString('pl-PL')}
+          {liczba(Math.floor(wybrane.zloto / 100))}
           <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
           {String(wybrane.zloto % 100).padStart(2, '0')}
           <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
@@ -177,7 +178,7 @@ export function OknoWyboru({
           disabled={premiaLacznie === 0}
           onClick={() => setPokazanaPremia((czy) => !czy)}
         >
-          {PODPISY.doswiadczenie}: {wybrane.doswiadczenie.toLocaleString('pl-PL')}
+          {PODPISY.doswiadczenie}: {liczba(wybrane.doswiadczenie)}
           {premiaLacznie > 0 && (
             <img className="skacze" src={ZNACZEK_PREMII} alt="z premią" />
           )}

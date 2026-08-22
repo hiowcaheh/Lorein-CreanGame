@@ -126,10 +126,16 @@ export const ODSTEP_WYBOROW = 40;
  * a przyciski zaczynaja sie na 960. Napisy wchodzily na nie i dluzsze
  * liczby stawaly sie nieczytelne.
  */
-export const OKNO_NAGRODY = ramka(410 + 250, 230 + 280, 165, 30);
+export const OKNO_NAGRODY = ramka(410 + 250, 230 + 280, 190, 30);
 export const ODSTEP_NAGROD = 40;
-/** Miejsce na przedmiot do zdobycia: REL_QO_SLOT = (400, 335). */
-export const OKNO_PRZEDMIOT = ramka(410 + 400, 230 + 335, 90, 90);
+/*
+ * Miejsce na przedmiot do zdobycia. Oryginal ma `REL_QO_SLOT = (400, 335)`,
+ * czyli x = 810 — ale tam ikona wchodzi na wiersz doswiadczenia, odkad
+ * stoi przy nim znaczek premii. Przesuwamy ja o 50 px w prawo, do samych
+ * przyciskow: te zaczynaja sie na `REL_QO_START_X = 550`, czyli 960,
+ * a ikona konczy sie na 950. Kolumna nagrod rosnie o tyle samo.
+ */
+export const OKNO_PRZEDMIOT = ramka(410 + 450, 230 + 335, 90, 90);
 /*
  * Oba przyciski stoja w jednej kolumnie, REL_QO_START_X = 550.
  *

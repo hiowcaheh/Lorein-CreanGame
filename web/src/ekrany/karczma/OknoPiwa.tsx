@@ -21,6 +21,7 @@ import {
   PORTRETY_KARCZMARZA,
 } from '../../gra/karczmaUklad';
 import type { StanKarczmy } from '../../gra/typy';
+import { NapisZIkona } from '../../gra/NapisZIkona';
 
 export function OknoPiwa({
   stan,
@@ -101,7 +102,7 @@ export function OknoPiwa({
         disabled={!naleje}
         onClick={onKup}
       >
-        {PODPISY.piwoKup}
+        <NapisZIkona tekst={PODPISY.piwoKup} />
       </button>
 
       <button

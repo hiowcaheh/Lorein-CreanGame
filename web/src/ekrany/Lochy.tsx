@@ -46,11 +46,11 @@ import {
 } from '../gra/lochyUklad';
 import {
   BRAK_KLUCZA,
+  PODPOWIEDZ_GRZYBA,
   NAZWY_DRUGIEJ_PLANSZY,
   NAZWY_LOCHOW,
   OCZYSZCZONY,
   OPIS_POSTEPU,
-  PODPOWIEDZ_GRZYBA,
   TYTUL_DRUGIEJ_PLANSZY,
   TYTUL_LISTY,
   TYTUL_LOCHU,
@@ -58,6 +58,7 @@ import {
 import { NAZWY_POTWOROW } from '../gra/klaser-teksty';
 import { obrazPotwora, czas } from '../gra/karczmaUklad';
 import { KLIK, zagraj } from '../gra/dzwieki';
+import { NapisZIkona } from '../gra/NapisZIkona';
 import type { Gracz } from '../gra/typy';
 
 export interface OpisLochu {
@@ -376,19 +377,6 @@ function EkranLochu({
         }}
       />
 
-      {czekamy && (
-        <div
-          className="lochy-podpowiedz"
-          style={{
-            left: PODPOWIEDZ.lewo,
-            top: PODPOWIEDZ.gora,
-            width: PODPOWIEDZ.szerokosc,
-          }}
-        >
-          {PODPOWIEDZ_GRZYBA.split('%1').join(czas(zostalo))}
-        </div>
-      )}
-
       <button
         type="button"
         className="przycisk lochy-start"
@@ -399,9 +387,23 @@ function EkranLochu({
           minHeight: PRZYCISK.wysokosc,
         }}
         disabled={przeszedl || (czekamy && stan.grzyby <= 0) || !stan.wolneMiejsceWPlecaku}
+        title={
+          czekamy
+            ? PODPOWIEDZ_GRZYBA.split('%1').join(czas(zostalo))
+            : !stan.wolneMiejsceWPlecaku
+              ? 'Plecak jest pełny.'
+              : undefined
+        }
         onClick={onWalcz}
       >
-        OK{czekamy ? ' (1~P)' : ''}
+        {/*
+          Licznik stoi NA przycisku, a nie osobnym napisem obok.
+          Oryginal ma tu `SetBtnText(BTN_MAINQUEST_START, txt[TXT_OK]
+          + " (1~P)")`, a czas pokazuje w `LBL_MAINQUEST_MUSHHINT` po
+          lewej — ale tamto miejsce zajmuje u nas przycisk „Wroc",
+          ktorego oryginal nie ma (wychodzi sie krzyzykiem).
+        */}
+        <NapisZIkona tekst={czekamy ? `OK ${czas(zostalo)} (1~P)` : 'OK'} />
       </button>
 
       <button

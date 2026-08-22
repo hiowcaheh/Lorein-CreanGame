@@ -6,6 +6,8 @@
  * koncowki przy cenach powyzej 9999.
  */
 
+import { liczba } from './liczby';
+
 /**
  * Ile punktow daje jeden zakup. Jeden — patrz `backend/src/game/cechy.ts`
  * i tabela odstepstw w CLAUDE.md.
@@ -31,7 +33,7 @@ export function opisCeny(cena: number): string {
   const srebro = pokazywana % 100;
 
   const czesci: string[] = [];
-  if (zloto > 0) czesci.push(`${zloto.toLocaleString('pl-PL')} złota`);
+  if (zloto > 0) czesci.push(`${liczba(zloto)} złota`);
   if (srebro > 0 || zloto === 0) czesci.push(`${srebro} srebra`);
   return czesci.join(' ');
 }

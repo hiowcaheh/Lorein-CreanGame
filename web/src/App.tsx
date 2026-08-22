@@ -27,6 +27,7 @@ import { Walka } from './ekrany/karczma/Walka';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, Rozliczenie, StanKarczmy, StanSklepu } from './gra/typy';
+import { liczba } from './gra/liczby';
 
 type Zakladka =
   | 'miasto'
@@ -391,13 +392,13 @@ export function App() {
         */}
         <div className="zasoby">
           <div className="linia" title="Złoto i srebro">
-            <span>{Math.floor(gracz.srebro / 100).toLocaleString('pl-PL')}</span>
+            <span>{liczba(Math.floor(gracz.srebro / 100))}</span>
             <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
             <span>{String(gracz.srebro % 100).padStart(2, '0')}</span>
             <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
           </div>
           <div className="linia" title="Grzyby">
-            <span>{gracz.grzyby.toLocaleString('pl-PL')}</span>
+            <span>{liczba(gracz.grzyby)}</span>
             <img className="grzyb" src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
           </div>
         </div>

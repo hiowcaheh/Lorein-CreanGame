@@ -43,6 +43,7 @@ import {
   wartoscZPolozenia,
 } from '../gra/oknoUklad';
 import type { Gracz } from '../gra/typy';
+import { liczba } from '../gra/liczby';
 
 /** Nazwy cech — pozycje 60..64 pliku jezykowego. */
 const NAZWY = ['Siła', 'Zręczność', 'Inteligencja', 'Wytrzym.', 'Szczęście'];
@@ -231,7 +232,7 @@ export function OknoCechy({
         <span className="kwota">
           {cena.zloto > 0 && (
             <>
-              {cena.zloto.toLocaleString('pl-PL')}
+              {liczba(cena.zloto)}
               <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
             </>
           )}

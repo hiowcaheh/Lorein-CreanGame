@@ -72,6 +72,7 @@ import {
   type Ramka,
 } from '../gra/ekranPostaci';
 import type { Gracz, Mikstura, Przedmiot } from '../gra/typy';
+import { liczba } from '../gra/liczby';
 
 /**
  * Gorna granica oslony pancerza — `DamageReductionMax` w kliencie
@@ -388,7 +389,7 @@ export function Bohater({
             <span className="postac-cena" style={{ left: KOLUMNA_CENY, top: wiersz(i) }}>
               {cecha.zloto > 0 && (
                 <>
-                  {cecha.zloto.toLocaleString('pl-PL')}
+                  {liczba(cecha.zloto)}
                   <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
                 </>
               )}

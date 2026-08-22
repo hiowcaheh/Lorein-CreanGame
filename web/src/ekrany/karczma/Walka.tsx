@@ -92,6 +92,7 @@ import {
   type Ramka,
 } from '../../gra/karczmaUklad';
 import type { CechyWalki, Gracz, Rozliczenie } from '../../gra/typy';
+import { liczba } from '../../gra/liczby';
 
 /*
  * Zegar animacji ciosu.
@@ -457,7 +458,7 @@ export function Walka({
                   className="walka-nagroda doswiadczenie"
                   style={{ left: WALKA_DOSWIADCZENIE_X, top: WALKA_PIENIADZE_Y }}
                 >
-                  {PODPISY.doswiadczenie}: {nagroda.doswiadczenie.toLocaleString('pl-PL')}
+                  {PODPISY.doswiadczenie}: {liczba(nagroda.doswiadczenie)}
                 </div>
               )}
 
@@ -487,7 +488,7 @@ export function Walka({
                   {/* Zloto to sto srebra; oba czlony pokazuja sie tylko, gdy sa. */}
                   {Math.floor(nagroda.zloto / 100) > 0 && (
                     <>
-                      {Math.floor(nagroda.zloto / 100).toLocaleString('pl-PL')}
+                      {liczba(Math.floor(nagroda.zloto / 100))}
                       <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
                     </>
                   )}
@@ -619,7 +620,7 @@ function Strona({
         }}
       />
       <div className="walka-zycie-napis" style={{ left: pasek.lewo, top: pasek.gora + 5, width: pasek.szerokosc }}>
-        {Math.max(0, Math.round(zycie)).toLocaleString('pl-PL')}
+        {liczba(Math.max(0, Math.round(zycie)))}
       </div>
 
       <img className="walka-ramka" style={ramkaNaStyl(ramkaStatow)} src={OBRAZ_RAMKI_STATOW} alt="" />
@@ -630,7 +631,7 @@ function Strona({
             {wiersz.nazwa}
           </span>
           <span className="walka-cecha" style={{ left: kolumny[1], top: WALKA_STATY_Y + i * WALKA_ODSTEP_STATOW }}>
-            {cechy[wiersz.klucz].toLocaleString('pl-PL')}
+            {liczba(cechy[wiersz.klucz])}
           </span>
         </span>
       ))}
@@ -989,7 +990,7 @@ function Cios({
             opacity: stan.aObrazen,
           }}
         >
-          {NAZWY_CIOSOW[rodzaj] ?? `-${obrazenia.toLocaleString('pl-PL')}`}
+          {NAZWY_CIOSOW[rodzaj] ?? `-${liczba(obrazenia)}`}
         </div>
       )}
     </>

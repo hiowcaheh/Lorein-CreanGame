@@ -29,6 +29,7 @@ import {
 } from '../gra/grzybiarz';
 import { BladApi, zapytaj } from '../gra/api';
 import type { Gracz } from '../gra/typy';
+import { liczba } from '../gra/liczby';
 
 export function Grzybiarz({
   grzyby,
@@ -109,7 +110,7 @@ export function Grzybiarz({
       >
         <div className="tytul">Grzybiarz</div>
         <div className="masz">
-          Masz {grzyby.toLocaleString('pl-PL')}
+          Masz {liczba(grzyby)}
           <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
         </div>
       </div>
@@ -128,7 +129,7 @@ export function Grzybiarz({
           onClick={() => setWybrana(i)}
         >
           <img src="/res/sfgame/if/icon_pilz.png" alt="" />
-          <span className="ile">{paczka.grzyby.toLocaleString('pl-PL')}</span>
+          <span className="ile">{liczba(paczka.grzyby)}</span>
           {paczka.rabat > 0 && <span className="rabat">−{paczka.rabat}%</span>}
           <span className="cena">{cenaSlownie(paczka.cena)}</span>
         </button>
