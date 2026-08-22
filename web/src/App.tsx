@@ -22,9 +22,11 @@ import { Sklep } from './ekrany/Sklep';
 import { Stajnia, type StanStajni } from './ekrany/Stajnia';
 import { Grzybiarz } from './ekrany/Grzybiarz';
 import { Klaser, type StanKlasera } from './ekrany/Klaser';
+import { Lochy, type StanLochow } from './ekrany/Lochy';
+import { Walka } from './ekrany/karczma/Walka';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
-import type { Gracz, OdpowiedzZTokenem, StanKarczmy, StanSklepu } from './gra/typy';
+import type { Gracz, OdpowiedzZTokenem, Rozliczenie, StanKarczmy, StanSklepu } from './gra/typy';
 
 type Zakladka =
   | 'miasto'
@@ -58,10 +60,10 @@ const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'stajnia', 'grzybiarz', 'opcje', 'klaser'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'stajnia', 'grzybiarz', 'opcje', 'klaser', 'lochy'];
 
 /** Zakladki, ktore wypelniaja cala rame wlasnym obrazem. */
-const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'klaser'];
+const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'klaser', 'lochy'];
 
 /** Co widzi gracz, zanim wejdzie do gry. */
 type Brama = 'sprawdzam' | 'logowanie' | 'tworzenie';
@@ -76,6 +78,8 @@ export function App() {
   const [sklep, setSklep] = useState<StanSklepu | null>(null);
   const [stajnia, setStajnia] = useState<StanStajni | null>(null);
   const [klaser, setKlaser] = useState<StanKlasera | null>(null);
+  const [lochy, setLochy] = useState<StanLochow | null>(null);
+  const [walkaWLochu, setWalkaWLochu] = useState<Rozliczenie | null>(null);
   const odliczanie = useOdliczanieWyprawy(karczma);
 
   /** Zapisany token moze byc juz niewazny — sprawdzamy go przy starcie. */
@@ -140,8 +144,17 @@ export function App() {
    */
   function przeniesPrzedmiot(zrodlo: number, cel: number | null) {
     setBlad(null);
-    void zapytaj<{ gracz: Gracz }>('/ekwipunek', { zrodlo, cel })
-      .then(({ gracz: g }) => setGracz(g))
+    void zapytaj<{ gracz: Gracz; otwartyLoch?: number }>('/ekwipunek', { zrodlo, cel })
+      .then(({ gracz: g, otwartyLoch }) => {
+        setGracz(g);
+        /*
+         * Klucz do lochu nie zaklada sie na postac — otwiera loch
+         * i przenosi gracza na jego liste. Oryginal robi to samo:
+         * po `$ACT_USE_ITEM` odsyla `$ACT_ENTER_DUNGEON`, a klient
+         * odgrywa tam otwieranie wrot.
+         */
+        if (otwartyLoch) setZakladka('lochy');
+      })
       .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się przełożyć przedmiotu.'));
   }
 
@@ -196,6 +209,31 @@ export function App() {
    * Klaser. Serwer oddaje same bity — `ACT_ALBUM` w oryginale robi
    * dokladnie to samo. Cala mapa „ktory bit jest czym" siedzi u klienta.
    */
+  /*
+   * Lochy. Wejscie na liste podnosi swiezo uzyty klucz do stanu „otwarty",
+   * dokladnie jak `ACT_ENTER_DUNGEON` — dlatego stan pobiera sie z serwera,
+   * a nie sklada z tego, co juz mamy.
+   */
+  const wczytajLochy = useCallback(() => {
+    void zapytaj<StanLochow>('/lochy')
+      .then((s) => {
+        setLochy(s);
+        if (s.gracz) setGracz(s.gracz);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Wrota są zatrzaśnięte.'));
+  }, []);
+
+  function walczWLochu(numer: number) {
+    setBlad(null);
+    void zapytaj<StanLochow & { rozliczenie: Rozliczenie }>(`/lochy/${numer}/walcz`, {})
+      .then((odp) => {
+        setLochy(odp);
+        if (odp.gracz) setGracz(odp.gracz);
+        setWalkaWLochu(odp.rozliczenie);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się zejść do lochu.'));
+  }
+
   const wczytajKlaser = useCallback(() => {
     void zapytaj<StanKlasera>('/klaser')
       .then(setKlaser)
@@ -269,6 +307,7 @@ export function App() {
     if (zakladka === 'magia' && gracz) wczytajSklep(1);
     if (zakladka === 'stajnia' && gracz) wczytajStajnie();
     if (zakladka === 'klaser' && gracz) wczytajKlaser();
+    if (zakladka === 'lochy' && gracz) wczytajLochy();
   }, [zakladka, gracz, wczytajSklep]);
 
   function wyloguj() {
@@ -419,6 +458,24 @@ export function App() {
           <Stajnia stan={stajnia} gracz={gracz} onWynajmij={wynajmijWierzchowca} />
         )}
         {zakladka === 'klaser' && klaser && <Klaser stan={klaser} />}
+        {zakladka === 'lochy' && lochy && !walkaWLochu && (
+          <Lochy
+            stan={lochy}
+            gracz={gracz}
+            onWalcz={walczWLochu}
+            onOdswiez={wczytajLochy}
+          />
+        )}
+        {zakladka === 'lochy' && walkaWLochu && (
+          <Walka
+            rozliczenie={walkaWLochu}
+            gracz={gracz}
+            onZamknij={() => {
+              setWalkaWLochu(null);
+              wczytajLochy();
+            }}
+          />
+        )}
         {zakladka === 'bohater' && (
           <Bohater
             gracz={gracz}

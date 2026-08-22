@@ -85,6 +85,15 @@ export interface OpisLochu {
 
 export interface StanLochow {
   lochy: OpisLochu[];
+  /**
+   * Lochy otwarte wlasnie teraz — dla nich klient odgrywa otwieranie wrot.
+   *
+   * Oryginal poznaje je po tym, ze zapis stanu wyslany do klienta ma
+   * jeszcze jedynke (`DungeonLevel == "0"`), mimo ze baza dostala juz
+   * dwojke. Zamiast wysylac nieaktualna liczbe, mowimy wprost, ktore
+   * to sa — efekt ten sam: `FadeOut(CNT_MQS_DISABLED + i)` i `unlock.mp3`.
+   */
+  swiezoOtwarte: number[];
   /** Do kiedy trwa przerwa — czas uniksowy. */
   przerwaDo: number;
   teraz: number;
@@ -99,8 +108,11 @@ export interface StanLochow {
  * to wlasnie tu klucz uzyty na ekranie postaci staje sie otwartym lochem.
  */
 async function stanLochow(sql: Sql, wiersz: WierszGracza): Promise<StanLochow> {
+  const swiezoOtwarte: number[] = [];
+
   for (let loch = 1; loch < 10; loch++) {
     if (liczba(wiersz[`dungeon_${loch}`]) !== KLUCZ_UZYTY) continue;
+    swiezoOtwarte.push(loch);
     wiersz[`dungeon_${loch}`] = PIERWSZY_POZIOM;
     await sql`
       UPDATE user_data SET ${sql(`dungeon_${loch}`)} = ${PIERWSZY_POZIOM}
@@ -128,6 +140,7 @@ async function stanLochow(sql: Sql, wiersz: WierszGracza): Promise<StanLochow> {
 
   return {
     lochy: opisy,
+    swiezoOtwarte,
     przerwaDo: liczba(wiersz['dungeon_time']),
     teraz: time(),
     grzyby: liczba(wiersz['mushroom']),
@@ -146,11 +159,22 @@ lochy.get('/lochy', async (c) => {
 /** Rozliczenie jednej walki w lochu — ten sam ksztalt, co przy wyprawie. */
 interface RozliczenieLochu {
   wygrana: boolean;
-  /** Numer lochu — z niego bierze sie tlo walki (`location{50 + N}.jpg`). */
+  /** Numer lochu. */
   loch: number;
+  /**
+   * Numer krainy dla tla walki. Lochy stoja na `IMG_SCR_QUEST_BG_1 + 50 + N`,
+   * czyli `location{50 + N}.jpg` — ten sam mechanizm, co przy wyprawie.
+   */
+  lokacja: number;
   poziom: number;
   awans: number | null;
-  nagroda: { zloto: number; doswiadczenie: number } | null;
+  /*
+   * Ten sam ksztalt, co po wyprawie — ekran walki jest wspolny. Honoru
+   * ani grzybow loch nie daje, wiec stoja tam zera.
+   */
+  nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
+  /** Ekran walki potrafi pokazac, ze plecak byl pelny; tutaj nigdy nie jest. */
+  plecakBylPelny: boolean;
   zdobytyPrzedmiot: PrzedmiotEkranu | null;
   /** Loch przeszedl do konca — `stage == 12`. */
   ukonczony: boolean;
@@ -362,15 +386,22 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
   const rozliczenie: RozliczenieLochu = {
     wygrana,
     loch: numer,
+    lokacja: 50 + numer,
     poziom: poziomZeStanu(stan),
     awans: poziom > poziomPrzed ? poziom : null,
     nagroda: wygrana
       ? {
-          zloto: losPrzedmiotu === 1 || nowyStan === PRZESZEDL ? 0 : Math.trunc(doswiadczeniePotwora * 2.5),
+          zloto:
+            losPrzedmiotu === 1 || nowyStan === PRZESZEDL
+              ? 0
+              : Math.trunc(doswiadczeniePotwora * 2.5),
           doswiadczenie: doswiadczeniePotwora,
+          honor: 0,
+          grzyby: 0,
         }
       : null,
     zdobytyPrzedmiot,
+    plecakBylPelny: false,
     ukonczony: nowyStan >= PRZESZEDL,
     walka: {
       gracz: {

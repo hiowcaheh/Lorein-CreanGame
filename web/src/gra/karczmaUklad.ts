@@ -151,9 +151,18 @@ export const POSTEP_WYPELNIENIE = ramka(390 + 110, 580 + 44, 555, 27);
 export const POSTEP_NAPIS = ramka(778, 625, 0, 0);
 export const POSTEP_PRZERWIJ = ramka(780, 700, 180, 50);
 
-/** Tlo krainy podczas wyprawy — `scr/quest/locations/locationN.jpg`, 1000x700. */
+/**
+ * Tlo krainy — `scr/quest/locations/locationN.jpg`, 1000x700.
+ *
+ * Wyprawy uzywaja numerow 1-21, lochy 51-63 (`IMG_SCR_QUEST_BG_1 + 50 + N`),
+ * a wieza i portal maja wlasne pliki. Gorna granica to najwyzszy numer,
+ * jaki lezy w katalogu.
+ */
+const NAJWYZSZA_KRAINA = 66;
+
 export function tloKrainy(lokacja: number): string {
-  return `/res/sfgame/scr/quest/locations/location${Math.max(1, Math.min(21, lokacja))}.jpg`;
+  const numer = Math.max(1, Math.min(NAJWYZSZA_KRAINA, lokacja));
+  return `/res/sfgame/scr/quest/locations/location${numer}.jpg`;
 }
 
 /*

@@ -2089,3 +2089,70 @@ button.postac-pancerz {
   top: 615px;
   width: 174px;
 }
+
+/*
+ * LOCHY — `BNC_SCREEN_MAINQUESTS` (lista) i `BNC_SCREEN_MAINQUEST`
+ * (jeden loch). Tlo listy to `location51.jpg`, tlo lochu — `location{50+N}`.
+ */
+.lochy {
+  position: absolute;
+  inset: 0;
+}
+
+.lochy > * { position: absolute; }
+
+.lochy-tlo {
+  left: 0;
+  top: 0;
+  width: 1000px;
+  height: 700px;
+}
+
+/* `FontFormat_ScreenTitle` — wysrodkowany na POS_SCREEN_TITLE_X. */
+.lochy-tytul {
+  font-size: 28px;
+  color: var(--zloto);
+  text-shadow: 0 2px 3px #000;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Kafel lochu: obrazek 234x165, na nim zaslona `unknown.png` albo `done.png`. */
+.lochy-kafel {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.lochy-kafel:disabled { cursor: default; }
+.lochy-kafel > img { position: absolute; left: 0; top: 0; width: 234px; height: 165px; }
+.lochy-kafel:not(:disabled):hover .obraz { filter: brightness(1.12); }
+
+/* Przydymiona plansza — `SHP_MAINQUEST`, czarny prostokat o alfie 0,6. */
+.lochy-plansza { background: #000; }
+
+.lochy-tekst {
+  font-size: var(--pismo);
+  line-height: 1.35;
+  color: var(--pergamin);
+  text-shadow: 0 1px 2px #000;
+}
+
+/* Motto lochu — w oryginale osobnym, blekitnym formatem. */
+.lochy-tekst .motto {
+  margin-bottom: 10px;
+  color: var(--blekit);
+  font-style: italic;
+}
+
+.lochy-przeciwnik,
+.lochy-ramka { pointer-events: none; }
+
+.lochy-podpowiedz {
+  font-size: var(--pismo-cechy);
+  line-height: 1.3;
+  color: var(--przygaszony);
+  text-shadow: 0 1px 2px #000;
+}
