@@ -9,6 +9,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
+import { CECHY_PO_KOLEI, RozbicieCechy } from '../gra/RozbicieCechy';
 import { PasekDoswiadczenia } from '../gra/PasekDoswiadczenia';
 import { PUNKTOW_ZA_ZAKUP, cenaPokazywana, opisCeny } from '../gra/cechy';
 import { OknoCechy } from './OknoCechy';
@@ -23,7 +24,7 @@ import {
 } from '../gra/stajnia';
 import { Portret } from '../gra/Portret';
 import { NAZWY_KLAS, NAZWY_RAS } from '../gra/portret';
-import { PIERWSZY_SLOT_PLECAKA, nazwaPrzedmiotu, slotDlaRodzaju } from '../gra/przedmioty';
+import { RODZAJ_MIKSTURY, PIERWSZY_SLOT_PLECAKA, nazwaPrzedmiotu, slotDlaRodzaju } from '../gra/przedmioty';
 import {
   NAPIS_DO,
   NAPIS_TYMCZASOWO,
@@ -130,9 +131,6 @@ function styl(r: Ramka): React.CSSProperties {
 function wiersz(i: number): number {
   return WIERSZ_CECHY_Y - 100 + i * ODSTEP_WIERSZA;
 }
-
-/** Rodzaj przedmiotu, ktory sie pije. */
-const RODZAJ_MIKSTURY = 12;
 
 export function Bohater({
   gracz,
@@ -276,6 +274,8 @@ export function Bohater({
   const [otwartaCecha, setOtwartaCecha] = useState<number | null>(null);
   const [pokazPancerz, setPokazPancerz] = useState(false);
   const [pokazKlaser, setPokazKlaser] = useState(false);
+  /** Ktory wiersz cechy ma otwarte rozbicie na czlony. */
+  const [rozbitaCecha, setRozbitaCecha] = useState<number | null>(null);
   const [pokazCeny, setPokazCeny] = useState(false);
 
   /*
@@ -286,6 +286,13 @@ export function Bohater({
    * albo „Odpornosc").
    */
   const pochodne = wierszePochodnych(gracz);
+
+  /*
+   * Pocisk zalozonej broni — stoi w miejscu tarczy u maga i zwiadowcy
+   * (patrz `pustaTarcza`).
+   */
+  const pociskZalozonejBroni =
+    gracz.ekwipunek.find((p) => p.slot === SLOT_BRONI)?.pocisk ?? null;
 
   return (
     <div className="postac" ref={ekran}>
@@ -303,7 +310,7 @@ export function Bohater({
             m.slot === SLOT_BRONI
               ? pustaBron(gracz.klasa)
               : m.slot === SLOT_TARCZY
-                ? (pustaTarcza(gracz.klasa) ?? undefined)
+                ? (pustaTarcza(gracz.klasa, pociskZalozonejBroni) ?? undefined)
                 : m.pusty
           }
           przedmiot={gracz.ekwipunek.find((p) => p.slot === m.slot)}
@@ -353,20 +360,28 @@ export function Bohater({
       */}
       {cechy.map((cecha, i) => (
         <Fragment key={cecha.nazwa}>
-          <span
-            className="postac-cecha"
+          {/*
+            Podpis i liczba sa klikalne — wychodzi wtedy rozbicie cechy
+            na czlon wlasny, przedmiotowy i miksturowy.
+          */}
+          <button
+            type="button"
+            className="postac-cecha klikalna"
             style={{ left: KOLUMNY_CECH[0], top: wiersz(i) }}
             title={cecha.tytul}
+            onClick={() => setRozbitaCecha((c) => (c === i ? null : i))}
           >
             {cecha.nazwa}
-          </span>
-          <span
-            className="postac-cecha"
+          </button>
+          <button
+            type="button"
+            className="postac-cecha klikalna"
             style={{ left: KOLUMNY_CECH[1], top: wiersz(i) }}
             title={cecha.tytul}
+            onClick={() => setRozbitaCecha((c) => (c === i ? null : i))}
           >
             {cecha.wartosc}
-          </span>
+          </button>
           {/*
             Przycisk „+" — `BTN_SCR_CHAR_STEIGERN1 + i` w kolumnie
             trzeciej, 3 px nad wierszem. Nieczynny, gdy nie stac:
@@ -425,6 +440,16 @@ export function Bohater({
           </span>
         </Fragment>
       ))}
+
+      {rozbitaCecha !== null && CECHY_PO_KOLEI[rozbitaCecha] && (
+        <RozbicieCechy
+          nazwa={cechy[rozbitaCecha]?.nazwa ?? ''}
+          skladniki={gracz.skladnikiCech[CECHY_PO_KOLEI[rozbitaCecha]]}
+          lewo={KOLUMNY_CECH[0] ?? 0}
+          gora={wiersz(rozbitaCecha)}
+          onZamknij={() => setRozbitaCecha(null)}
+        />
+      )}
 
       {/* --- prawa polowa --- */}
       <img
@@ -859,7 +884,17 @@ function Miejsce({
   if (!przedmiot) {
     return (
       <div className={klasy.join(' ')} style={styl(ramka)} title={nazwa} data-slot={slot}>
-        {pusty && <img className="pusty" src={KATALOG_SLOTOW + pusty} alt="" />}
+        {/*
+          Pocisk przychodzi z serwera gotowa sciezka `/res/...`; sylwetki
+          pustych miejsc leza w katalogu slotow i maja same nazwy.
+        */}
+        {pusty && (
+          <img
+            className={pusty.startsWith('/') ? 'pusty pocisk' : 'pusty'}
+            src={pusty.startsWith('/') ? pusty : KATALOG_SLOTOW + pusty}
+            alt=""
+          />
+        )}
         {sugestia}
       </div>
     );

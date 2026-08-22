@@ -16,11 +16,17 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
+import { CECHY_PO_KOLEI, RozbicieCechy } from '../gra/RozbicieCechy';
 import { Portret } from '../gra/Portret';
 import { PasekDoswiadczenia } from '../gra/PasekDoswiadczenia';
 import { nazwaPrzedmiotu } from '../gra/przedmioty';
 import { usePrzeciaganie } from '../gra/usePrzeciaganie';
-import { PIERWSZY_SLOT_PLECAKA, slotDlaRodzaju } from '../gra/przedmioty';
+import {
+  PIERWSZY_SLOT_PLECAKA,
+  RODZAJ_MIKSTURY,
+  czyEpicki,
+  slotDlaRodzaju,
+} from '../gra/przedmioty';
 import {
   KOLUMNY_CECH,
   MIEJSCA,
@@ -51,6 +57,16 @@ import {
   type Ramka,
   type WygladSklepu,
 } from '../gra/sklepUklad';
+import {
+  NAGLOWEK_Y,
+  ODSTEP_PRZYCISKOW,
+  OKNO,
+  PRZYCISK,
+  PRZYCISKI_Y,
+  SRODEK_OKNA,
+  TEKST,
+  TLO_OKNA,
+} from '../gra/oknoUklad';
 import type { Gracz, Przedmiot, StanSklepu, TowarSklepu } from '../gra/typy';
 
 const KATALOG_SLOTOW = '/res/sfgame/scr/char/';
@@ -72,6 +88,7 @@ export function Sklep({
   onSprzedaj,
   onWymien,
   onPrzenies,
+  onWypij,
 }: {
   stan: StanSklepu;
   gracz: Gracz;
@@ -87,6 +104,7 @@ export function Sklep({
    * ma tu dzialac tak samo.
    */
   onPrzenies: (zrodlo: number, cel: number | null) => void;
+  onWypij: (slot: number) => void;
 }) {
   const [pokazany, setPokazany] = useState<Przedmiot | null>(null);
   const ekran = useRef<HTMLDivElement>(null);
@@ -114,6 +132,17 @@ export function Sklep({
        */
       if (cel !== null && (czyMiejsceTowaru(cel) || czyMiejsceSprzedazy(cel))) {
         onSprzedaj(przedmiot.slot);
+        return;
+      }
+
+      /*
+       * Mikstury sie nie zaklada — sie ja pije. Tak samo, jak na ekranie
+       * postaci: rzucenie jej na siebie ma ja WYPIC, a nie przelozyc.
+       * Bez tego wyjatku sklep wysylal zwykle przeniesienie i mikstura
+       * ladowala w pierwszym wolnym miejscu ekwipunku.
+       */
+      if (przedmiot.typ === RODZAJ_MIKSTURY && cel === null) {
+        onWypij(przedmiot.slot);
         return;
       }
 
@@ -153,6 +182,23 @@ export function Sklep({
       ? slotDlaRodzaju(ciagniety.przedmiot.typ)
       : null;
   const sprzedaje = ciagniety !== null && !czyMiejsceTowaru(ciagniety.przedmiot.slot);
+
+  /** Ktory wiersz cechy ma otwarte rozbicie na czlony. */
+  const [rozbitaCecha, setRozbitaCecha] = useState<number | null>(null);
+  const [pytanieOWymiane, setPytanieOWymiane] = useState(false);
+
+  /*
+   * Epiki na pólce. Odswiezenie towaru je BEZPOWROTNIE kasuje, a epik
+   * trafia sie rzadko — wlasciciel gry poprosil, zeby gra pytala, zanim
+   * gracz wymieni pólke z epikiem. Oryginal wymienia bez slowa.
+   */
+  const epikiNaPolce = stan.towar
+    .map((t: TowarSklepu) => ({ ...t, slot: PIERWSZE_MIEJSCE_TOWARU + t.slot }))
+    .filter((t) => czyEpicki(t));
+
+  /* Pocisk zalozonej broni — u maga i zwiadowcy stoi w miejscu tarczy. */
+  const pociskZalozonejBroni =
+    gracz.ekwipunek.find((p) => p.slot === SLOT_BRONI)?.pocisk ?? null;
 
   const wSlocie = (slot: number) => gracz.ekwipunek.find((p) => p.slot === slot);
   const [mruga, setMruga] = useState(false);
@@ -238,7 +284,7 @@ export function Sklep({
             m.slot === SLOT_BRONI
               ? pustaBron(gracz.klasa)
               : m.slot === SLOT_TARCZY
-                ? (pustaTarcza(gracz.klasa) ?? undefined)
+                ? (pustaTarcza(gracz.klasa, pociskZalozonejBroni) ?? undefined)
                 : m.pusty
           }
           przedmiot={wSlocie(m.slot)}
@@ -268,12 +314,23 @@ export function Sklep({
       */}
       {cechy.map((cecha, i) => (
         <Fragment key={cecha.nazwa}>
-          <span className="postac-cecha" style={{ left: KOLUMNY_CECH[0], top: wierszCechy(i) }}>
+          {/* Klikniecie rozpisuje cechę na czlon wlasny i przedmiotowy. */}
+          <button
+            type="button"
+            className="postac-cecha klikalna"
+            style={{ left: KOLUMNY_CECH[0], top: wierszCechy(i) }}
+            onClick={() => setRozbitaCecha((c) => (c === i ? null : i))}
+          >
             {cecha.nazwa}
-          </span>
-          <span className="postac-cecha" style={{ left: KOLUMNY_CECH[1], top: wierszCechy(i) }}>
+          </button>
+          <button
+            type="button"
+            className="postac-cecha klikalna"
+            style={{ left: KOLUMNY_CECH[1], top: wierszCechy(i) }}
+            onClick={() => setRozbitaCecha((c) => (c === i ? null : i))}
+          >
             {cecha.wartosc}
-          </span>
+          </button>
           <span
             className="postac-cecha"
             style={{ left: KOLUMNY_CECH[3], top: wierszCechy(i) }}
@@ -286,6 +343,16 @@ export function Sklep({
           </span>
         </Fragment>
       ))}
+
+      {rozbitaCecha !== null && CECHY_PO_KOLEI[rozbitaCecha] && (
+        <RozbicieCechy
+          nazwa={cechy[rozbitaCecha]?.nazwa ?? ''}
+          skladniki={gracz.skladnikiCech[CECHY_PO_KOLEI[rozbitaCecha]]}
+          lewo={KOLUMNY_CECH[0] ?? 0}
+          gora={wierszCechy(rozbitaCecha)}
+          onZamknij={() => setRozbitaCecha(null)}
+        />
+      )}
 
       {/* --------------------------------------------- prawa polowa -- */}
 
@@ -352,7 +419,7 @@ export function Sklep({
         type="button"
         className="przycisk sklep-wymiana"
         style={styl(PRZYCISK_TOWARU)}
-        onClick={onWymien}
+        onClick={() => (epikiNaPolce.length > 0 ? setPytanieOWymiane(true) : onWymien())}
         disabled={gracz.grzyby < stan.kosztWymiany}
         title={`Nowy towar za ${stan.kosztWymiany} grzyba`}
       >
@@ -370,10 +437,23 @@ export function Sklep({
         />
       )}
 
+      {pytanieOWymiane && (
+        <PytanieOWymiane
+          epiki={epikiNaPolce}
+          onOdswiez={() => {
+            setPytanieOWymiane(false);
+            onWymien();
+          }}
+          onWroc={() => setPytanieOWymiane(false)}
+        />
+      )}
+
       {pokazany && (
         <PodpowiedzPrzedmiotu
           przedmiot={pokazany}
           miejsce={miejscePodpowiedzi(pokazany)}
+          /* Rzecz spoza pólki to rzecz GRACZA, czyli tu do sprzedania. */
+          sprzedaz={!czyMiejsceTowaru(pokazany.slot)}
           onZamknij={() => setPokazany(null)}
         />
       )}
@@ -425,10 +505,27 @@ function Miejsce({
   const klasy = ['postac-slot'];
   if (sugerowane) klasy.push('sugerowane');
 
+  /*
+   * `IMG_SLOT_SUGGESTION` — to samo podswietlenie, co na ekranie postaci.
+   * W sklepie tez jest potrzebne: rzecz z plecaka zaklada sie i stad,
+   * a bez podswietlenia nie widac, w ktore miejsce poleci.
+   */
+  const sugestia = sugerowane ? (
+    <img className="podpowiedz-miejsca" src={`${KATALOG_SLOTOW}slot_suggestion.png`} alt="" />
+  ) : null;
+
   if (!przedmiot) {
     return (
       <div className={klasy.join(' ')} style={styl(ramka)} title={nazwa} data-slot={slot}>
-        {pusty && <img className="pusty" src={KATALOG_SLOTOW + pusty} alt="" />}
+        {/* Pocisk przychodzi gotowa sciezka `/res/...`, sylwetki sama nazwa. */}
+        {pusty && (
+          <img
+            className={pusty.startsWith('/') ? 'pusty pocisk' : 'pusty'}
+            src={pusty.startsWith('/') ? pusty : KATALOG_SLOTOW + pusty}
+            alt=""
+          />
+        )}
+        {sugestia}
       </div>
     );
   }
@@ -448,6 +545,85 @@ function Miejsce({
         alt={nazwa}
         draggable={false}
       />
+      {sugestia}
     </button>
+  );
+}
+
+/**
+ * Potwierdzenie wymiany towaru, gdy na pólce lezy epik.
+ *
+ * SWIADOME ODSTEPSTWO (tabela w CLAUDE.md) — oryginal wymienia bez
+ * slowa. Samo okno jest z ekranu Warty, tak samo jak okno cechy:
+ * `okno.png` w `POS_IF_WIN`, przyciski obok siebie na `REL_ARBEITEN_BTN_Y`.
+ */
+function PytanieOWymiane({
+  epiki,
+  onOdswiez,
+  onWroc,
+}: {
+  epiki: Przedmiot[];
+  onOdswiez: () => void;
+  onWroc: () => void;
+}) {
+  return (
+    <div className="okno-cechy" role="dialog" aria-label="Wymiana towaru">
+      {/* Zaslona przechwytuje klikniecia w reszte ekranu. */}
+      <div className="okno-zaslona" onClick={onWroc} role="presentation" />
+
+      <img
+        className="okno-tlo"
+        src={TLO_OKNA}
+        alt=""
+        style={{ left: OKNO.lewo, top: OKNO.gora, width: OKNO.szerokosc, height: OKNO.wysokosc }}
+      />
+
+      <div className="okno-naglowek" style={{ left: SRODEK_OKNA, top: NAGLOWEK_Y }}>
+        Nowy towar
+      </div>
+
+      <div
+        className="okno-tekst"
+        style={{ left: TEKST.lewo, top: TEKST.gora, width: TEKST.szerokosc }}
+      >
+        <div>
+          W sklepie {epiki.length > 1 ? 'są przedmioty epickie' : 'jest przedmiot epicki'} do
+          kupienia:
+        </div>
+        {epiki.map((e) => (
+          <div className="cytat" key={e.slot}>
+            „{nazwaPrzedmiotu(e)}"
+          </div>
+        ))}
+        <div>Na pewno chcesz odświeżyć towar?</div>
+      </div>
+
+      <button
+        type="button"
+        className="przycisk"
+        style={{
+          left: SRODEK_OKNA - PRZYCISK.szerokosc - ODSTEP_PRZYCISKOW / 2,
+          top: PRZYCISKI_Y,
+          width: PRZYCISK.szerokosc,
+          minHeight: PRZYCISK.wysokosc,
+        }}
+        onClick={onOdswiez}
+      >
+        Odśwież
+      </button>
+      <button
+        type="button"
+        className="przycisk"
+        style={{
+          left: SRODEK_OKNA + ODSTEP_PRZYCISKOW / 2,
+          top: PRZYCISKI_Y,
+          width: PRZYCISK.szerokosc,
+          minHeight: PRZYCISK.wysokosc,
+        }}
+        onClick={onWroc}
+      >
+        Wróć
+      </button>
+    </div>
   );
 }

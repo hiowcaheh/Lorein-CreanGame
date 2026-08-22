@@ -1,3 +1,8 @@
+import type { PremieNagrody } from './premie';
+
+/** Piec cech postaci, w kolejnosci z ekranu. */
+export type NazwaCechy = 'sila' | 'zrecznosc' | 'intelekt' | 'wytrzymalosc' | 'szczescie';
+
 /** Stan gracza tak, jak podaje go backend (`src/api/gracz.ts`). */
 export interface Gracz {
   id: number;
@@ -23,6 +28,19 @@ export interface Gracz {
     wytrzymalosc: number;
     szczescie: number;
   };
+
+  /** Nazwy cech w kolejnosci z ekranu postaci. */
+  skladnikiCech: Record<
+    NazwaCechy,
+    {
+      /** Wartosc wlasna postaci — cechy startowe plus dokupione punkty. */
+      podstawa: number;
+      /** Ile dokladaja ZALOZONE przedmioty. */
+      przedmioty: number;
+      /** Ile dokladaja dzialajace mikstury. */
+      mikstury: number;
+    }
+  >;
 
   zycie: number;
 
@@ -93,6 +111,11 @@ export interface Przedmiot {
   /** Poziom ulepszenia; w nazwie pokazywany jako " (+N)". */
   ulepszenie: number;
   obrazek: string;
+  /**
+   * Pocisk, ktory ta bron wypuszcza w walce. Maja go rozdzki maga
+   * i luki zwiadowcy; reszta przedmiotow `null`.
+   */
+  pocisk: string | null;
   obrazenia: { min: number; max: number };
   atrybuty: { rodzaj: number; wartosc: number }[];
   zloto: number;
@@ -194,7 +217,7 @@ export interface Rozliczenie {
    * tam premia siedzi juz w liczbie zadania; loch odsyla, bo tam nagroda
    * powstaje dopiero po walce.
    */
-  premie?: { klaser: number };
+  premie?: PremieNagrody;
   /**
    * Zdobyty przedmiot — caly, bo ekran walki pokazuje jego ikone
    * i podpowiedz ze statystykami, a nie sam napis.

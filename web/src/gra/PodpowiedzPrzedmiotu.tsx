@@ -11,7 +11,14 @@
  * czego najezdzac, a gra ma dzialac na telefonie.
  */
 
-import { cenaPrzedmiotu, cytatPrzedmiotu, nazwaPrzedmiotu, wierszeOpisu } from './przedmioty';
+import {
+  GRZYBY_ZA_SPRZEDAZ_EPIKA,
+  cenaPrzedmiotu,
+  cytatPrzedmiotu,
+  czyEpicki,
+  nazwaPrzedmiotu,
+  wierszeOpisu,
+} from './przedmioty';
 import type { Przedmiot } from './typy';
 
 /** Szerokosc podpowiedzi w pikselach sceny. Kolumna wartosci na 137 px
@@ -33,19 +40,30 @@ export interface MiejscePodpowiedzi {
 export function PodpowiedzPrzedmiotu({
   przedmiot,
   miejsce,
+  sprzedaz = false,
   onZamknij,
 }: {
   przedmiot: Przedmiot;
   miejsce: MiejscePodpowiedzi;
+  /**
+   * Czy podpowiedz dotyczy rzeczy, ktora gracz moze tu SPRZEDAC. Wtedy
+   * przy grzybach stoi to, co sklep ODDA (`GRZYBY_ZA_SPRZEDAZ_EPIKA`),
+   * a nie kolumna `mush` przedmiotu, czyli jego cena zakupu.
+   */
+  sprzedaz?: boolean;
   onZamknij: () => void;
 }) {
   const wiersze = wierszeOpisu(przedmiot);
   const cytat = cytatPrzedmiotu(przedmiot);
   const cena = cenaPrzedmiotu(przedmiot);
+  const grzyby = sprzedaz
+    ? (czyEpicki(przedmiot) ? GRZYBY_ZA_SPRZEDAZ_EPIKA : 0)
+    : cena.grzyby;
+  const wierszeCytatu = cytat === '' ? [] : cytat.split('\n');
 
   // Wysokosc liczymy z liczby wierszy, zeby podpowiedz stanela NAD miejscem
   // i nie zaslanila samego przedmiotu.
-  const wierszy = 1 + (cytat ? 1 : 0) + wiersze.length + 1;
+  const wierszy = 1 + wierszeCytatu.length + wiersze.length + 1;
   const wysokosc = 16 + wierszy * 26;
 
   const lewo = Math.min(
@@ -64,7 +82,11 @@ export function PodpowiedzPrzedmiotu({
     >
       <div className="nazwa">{nazwaPrzedmiotu(przedmiot)}</div>
 
-      {cytat && <div className="cytat">{cytat}</div>}
+      {wierszeCytatu.map((w, i) => (
+        <div className="cytat" key={i}>
+          {w}
+        </div>
+      ))}
 
       {wiersze.map((w) => (
         <div className="wiersz" key={w.etykieta}>
@@ -87,9 +109,9 @@ export function PodpowiedzPrzedmiotu({
         {cena.srebro}
         <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
         {/* Grzyby doplaca sie DO zlota, a nie zamiast — patrz `genItem()`. */}
-        {cena.grzyby > 0 && (
+        {grzyby > 0 && (
           <>
-            {cena.grzyby}
+            {grzyby}
             <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
           </>
         )}

@@ -72,6 +72,9 @@ export function rozlozNumer(numerPrzedmiotu: number): { klasa: number; obrazek: 
  */
 export const PIERWSZY_EPICKI = 50;
 
+/** Rodzaj przedmiotu, ktory jest bronia — tylko on wypuszcza pocisk. */
+export const RODZAJ_BRONI = 1;
+
 /** Czy przedmiot jest epicki — po numerze obrazka, nie po cenie. */
 export function czyEpicki(typ: number, numerPrzedmiotu: number): boolean {
   return rozlozNumer(numerPrzedmiotu).obrazek >= PIERWSZY_EPICKI && typ !== 14;

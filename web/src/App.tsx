@@ -27,7 +27,7 @@ import { Walka } from './ekrany/karczma/Walka';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, Rozliczenie, StanKarczmy, StanSklepu } from './gra/typy';
-import { liczba } from './gra/liczby';
+import { klasaWielkosci, liczba, skrocona } from './gra/liczby';
 
 type Zakladka =
   | 'miasto'
@@ -390,18 +390,7 @@ export function App() {
           potem ikona, a calosc wyrownana do prawej krawedzi panelu.
           Zloto i srebro w jednym wierszu, grzyby w nastepnym.
         */}
-        <div className="zasoby">
-          <div className="linia" title="Złoto i srebro">
-            <span>{liczba(Math.floor(gracz.srebro / 100))}</span>
-            <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
-            <span>{String(gracz.srebro % 100).padStart(2, '0')}</span>
-            <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
-          </div>
-          <div className="linia" title="Grzyby">
-            <span>{liczba(gracz.grzyby)}</span>
-            <img className="grzyb" src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
-          </div>
-        </div>
+        <Zasoby srebro={gracz.srebro} grzyby={gracz.grzyby} />
 
         <ul>
           {MENU.map((poz) => {
@@ -450,6 +439,7 @@ export function App() {
             onSprzedaj={(slot: number) => akcjaSklepu(`/sklep/${sklep.numer}/sprzedaj`, { slot })}
             onWymien={() => akcjaSklepu(`/sklep/${sklep.numer}/wymien`)}
             onPrzenies={przeniesPrzedmiot}
+            onWypij={wypijMiksture}
           />
         )}
         {zakladka === 'grzybiarz' && (
@@ -673,6 +663,58 @@ function Rama({
           <button type="button" className="przycisk drugi" onClick={() => setMimoTo(true)}>
             Graj mimo to
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Zasoby u gory panelu — w kolejnosci z oryginalu: najpierw LICZBA,
+ * potem ikona, a calosc wyrownana do prawej krawedzi panelu. Zloto
+ * i srebro w jednym wierszu, grzyby w nastepnym.
+ *
+ * Kwoty od miliona w gore stoja SKROCONE („18kk") i w swoim kolorze —
+ * SWIADOME ODSTEPSTWO, patrz tabela w CLAUDE.md. Pelna liczba wychodzi
+ * po klikniecu, bo skrot z natury gubi koncowke.
+ */
+function Zasoby({ srebro, grzyby }: { srebro: number; grzyby: number }) {
+  const [dokladnie, setDokladnie] = useState(false);
+  const zloto = Math.floor(srebro / 100);
+
+  return (
+    <div className="zasoby">
+      <button
+        type="button"
+        className="linia"
+        title="Złoto i srebro — kliknij, żeby zobaczyć dokładną kwotę"
+        onClick={() => setDokladnie((czy) => !czy)}
+      >
+        <span className={klasaWielkosci(zloto)}>{skrocona(zloto)}</span>
+        <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
+        <span>{String(srebro % 100).padStart(2, '0')}</span>
+        <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+      </button>
+
+      <div className="linia" title="Grzyby">
+        <span className={klasaWielkosci(grzyby)}>{skrocona(grzyby)}</span>
+        <img className="grzyb" src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
+      </div>
+
+      {dokladnie && (
+        <div className="podpowiedz zasoby-dokladnie" role="dialog">
+          <div className="wiersz">
+            <span>Złoto</span>
+            <span>{liczba(zloto)}</span>
+          </div>
+          <div className="wiersz">
+            <span>Srebro</span>
+            <span>{String(srebro % 100).padStart(2, '0')}</span>
+          </div>
+          <div className="wiersz">
+            <span>Grzyby</span>
+            <span>{liczba(grzyby)}</span>
+          </div>
         </div>
       )}
     </div>

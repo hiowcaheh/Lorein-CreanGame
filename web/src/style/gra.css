@@ -55,6 +55,16 @@
    * odstepstw w CLAUDE.md).
    */
   --blekit: #9ecbff;
+  /* Progi wielkosci kwot — patrz `klasaWielkosci()` w `gra/liczby.ts`. */
+  --liczba-duza: #7fae6a;
+  --liczba-ogromna: #c85a4a;
+  /*
+   * Sam CYTAT epika jest blizej oryginalu: `CLR_EPICITEMQUOTE = 0x8888FF`
+   * rozjasniony tylko na tyle, zeby dalo sie go czytac na czarnym tle
+   * podpowiedzi. Wlasciciel gry poprosil, zeby byl wyrazniej niebieski
+   * niz reszta premii, ktore zostaja na `--blekit`.
+   */
+  --blekit-cytat: #9a9aff;
 
   /* FontFormat_Default = sizeMod + 20, przy osadzonej Komice sizeMod = 0. */
   --pismo: 20px;
@@ -238,6 +248,45 @@ img { max-width: 100%; }
 /* Wiersze na wysokosci 115 i 145, czyli 15 i 45 od gory panelu. */
 .zasoby .linia:nth-child(1) { top: 15px; }
 .zasoby .linia:nth-child(2) { top: 45px; }
+
+/* Wiersz ze zlotem jest przyciskiem — pokazuje dokladna kwote. */
+button.zasoby .linia,
+.zasoby button.linia {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+/*
+ * Kolory rzedow wielkosci — od miliona zielony, od dziesieciu milionow
+ * czerwony. Odcienie z palety gry: zielen pergaminowa, czerwien ta sama,
+ * co `--zly`. SWIADOME ODSTEPSTWO, patrz tabela w CLAUDE.md.
+ */
+.duza { color: var(--liczba-duza); }
+.ogromna { color: var(--liczba-ogromna); }
+
+/* Dokladne kwoty — zwykla podpowiedz, pod paskiem zasobow. */
+.zasoby-dokladnie {
+  position: absolute;
+  right: 26px;
+  top: 78px;
+  width: 200px;
+  z-index: 20;
+  font-size: var(--pismo-cechy);
+  line-height: 1.5;
+}
+
+.zasoby-dokladnie .wiersz {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+/* Tu wartosc idzie do prawej krawedzi, a nie do stalej kolumny 137 px. */
+.zasoby-dokladnie .wiersz > span:nth-child(2) { position: static; }
 
 .zasoby img { width: 24px; height: 20px; }
 .zasoby img.grzyb { width: 25px; height: 24px; }
@@ -682,6 +731,17 @@ button.postac-slot:hover img { filter: brightness(1.15); }
 /* Sylwetka pustego miejsca jest przygaszona — ma podpowiadac, nie krzyczec. */
 .postac-slot img.pusty { opacity: .55; }
 
+/*
+ * Pocisk w miejscu tarczy (mag i zwiadowca). Sprite pocisku jest maly
+ * — rozciagniety na cale miejsce bylby rozmazany, wiec stoi w srodku
+ * w swojej skali, zmniejszony do polowy kafelka.
+ */
+.postac-slot img.pusty.pocisk {
+  width: 55%;
+  height: 55%;
+  image-rendering: auto;
+}
+
 /* --- portret --- */
 
 /* Tlo ma juz narysowana ramke pola, wiec portret wchodzi bez wlasnej. */
@@ -749,6 +809,35 @@ button.postac-slot:hover img { filter: brightness(1.15); }
   text-shadow: 0 1px 2px #000;
   white-space: nowrap;
 }
+
+/*
+ * Podpis i liczba cechy sa przyciskami — klikniecie rozpisuje cechę
+ * na czlon wlasny, przedmiotowy i miksturowy. Przycisk ma wygladac
+ * dokladnie jak napis, wiec zdejmujemy mu wszystko, co dokłada
+ * przegladarka.
+ */
+button.postac-cecha.klikalna {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.postac-cecha.klikalna:hover { filter: brightness(1.2); }
+
+/* Rozbicie cechy — zwykla podpowiedz z wartoscia przy prawej krawedzi. */
+.rozbicie-cechy .wiersz {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rozbicie-cechy .wiersz > span:nth-child(2) { position: static; }
+.rozbicie-cechy .zPrzedmiotow { color: var(--blekit); }
+.rozbicie-cechy .zMikstur { color: var(--liczba-duza); }
+.rozbicie-cechy .razem { color: var(--pergamin); }
 
 /*
  * Trzy miejsca na dzialajace mikstury.
@@ -927,7 +1016,7 @@ button.postac-wierzchowiec-obraz img {
 /* Cytat przedmiotu epickiego — w oryginale ma wlasny, jasniejszy format. */
 .podpowiedz .cytat {
   padding: 0 5px;
-  color: var(--blekit);
+  color: var(--blekit-cytat);
   font-style: italic;
 }
 
@@ -1399,15 +1488,38 @@ button.postac-wierzchowiec-obraz img {
  * wiec nie ma jak wejsc na sasiednie napisy. Musi byc bardziej
  * szczegolowy niz `.walka-nagroda.kwota img`, ktore narzuca 24x20.
  */
-.walka-nagroda .walka-premia {
+/*
+ * Musi byc bardziej szczegolowy niz `.walka-nagroda.kwota img`, ktore
+ * narzuca 24x20 — inaczej strzalka przy zlocie rosla do rozmiaru monety.
+ */
+.walka-nagroda img.walka-premia,
+.walka-nagroda.kwota img.walka-premia {
   width: 18px;
   height: 18px;
   margin: 0 6px 0 0;
   vertical-align: -3px;
-  animation: podskok 0.8s ease-in-out infinite;
 }
 
-.walka-nagroda.doswiadczenie .walka-premia { margin: 0 0 0 6px; }
+.walka-nagroda.doswiadczenie img.walka-premia { margin: 0 0 0 6px; }
+
+/*
+ * Nagroda z premia da sie kliknac — wychodzi wtedy rozpisanie, ta sama
+ * tresc, co w oknie wyboru zadania. Reszta wiersza zostaje przezroczysta
+ * dla myszy, zeby nie lapala klikniec w tlo walki.
+ */
+.walka-nagroda.zPremia {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.walka-premia-podpowiedz {
+  position: absolute;
+  z-index: 12;
+  padding: 8px 10px;
+  font-size: var(--pismo-cechy);
+  line-height: 1.4;
+}
+
 
 .walka-nagroda.ostrzezenie { color: var(--zly); text-align: center; }
 
@@ -1748,8 +1860,14 @@ button.postac-wierzchowiec-obraz img {
   height: 18px;
 }
 
-.karczma-premia .skacze,
-
+/*
+ * Strzalka podskakuje. Krotki takt (0,55 s) — wlasciciel gry poprosil,
+ * zeby ruch byl wyrazniejszy niz przy pierwszym podejsciu.
+ */
+.karczma-premia img.skacze,
+.walka-nagroda img.walka-premia {
+  animation: podskok 0.55s ease-in-out infinite;
+}
 
 @keyframes podskok {
   0%, 60%, 100% { transform: translateY(0); }
@@ -1757,13 +1875,24 @@ button.postac-wierzchowiec-obraz img {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .karczma-premia .skacze,
-  .walka-nagroda .walka-premia { animation: none; }
+  .karczma-premia img.skacze,
+  .walka-nagroda img.walka-premia { animation: none; }
 }
 
-/* Kolory premii — po nich widac, skad sie wziela. */
-.karczma-premia-podpowiedz .premia-klaser { color: var(--blekit); }
-.karczma-premia-podpowiedz .premia-rzadkie { color: var(--zly); }
+/*
+ * Kolory premii — po nich widac, skad sie wziela. Jeden zestaw dla obu
+ * rozpisan: tego w oknie wyboru zadania i tego po walce. Nowe zrodla
+ * (gildia, wieza, serwerowe przedmioty) maja tu juz swoje kolory
+ * i pojawia sie same, gdy tylko serwer zacznie je odsylac.
+ */
+.premia-klaser { color: var(--blekit); }
+.premia-rzadkie { color: var(--zly); }
+/* Gildia — zielen z pergaminowego konca palety, nie jaskrawa. */
+.premia-gildia { color: #7fae6a; }
+/* Wieza — fiolet, jedyny kolor jeszcze nie zajety na tych ekranach. */
+.premia-wieza { color: #b08ad0; }
+/* Serwerowe przedmioty — zloto sceny, o ton jasniejsze. */
+.premia-przedmioty { color: #f5d98a; }
 
 /*
  * Wyglada jak kazda inna podpowiedz: czarne tlo 0,8 i obwodka CLR_SFORANGE.
@@ -2091,6 +2220,41 @@ button.postac-pancerz {
   height: 90px;
   pointer-events: none;
 }
+
+/*
+ * Przezroczysty guzik na kazdej ikonie. Oryginal wiesza tam
+ * `EnablePopup(CNT_ALBUM_WEAPON_n + i)` BEZ tresci, wiec nic nie pokazuje;
+ * u nas otwiera okienko z nazwa i data odblokowania (odstepstwo).
+ */
+.klaser-guzik {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.klaser-guzik:hover { background: rgba(240, 192, 66, .18); }
+
+/* Okienko z data — zwykla podpowiedz, przyklejona srodkiem do ikony. */
+.klaser-okienko {
+  width: 320px;
+  transform: translateX(-50%);
+  z-index: 12;
+  padding: 8px 10px;
+  font-size: var(--pismo-cechy);
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+}
+
+/* Gdy pod ikona brakuje miejsca, okienko staje nad nia. */
+.klaser-okienko.nad { transform: translate(-50%, -100%); }
+
+.klaser-okienko .nazwa { padding: 0; }
+.klaser-okienko .data { color: var(--blekit); }
+.klaser-okienko .brak { color: var(--pergamin); }
 
 /* Strzalki przewracania stron — `btnClassArrowLeft` i `-Right`, 33x33. */
 .klaser-strzalka {

@@ -129,8 +129,23 @@ export function cytatPrzedmiotu(p: Przedmiot): string {
   const przesuniecie = p.numer >= PIERWSZY_EPICKI && p.typ !== 14 ? PRZESUNIECIE_EPICKICH : 0;
 
   const nazwa = tekst(baza + przesuniecie + numer - 1) ?? '';
-  return nazwa.includes('|') ? (nazwa.split('|')[1] ?? '') : '';
+  if (!nazwa.includes('|')) return '';
+
+  // `#` w pliku jezykowym to koniec wiersza — tak samo czyta go klient
+  // (`hintText = ...split("#").join(String.fromCharCode(13))`).
+  return (nazwa.split('|')[1] ?? '').split('#').join('\n');
 }
+
+/**
+ * Czy przedmiot jest epicki — obrazek od 50 w gore, poza miksturami.
+ * To samo, co `czyEpicki()` na serwerze.
+ */
+export function czyEpicki(p: Przedmiot): boolean {
+  return p.numer >= PIERWSZY_EPICKI && p.typ !== 14;
+}
+
+/** Za epika sklep oddaje 10 grzybow; za reszte nic — `api/sklep.ts`. */
+export const GRZYBY_ZA_SPRZEDAZ_EPIKA = 10;
 
 export interface WierszOpisu {
   etykieta: string;
@@ -232,6 +247,9 @@ export function slotDlaRodzaju(rodzaj: number): number {
     default: return 10;  // reszta ida do plecaka
   }
 }
+
+/** Rodzaj przedmiotu, ktory sie pije, a nie zaklada. */
+export const RODZAJ_MIKSTURY = 12;
 
 /** Pierwszy slot plecaka. Nizsze numery to miejsca na zalozone rzeczy. */
 export const PIERWSZY_SLOT_PLECAKA = 10;

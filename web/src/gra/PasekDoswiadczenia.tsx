@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { liczba } from './liczby';
 
 /** Napis „Pzm" — pozycja 55 pliku jezykowego. */
 const TXT_PZM = 'Pzm';
@@ -108,11 +109,11 @@ export function PasekDoswiadczenia({
         >
           <div className="wiersz">
             <span>{TXT_DOSWIADCZENIE}:</span>
-            <span style={{ left: KOLUMNA_WARTOSCI }}>{doswiadczenie}</span>
+            <span style={{ left: KOLUMNA_WARTOSCI }}>{liczba(doswiadczenie)}</span>
           </div>
           <div className="wiersz">
             <span>{TXT_NASTEPNY_POZIOM}:</span>
-            <span style={{ left: KOLUMNA_WARTOSCI }}>{doNastepnegoPoziomu}</span>
+            <span style={{ left: KOLUMNA_WARTOSCI }}>{liczba(doNastepnegoPoziomu)}</span>
           </div>
         </div>
       )}

@@ -9,7 +9,12 @@
 import { bonusyZPrzedmiotow } from '../game/ekwipunek.js';
 import { cenaPunktow, dokupionePunkty } from '../game/cechy.js';
 import { BEZ_KLASERA } from '../game/album.js';
-import { barwaPrzedmiotu, plikIkony } from '../game/grafikaPrzedmiotow.js';
+import {
+  RODZAJ_BRONI,
+  barwaPrzedmiotu,
+  plikIkony,
+  plikPocisku,
+} from '../game/grafikaPrzedmiotow.js';
 import {
   RODZAJ_MIKSTURY,
   bonusZycia,
@@ -65,6 +70,16 @@ export interface Gracz {
     wytrzymalosc: number;
     szczescie: number;
   };
+
+  /**
+   * Z czego sklada sie kazda widoczna cecha: wartosc wlasna postaci,
+   * dokladka z zalozonych przedmiotow i dokladka z mikstur. Suma trzech
+   * czlonow to `cechy`.
+   */
+  skladnikiCech: Record<
+    'sila' | 'zrecznosc' | 'intelekt' | 'wytrzymalosc' | 'szczescie',
+    { podstawa: number; przedmioty: number; mikstury: number }
+  >;
 
   /**
    * Ile srebra kosztuje dokupienie kolejnych trzech punktow kazdej
@@ -178,6 +193,11 @@ export interface Przedmiot {
   ulepszenie: number;
   /** Adres obrazka w katalogu zasobow. */
   obrazek: string;
+  /**
+   * Adres pocisku, ktory ta bron wypuszcza w walce — `GetArrowID()`.
+   * Maja go tylko rozdzki maga i luki zwiadowcy; reszta ma `null`.
+   */
+  pocisk: string | null;
   obrazenia: { min: number; max: number };
   atrybuty: { rodzaj: number; wartosc: number }[];
   zloto: number;
@@ -260,6 +280,12 @@ export function zbudujPrzedmiot(wiersz: Record<string, unknown>): Przedmiot {
     numer,
     ulepszenie: intval(wiersz['upgrade_level'] ?? 0),
     obrazek: plikIkony(typ, identyfikator, barwa),
+    /*
+     * Pocisk, ktory ta bron wypuszcza w walce — tylko rozdzka maga
+     * i luk zwiadowcy jakis maja (`GetArrowID`). Ekran postaci stawia go
+     * tam, gdzie wojownik ma tarcze; reszta przedmiotow oddaje `null`.
+     */
+    pocisk: typ === RODZAJ_BRONI ? plikPocisku(identyfikator, barwa) : null,
     obrazenia: { min: intval(wiersz['dmg_min'] ?? 0), max: intval(wiersz['dmg_max'] ?? 0) },
     atrybuty: [1, 2, 3]
       .map((n) => ({
@@ -366,12 +392,42 @@ export function zbudujGracza(
   const mnozniki = mnoznikiCech(mikstury);
   const CECHY_PO_KOLEI = ['sila', 'zrecznosc', 'intelekt', 'wytrzymalosc', 'szczescie'] as const;
 
+  /*
+   * Rozbicie kazdej cechy na trzy czlony — ekran postaci pokazuje je po
+   * klikniecu w wiersz. Podstawa to wartosc wlasna postaci, dalej ida
+   * ZALOZONE przedmioty i dzialajace mikstury.
+   */
+  const skladnikiCech = {
+    sila: { podstawa: cechy.sila - bonusy.sila, przedmioty: bonusy.sila, mikstury: 0 },
+    zrecznosc: {
+      podstawa: cechy.zrecznosc - bonusy.zrecznosc,
+      przedmioty: bonusy.zrecznosc,
+      mikstury: 0,
+    },
+    intelekt: {
+      podstawa: cechy.intelekt - bonusy.intelekt,
+      przedmioty: bonusy.intelekt,
+      mikstury: 0,
+    },
+    wytrzymalosc: {
+      podstawa: cechy.wytrzymalosc - bonusy.wytrzymalosc,
+      przedmioty: bonusy.wytrzymalosc,
+      mikstury: 0,
+    },
+    szczescie: {
+      podstawa: cechy.szczescie - bonusy.szczescie,
+      przedmioty: bonusy.szczescie,
+      mikstury: 0,
+    },
+  };
+
   CECHY_PO_KOLEI.forEach((nazwa, i) => {
     const udzial = (mnozniki[i + 1] ?? 1) - 1;
     if (udzial === 0) return;
     const dodatek = Math.round(cechy[nazwa] * udzial);
     bonusy[nazwa] += dodatek;
     cechy[nazwa] += dodatek;
+    skladnikiCech[nazwa].mikstury = dodatek;
   });
 
   return {
@@ -393,6 +449,7 @@ export function zbudujGracza(
 
     cechy,
     bonusy,
+    skladnikiCech,
     cenyCech: [1, 2, 3, 4, 5].map((cecha) =>
       cenaPunktow(klasa, rasa, cecha, cechyWlasne[cecha - 1] ?? 0),
     ),

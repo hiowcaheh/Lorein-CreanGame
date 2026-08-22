@@ -17,6 +17,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PODPISY, POTWORY, WYNIKI_WALKI } from '../../gra/karczma-teksty';
+import { lacznaPremia, wierszePremii } from '../../gra/premie';
 import { PodpowiedzPrzedmiotu } from '../../gra/PodpowiedzPrzedmiotu';
 import {
   FANFARY,
@@ -182,7 +183,9 @@ export function Walka({
    * podbita w oknie wyboru i tam stoi znaczek; po walce w lochu nagroda
    * powstaje dopiero teraz, wiec znaczek nalezy sie tutaj.
    */
-  const premiaLacznie = rozliczenie.premie?.klaser ?? 0;
+  const skladnikiPremii = wierszePremii(rozliczenie.premie);
+  const premiaLacznie = lacznaPremia(rozliczenie.premie);
+  const [pokazanaPremia, setPokazanaPremia] = useState(false);
 
   /*
    * `odgrywany` to numer ciosu, ktory wlasnie leci; `zaliczonych` — ile
@@ -478,11 +481,18 @@ export function Walka({
               */}
               {nagroda.doswiadczenie > 0 && (
                 <div
-                  className="walka-nagroda doswiadczenie"
+                  className={`walka-nagroda doswiadczenie${premiaLacznie > 0 ? ' zPremia' : ''}`}
                   style={{ left: WALKA_DOSWIADCZENIE_X, top: WALKA_PIENIADZE_Y }}
+                  onClick={() => premiaLacznie > 0 && setPokazanaPremia((czy) => !czy)}
                 >
-                  {PODPISY.doswiadczenie}: {liczba(nagroda.doswiadczenie)}
+                  {/*
+                    Podpis skrocony do „EXP" — SWIADOME ODSTEPSTWO, patrz
+                    tabela w CLAUDE.md. Dluzsze slowo zjadalo miejsce
+                    liczbie i ikonie zdobyczy.
+                  */}
+                  {PODPISY.doswiadczenieKrotko}:{' '}
                   {premiaLacznie > 0 && <ZnaczekPremii />}
+                  {liczba(nagroda.doswiadczenie)}
                 </div>
               )}
 
@@ -503,11 +513,12 @@ export function Walka({
 
               {nagroda.zloto > 0 && (
                 <div
-                  className="walka-nagroda kwota"
+                  className={`walka-nagroda kwota${premiaLacznie > 0 ? ' zPremia' : ''}`}
                   style={{
                     right: SZEROKOSC_EKRANU_GRY - WALKA_NAGRODY_PRAWA,
                     top: WALKA_PIENIADZE_Y,
                   }}
+                  onClick={() => premiaLacznie > 0 && setPokazanaPremia((czy) => !czy)}
                 >
                   {premiaLacznie > 0 && <ZnaczekPremii />}
                   {/* Zloto to sto srebra; oba czlony pokazuja sie tylko, gdy sa. */}
@@ -526,6 +537,29 @@ export function Walka({
                 </div>
               )}
             </>
+          )}
+
+          {/*
+            Rozpisanie premii — ta sama tresc, co w oknie wyboru zadania.
+            Stoi NAD wierszem z nagroda, zeby nie zaslonic przycisku „OK".
+          */}
+          {pokazanaPremia && premiaLacznie > 0 && (
+            <div
+              className="podpowiedz walka-premia-podpowiedz"
+              style={{
+                left: WALKA_DOSWIADCZENIE_X,
+                top: WALKA_PIENIADZE_Y - 76,
+                width: 300,
+              }}
+              role="dialog"
+            >
+              <div>{PODPISY.wTym}:</div>
+              {skladnikiPremii.map((p) => (
+                <div className={p.klasa} key={p.klasa}>
+                  {p.podpis}: +{p.ile}%
+                </div>
+              ))}
+            </div>
           )}
 
           {plecakBylPelny && (

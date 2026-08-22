@@ -11,7 +11,7 @@
  * „ktory bit jest czym" jest przepisana do `gra/klaser.ts`.
  */
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useLayoutEffect, useRef, useState } from 'react';
 import {
   GNIAZDA,
   LICZBA_DZIALOW,
@@ -23,6 +23,7 @@ import {
   ODSUNIECIE_RAMKI,
   POZYCJI_W_DZIALE,
   RAMKA_POTWORA,
+  SKALA_POTWORA,
   STRZALKA,
   STRZALKA_DALEJ_X,
   STRZALKA_WSTECZ_X,
@@ -55,31 +56,49 @@ export interface StanKlasera {
   daty: Record<number, number>;
 }
 
-/**
- * Kiedy pozycja trafila do klasera.
- *
- * Wzor ma piec barw i kazda swoja date — bierzemy NAJWCZESNIEJSZA,
- * czyli chwile, w ktorej gracz zobaczyl ten wzor po raz pierwszy.
- */
-function dataOdblokowania(
-  daty: StanKlasera['daty'],
-  bit: number,
-  ile: number,
-  bity: readonly boolean[],
-): string {
-  let najwczesniej = 0;
-  for (let i = 0; i < ile; i++) {
-    if (!bity[bit + i]) continue;
-    const czas = daty[bit + i];
-    if (czas && (najwczesniej === 0 || czas < najwczesniej)) najwczesniej = czas;
-  }
-  if (najwczesniej === 0) return '';
+/** Ikony przedmiotow — 90x90, tak jak pliki w katalogu `itm/`. */
+const IKONA_PRZEDMIOTU = 90;
 
-  return new Date(najwczesniej * 1000).toLocaleDateString('pl-PL', {
+/** Portret potwora — 300 px pomniejszone do `SKALA_POTWORA`. */
+const IKONA_POTWORA = 300 * SKALA_POTWORA;
+
+/** Szerokosc okienka z data. Zmierzona tak, by miescila sie nazwa i data. */
+const SZEROKOSC_OKIENKA = 320;
+
+/** Ile miejsca okienko potrzebuje pod ikona, zeby nie wyjsc poza ekran. */
+const WYSOKOSC_OKIENKA = 96;
+
+/**
+ * Kiedy KONKRETNA pozycja trafila do klasera — z dokladnoscia do sekundy.
+ *
+ * Kazdy bit ma wlasna date, wiec kazda barwa wzoru ma swoja: piec ikon
+ * jednego miecza to piec osobnych zdobyczy i piec osobnych chwil.
+ */
+function dataOdblokowania(daty: StanKlasera['daty'], bit: number): string {
+  const czas = daty[bit];
+  if (!czas) return '';
+
+  return new Date(czas * 1000).toLocaleString('pl-PL', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   });
+}
+
+/** Co pokazac w okienku po klikniecu w ikone. */
+export interface WybranaPozycja {
+  nazwa: string;
+  /** Czy gracz ma juz te pozycje w klaserze. */
+  zebrana: boolean;
+  /** Pusty napis, gdy wpis jest sprzed wprowadzenia dat. */
+  data: string;
+  /** Srodek ikony w poziomie oraz jej gorna i dolna krawedz. */
+  x: number;
+  gora: number;
+  dol: number;
 }
 
 /** Ile procent, z dokladnoscia do setnej — `Math.round(x * 10000) / 100`. */
@@ -102,6 +121,7 @@ function zloz(wzor: string, ile: number, ze: number): string[] {
 export function Klaser({ stan }: { stan: StanKlasera }) {
   const [dzial, setDzial] = useState(0);
   const [strona, setStrona] = useState(0);
+  const [wybrana, setWybrana] = useState<WybranaPozycja | null>(null);
   const licznik = useRef<HTMLDivElement>(null);
   const [licznikY, setLicznikY] = useState(LICZNIK.gora);
 
@@ -156,11 +176,13 @@ export function Klaser({ stan }: { stan: StanKlasera }) {
 
   function przejdz(oIle: number) {
     zagraj(KLIK);
+    setWybrana(null);
     setStrona((s) => przewin(dzial, s + oIle));
   }
 
   function wybierzDzial(nowy: number) {
     zagraj(KLIK);
+    setWybrana(null);
     setDzial(nowy);
     setStrona(0);
   }
@@ -207,6 +229,7 @@ export function Klaser({ stan }: { stan: StanKlasera }) {
           pozycja={pozycjaNaStronie(dzial, strona, i)}
           bity={bity}
           daty={stan.daty}
+          onWybor={setWybrana}
         />
       ))}
 
@@ -238,6 +261,44 @@ export function Klaser({ stan }: { stan: StanKlasera }) {
         onClick={() => przejdz(1)}
         aria-label="Następna strona"
       />
+
+      {wybrana && <OkienkoPozycji wybrana={wybrana} zamknij={() => setWybrana(null)} />}
+    </div>
+  );
+}
+
+/**
+ * Okienko z nazwa i data odblokowania — otwiera je klikniecie w ikone.
+ *
+ * Staje pod ikona, a gdy by sie tam nie zmiescilo, to nad nia; w poziomie
+ * jest przyciete do rozkladowki, zeby nie wyszlo poza ekran gry.
+ */
+function OkienkoPozycji({
+  wybrana,
+  zamknij,
+}: {
+  wybrana: WybranaPozycja;
+  zamknij: () => void;
+}) {
+  const polowa = SZEROKOSC_OKIENKA / 2;
+  const lewo = Math.min(Math.max(wybrana.x, polowa + 5), 1000 - polowa - 5);
+  const podSpodem = wybrana.dol + 8 + WYSOKOSC_OKIENKA <= 700;
+
+  return (
+    <div
+      className={`podpowiedz klaser-okienko${podSpodem ? '' : ' nad'}`}
+      style={{ left: lewo, top: podSpodem ? wybrana.dol + 8 : wybrana.gora - 8 }}
+      onClick={zamknij}
+      role="presentation"
+    >
+      <div className="nazwa">{wybrana.nazwa}</div>
+      {!wybrana.zebrana && <div className="brak">Jeszcze nieznaleziony</div>}
+      {wybrana.zebrana && wybrana.data !== '' && (
+        <div className="data">Znaleziono: {wybrana.data}</div>
+      )}
+      {wybrana.zebrana && wybrana.data === '' && (
+        <div className="brak">Znaleziono — data nieznana</div>
+      )}
     </div>
   );
 }
@@ -249,6 +310,7 @@ function Gniazdo({
   pozycja,
   bity,
   daty,
+  onWybor,
 }: {
   /** 0..3 — potrzebny licznikowi, ktory patrzy na PIERWSZE gniazdo. */
   numer: number;
@@ -256,6 +318,7 @@ function Gniazdo({
   pozycja: Pozycja;
   bity: readonly boolean[];
   daty: StanKlasera['daty'];
+  onWybor: (co: WybranaPozycja) => void;
 }) {
   if (pozycja.rodzaj === 'pusta') return null;
 
@@ -264,10 +327,7 @@ function Gniazdo({
 
   if (pozycja.rodzaj === 'potwor') {
     const znaleziony = bity[pozycja.bit] === true;
-    if (znaleziony) {
-      naglowek = NAZWY_POTWOROW[pozycja.bit] ?? NIEZNANE;
-      podpowiedz = zPodpisemDaty(dataOdblokowania(daty, pozycja.bit, 1, bity));
-    }
+    if (znaleziony) naglowek = NAZWY_POTWOROW[pozycja.bit] ?? NIEZNANE;
 
     return (
       <>
@@ -291,6 +351,15 @@ function Gniazdo({
           alt=""
           style={{ left: gniazdo.potwor.lewo, top: gniazdo.potwor.gora }}
         />
+        <GuzikPozycji
+          lewo={gniazdo.potwor.lewo}
+          gora={gniazdo.potwor.gora}
+          bok={IKONA_POTWORA}
+          nazwa={naglowek}
+          zebrana={znaleziony}
+          data={dataOdblokowania(daty, pozycja.bit)}
+          onWybor={onWybor}
+        />
       </>
     );
   }
@@ -303,21 +372,30 @@ function Gniazdo({
     const jest = bity[pozycja.bit] === true;
     if (jest) {
       naglowek = nazwa.nazwa;
-      podpowiedz = [nazwa.podpowiedz, zPodpisemDaty(dataOdblokowania(daty, pozycja.bit, 1, bity))]
-        .filter(Boolean)
-        .join('\n');
+      podpowiedz = nazwa.podpowiedz;
     }
 
     return (
       <>
         <Naglowek numer={numer} gniazdo={gniazdo} tekst={naglowek} podpowiedz={podpowiedz} />
         {jest && (
-          <img
-            className="klaser-wzor"
-            src={plikPrzedmiotu(typ, obrazek, 0, klasa)}
-            alt=""
-            style={{ left: gniazdo.epik.lewo, top: gniazdo.epik.gora }}
-          />
+          <>
+            <img
+              className="klaser-wzor"
+              src={plikPrzedmiotu(typ, obrazek, 0, klasa)}
+              alt=""
+              style={{ left: gniazdo.epik.lewo, top: gniazdo.epik.gora }}
+            />
+            <GuzikPozycji
+              lewo={gniazdo.epik.lewo}
+              gora={gniazdo.epik.gora}
+              bok={IKONA_PRZEDMIOTU}
+              nazwa={naglowek}
+              zebrana
+              data={dataOdblokowania(daty, pozycja.bit)}
+              onWybor={onWybor}
+            />
+          </>
         )}
       </>
     );
@@ -329,38 +407,78 @@ function Gniazdo({
    */
   const barwy = [0, 1, 2, 3, 4].map((b) => bity[pozycja.bit + b] === true);
   const cokolwiek = barwy.some(Boolean);
-  if (cokolwiek) {
-    naglowek = nazwa.nazwa;
-    podpowiedz = zPodpisemDaty(dataOdblokowania(daty, pozycja.bit, 5, bity));
-  }
+  if (cokolwiek) naglowek = nazwa.nazwa;
 
   return (
     <>
       <Naglowek numer={numer} gniazdo={gniazdo} tekst={naglowek} podpowiedz={podpowiedz} />
       {cokolwiek &&
-        barwy.map((ma, b) => (
-          <img
-            key={b}
-            className="klaser-wzor"
-            src={plikPrzedmiotu(typ, obrazek, b, klasa)}
-            alt=""
-            style={{
-              left: gniazdo.wzory[b]?.lewo,
-              top: gniazdo.wzory[b]?.gora,
-              opacity: ma ? 1 : 0.3,
-            }}
-          />
-        ))}
+        barwy.map((ma, b) => {
+          const miejsce = gniazdo.wzory[b];
+          if (!miejsce) return null;
+
+          return (
+            <Fragment key={b}>
+              <img
+                className="klaser-wzor"
+                src={plikPrzedmiotu(typ, obrazek, b, klasa)}
+                alt=""
+                style={{ left: miejsce.lewo, top: miejsce.gora, opacity: ma ? 1 : 0.3 }}
+              />
+              <GuzikPozycji
+                lewo={miejsce.lewo}
+                gora={miejsce.gora}
+                bok={IKONA_PRZEDMIOTU}
+                /*
+                 * Piec barw jednego wzoru nosi w oryginale te sama nazwe —
+                 * `GetItemName` barwy nie zna. Zeby w okienku bylo widac,
+                 * o ktora chodzi, dopisujemy jej numer.
+                 */
+                nazwa={`${naglowek} (barwa ${b + 1} z 5)`}
+                zebrana={ma}
+                data={dataOdblokowania(daty, pozycja.bit + b)}
+                onWybor={onWybor}
+              />
+            </Fragment>
+          );
+        })}
     </>
   );
 }
 
-/** „Znaleziono: 22.08.2026" — pusty napis, gdy daty nie ma. */
-function zPodpisemDaty(data: string): string {
-  return data === '' ? '' : `Znaleziono: ${data}`;
+/** Przezroczysty guzik na ikonie — otwiera okienko z data odblokowania. */
+function GuzikPozycji({
+  lewo,
+  gora,
+  bok,
+  nazwa,
+  zebrana,
+  data,
+  onWybor,
+}: {
+  lewo: number;
+  gora: number;
+  bok: number;
+  nazwa: string;
+  zebrana: boolean;
+  data: string;
+  onWybor: (co: WybranaPozycja) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="klaser-guzik"
+      style={{ left: lewo, top: gora, width: bok, height: bok }}
+      aria-label={nazwa}
+      onClick={() => {
+        zagraj(KLIK);
+        onWybor({ nazwa, zebrana, data, x: lewo + bok / 2, gora, dol: gora + bok });
+      }}
+    />
+  );
 }
 
-/** Napis nad pozycja i — pod nim cytat epika oraz data odblokowania. */
+/** Napis nad pozycja i — pod nim cytat epika. */
 function Naglowek({
   numer,
   gniazdo,

@@ -38,6 +38,11 @@ export const PODPISY = {
   "przyjmij": "Przyjmij",
   "wroc": "Wróć",
   "doswiadczenie": "Doświadczenie",
+  /*
+   * Krotszy podpis na ekranie po walce. SWIADOME ODSTEPSTWO — patrz
+   * tabela w CLAUDE.md; okno wyboru zadania zostaje przy pelnym slowie.
+   */
+  "doswiadczenieKrotko": "EXP",
   "czasTrwania": "Czas trwania",
   "przerwij": "Przerwij",
   "pomin": "Pomiń",

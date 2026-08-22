@@ -97,8 +97,16 @@ export function pustaBron(klasa: number): string {
 export const SLOT_BRONI = 8;
 export const SLOT_TARCZY = 9;
 
-export function pustaTarcza(klasa: number): string | null {
-  return klasa === 1 ? 'slot10.png' : null;
+export function pustaTarcza(klasa: number, pociskBroni?: string | null): string | null {
+  if (klasa === 1) return 'slot10.png';
+
+  /*
+   * Odstepstwo: oryginal zostawia tu magowi i zwiadowcy pusty kwadrat.
+   * Wlasciciel gry poprosil, zeby stal tam POCISK, ktory wypuszcza
+   * zalozona bron — ten sam plik, ktory leci przez pole bitwy
+   * (`GetArrowID`). Bez broni nie ma czego pokazac.
+   */
+  return pociskBroni ?? null;
 }
 
 /** Plecak — piec miejsc w dolnym rzedzie. */
@@ -289,12 +297,16 @@ export function wierszeCech(gracz: {
   ciosKrytyczny: number;
 }) {
   return [
-    { nazwa: 'Siła', wartosc: String(gracz.cechy.sila) },
-    { nazwa: 'Zręczność', wartosc: String(gracz.cechy.zrecznosc) },
-    { nazwa: 'Inteligencja', wartosc: String(gracz.cechy.intelekt) },
+    { nazwa: 'Siła', klucz: 'sila' as const, wartosc: String(gracz.cechy.sila) },
+    { nazwa: 'Zręczność', klucz: 'zrecznosc' as const, wartosc: String(gracz.cechy.zrecznosc) },
+    { nazwa: 'Inteligencja', klucz: 'intelekt' as const, wartosc: String(gracz.cechy.intelekt) },
     // "Wytrzym." — skrot jest w oryginalnym pliku jezykowym (pozycja 63).
-    { nazwa: 'Wytrzym.', wartosc: String(gracz.cechy.wytrzymalosc) },
-    { nazwa: 'Szczęście', wartosc: String(gracz.cechy.szczescie) },
+    {
+      nazwa: 'Wytrzym.',
+      klucz: 'wytrzymalosc' as const,
+      wartosc: String(gracz.cechy.wytrzymalosc),
+    },
+    { nazwa: 'Szczęście', klucz: 'szczescie' as const, wartosc: String(gracz.cechy.szczescie) },
   ];
 }
 
