@@ -43,6 +43,16 @@ const SEKUND_NA_JEDNOSTKE = 300;
 /** O ile procent skraca wyprawe kazdy wierzchowiec — `mountMultiplier()`. */
 const SKROCENIE: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50 };
 
+/**
+ * Znaczek przy nagrodzie, ktora jest podbita premia.
+ *
+ * Oryginal nie oznacza jej niczym — po prostu podwiesza podpowiedz
+ * (`EnablePopup(LBL_QO_REWARDEXP, ...)`), a na dotyku nie ma czego
+ * najezdzac. Wlasciciel gry poprosil o widoczny znak; bierzemy na to
+ * ikone „+" z oryginalu (`btnClassPlus`, ta sama, co przy cechach).
+ */
+const ZNACZEK_PREMII = '/res/ui/plus.png';
+
 export function OknoWyboru({
   stan,
   gracz,
@@ -58,10 +68,22 @@ export function OknoWyboru({
 }) {
   const [wybrane, setWybrane] = useState<Zadanie | null>(stan.zadania[0] ?? null);
   const [pokazanyPrzedmiot, setPokazanyPrzedmiot] = useState(false);
+  const [pokazanaPremia, setPokazanaPremia] = useState(false);
   const [pokazanyCzas, setPokazanyCzas] = useState(false);
   if (!wybrane) return null;
 
   const zaKrotkaWytrzymalosc = stan.wytrzymalosc < wybrane.sekundy;
+
+  /*
+   * Ile procent doswiadczenia dokladaja premie. `req.php` liczy je
+   * osobno i dodaje do jedynki:
+   *
+   *     $exp = quest_exp * ($ebonus + $albumbonus + $rqbonus);
+   *
+   * Premii gildii jeszcze nie ma czym wypelnic, wiec zostaja dwie:
+   * klaser i rzadkie zadanie.
+   */
+  const premiaLacznie = wybrane.premie.klaser + wybrane.premie.rzadkie;
 
   return (
     <div className="karczma-okno" style={{ left: OKNO.lewo, top: OKNO.gora, width: OKNO.szerokosc, height: OKNO.wysokosc }}>
@@ -143,9 +165,21 @@ export function OknoWyboru({
           {String(wybrane.zloto % 100).padStart(2, '0')}
           <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
         </>,
-        <>
+        /*
+          Doswiadczenie. Liczba jest juz Z PREMIAMI — tak samo podaje ja
+          `req.php` (`round(quest_exp * ($ebonus + $albumbonus + $rqbonus))`).
+          Klikniecie rozpisuje, ile z tego dokłada klaser i rzadkie
+          zadanie — to samo mowi podpowiedz w oryginale.
+        */
+        <button
+          type="button"
+          className="karczma-premia"
+          disabled={premiaLacznie === 0}
+          onClick={() => setPokazanaPremia((czy) => !czy)}
+        >
           {PODPISY.doswiadczenie}: {wybrane.doswiadczenie.toLocaleString('pl-PL')}
-        </>,
+          {premiaLacznie > 0 && <img src={ZNACZEK_PREMII} alt="z premią" />}
+        </button>,
         /*
           Czas trwania. Klikniecie pokazuje, ile wyprawa zajelaby PIESZO
           i o ile skraca ja wierzchowiec — tego w oryginale nie ma
@@ -158,7 +192,7 @@ export function OknoWyboru({
           onClick={() => setPokazanyCzas((czy) => !czy)}
         >
           {PODPISY.czasTrwania}: {czas(wybrane.sekundy)}
-          {stan.wierzchowiec > 0 && ' *'}
+          {stan.wierzchowiec > 0 && <img src={ZNACZEK_PREMII} alt="skrócony" />}
         </button>,
       ].map((tresc, i) => (
         <div
@@ -173,6 +207,37 @@ export function OknoWyboru({
           {tresc}
         </div>
       ))}
+
+      {/*
+        Z czego sklada sie premia do doswiadczenia — to samo, co mowi
+        podpowiedz w oryginale:
+
+            txt[TXT_EXPBONUS_PREFIX] + " " + SG_EXP_BONUS + "% " + txt[TXT_EXPBONUS_SUFFIX]
+              + " + " + round((SG_ALBUM - 10000) / contentMax * 100) + "% " + txt[TXT_COLLECTION + 1]
+
+        Stoi NAD wierszem z doswiadczeniem, tak samo jak podpowiedz
+        czasu — inaczej zaslonilaby przyciski.
+      */}
+      {pokazanaPremia && premiaLacznie > 0 && (
+        <div
+          className="podpowiedz karczma-premia-podpowiedz"
+          style={{
+            left: OKNO_NAGRODY.lewo - OKNO.lewo,
+            top: OKNO_NAGRODY.gora - OKNO.gora + 2 * ODSTEP_NAGROD - 84,
+            width: 300,
+          }}
+        >
+          <div>{PODPISY.wTym}:</div>
+          {wybrane.premie.klaser > 0 && (
+            <div>
+              {PODPISY.premiaKolekcjonera}: +{wybrane.premie.klaser}%
+            </div>
+          )}
+          {wybrane.premie.rzadkie > 0 && (
+            <div>Rzadkie zadanie: +{wybrane.premie.rzadkie}%</div>
+          )}
+        </div>
+      )}
 
       {/*
         Rozpisany czas wyprawy: ile trwalaby pieszo, ktory wierzchowiec

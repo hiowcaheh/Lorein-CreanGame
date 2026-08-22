@@ -15,7 +15,13 @@
 import { Hono } from 'hono';
 import { getSql } from '../db/client.js';
 import { intval } from '../compat/php.js';
-import { BEZ_KLASERA, POZYCJI_W_KLASERZE, PUSTY_KLASER } from '../game/album.js';
+import {
+  BEZ_KLASERA,
+  POZYCJI_W_KLASERZE,
+  PUSTY_KLASER,
+  odczytajDaty,
+  type DatyKlasera,
+} from '../game/album.js';
 import { tokenZNaglowka } from './konto.js';
 
 export const klaser = new Hono();
@@ -23,6 +29,7 @@ export const klaser = new Hono();
 interface WierszKlasera extends Record<string, unknown> {
   album: number | null;
   album_data: string | null;
+  album_dates: string | null;
 }
 
 export interface StanKlaseraApi {
@@ -32,6 +39,11 @@ export interface StanKlaseraApi {
   ile: number;
   /** `contentMax` z klienta — ile pozycji miesci komplet. */
   wszystkich: number;
+  /**
+   * Kiedy odblokowala sie ktora pozycja: numer bitu -> czas uniksowy.
+   * Pozycje sprzed wprowadzenia kolumny daty nie maja.
+   */
+  daty: DatyKlasera;
 }
 
 klaser.get('/klaser', async (c) => {
@@ -40,7 +52,7 @@ klaser.get('/klaser', async (c) => {
 
   const sql = getSql();
   const [wiersz] = await sql<WierszKlasera[]>`
-    SELECT album, album_data FROM user_data WHERE ssid = ${token} LIMIT 1
+    SELECT album, album_data, album_dates FROM user_data WHERE ssid = ${token} LIMIT 1
   `;
   if (!wiersz) return c.json({ blad: 'Brak sesji.' }, 401);
 
@@ -49,6 +61,7 @@ klaser.get('/klaser', async (c) => {
     dane: ile === BEZ_KLASERA ? PUSTY_KLASER : (wiersz.album_data || PUSTY_KLASER),
     ile,
     wszystkich: POZYCJI_W_KLASERZE,
+    daty: ile === BEZ_KLASERA ? {} : odczytajDaty(wiersz.album_dates),
   };
   return c.json(odpowiedz);
 });

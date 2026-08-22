@@ -51,7 +51,9 @@ export const PODPISY = {
   "piwoTekstDosc": "...masz już dosyć, kolego. Trzeba znać umiar. Wróć jutro.",
   "piwoWypite": "Wypite dziś kufle:",
   "piwoTytulZaZdrowy": "Czego dusza pragnie?",
-  "piwoTekstZaZdrowy": "Nie wolisz najpierw czegoś zrobić, zanim się tu zasiedzisz, kolego? Mój trunek stawia na nogi zmęczonych wędrowców. Nie widzę po tobie zmęczenia... ani śladów wędrówki. Zagadnij kogoś z gości. Na pewno ktoś tu znajdzie dla ciebie zadanie."
+  "piwoTekstZaZdrowy": "Nie wolisz najpierw czegoś zrobić, zanim się tu zasiedzisz, kolego? Mój trunek stawia na nogi zmęczonych wędrowców. Nie widzę po tobie zmęczenia... ani śladów wędrówki. Zagadnij kogoś z gości. Na pewno ktoś tu znajdzie dla ciebie zadanie.",
+  "wTym": "w tym",
+  "premiaKolekcjonera": "Premia kolekcjonera"
 } as const;
 
 /** Nazwy potworow — numer z serwera liczy od jedynki. */

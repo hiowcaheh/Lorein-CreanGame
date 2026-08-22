@@ -158,9 +158,43 @@ export function miejsceWKlaserze(p: PrzedmiotKlasera): number {
   return miejsce;
 }
 
+/**
+ * Kiedy odblokowala sie ktora pozycja: numer bitu -> czas uniksowy.
+ *
+ * SWIADOME ODSTEPSTWO (tabela w CLAUDE.md). Oryginal nie zapisuje dat
+ * wcale — klaser to same bity. Wlasciciel gry poprosil, zeby przy
+ * znalezionej pozycji stala data; trzyma sie ja w osobnej kolumnie,
+ * zeby zapis bitowy zostal taki sam, jak w oryginale.
+ */
+export type DatyKlasera = Record<number, number>;
+
 export interface StanKlasera {
   dane: string;
   ile: number;
+  daty: DatyKlasera;
+}
+
+/** Odczytuje kolumne `album_dates`. Pusta albo zepsuta znaczy „brak dat". */
+export function odczytajDaty(zapis: unknown): DatyKlasera {
+  if (typeof zapis !== 'string' || zapis === '') return {};
+  try {
+    const odczytane: unknown = JSON.parse(zapis);
+    if (!odczytane || typeof odczytane !== 'object') return {};
+
+    const daty: DatyKlasera = {};
+    for (const [bit, czas] of Object.entries(odczytane as Record<string, unknown>)) {
+      const b = Number(bit);
+      const t = Number(czas);
+      if (Number.isInteger(b) && b >= 0 && Number.isFinite(t) && t > 0) daty[b] = Math.trunc(t);
+    }
+    return daty;
+  } catch {
+    return {};
+  }
+}
+
+export function zapiszDaty(daty: DatyKlasera): string {
+  return JSON.stringify(daty);
 }
 
 /**
@@ -170,8 +204,10 @@ export interface StanKlasera {
 export function dopiszDoKlasera(
   stan: StanKlasera,
   przedmioty: readonly PrzedmiotKlasera[],
+  teraz = 0,
 ): StanKlasera {
   const bity = odkodujKlaser(stan.dane);
+  const daty = { ...stan.daty };
   let ile = stan.ile;
 
   for (const p of przedmioty) {
@@ -180,10 +216,11 @@ export function dopiszDoKlasera(
     if (miejsce <= 0 || miejsce >= bity.length) continue;
     if (bity[miejsce]) continue;
     bity[miejsce] = true;
+    if (teraz > 0) daty[miejsce] = teraz;
     ile += 1;
   }
 
-  return { dane: zakodujKlaser(bity), ile };
+  return { dane: zakodujKlaser(bity), ile, daty };
 }
 
 /**
@@ -207,7 +244,11 @@ export function premiaZKlasera(album: number): number {
 export const NAJWYZSZY_POTWOR = 252;
 
 /** Wpisuje pokonanego potwora. Numer liczy sie od jedynki, tak jak w bazie. */
-export function dopiszPotworaDoKlasera(stan: StanKlasera, idPotwora: number): StanKlasera {
+export function dopiszPotworaDoKlasera(
+  stan: StanKlasera,
+  idPotwora: number,
+  teraz = 0,
+): StanKlasera {
   const miejsce = Math.abs(idPotwora) - 1;
   if (miejsce < 0 || miejsce > NAJWYZSZY_POTWOR) return stan;
 
@@ -215,5 +256,8 @@ export function dopiszPotworaDoKlasera(stan: StanKlasera, idPotwora: number): St
   if (miejsce >= bity.length || bity[miejsce]) return stan;
 
   bity[miejsce] = true;
-  return { dane: zakodujKlaser(bity), ile: stan.ile + 1 };
+  const daty = { ...stan.daty };
+  if (teraz > 0) daty[miejsce] = teraz;
+
+  return { dane: zakodujKlaser(bity), ile: stan.ile + 1, daty };
 }

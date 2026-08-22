@@ -4,10 +4,13 @@ import {
   POZYCJI_W_KLASERZE,
   PUSTY_KLASER,
   dopiszDoKlasera,
+  dopiszPotworaDoKlasera,
   miejsceWKlaserze,
+  odczytajDaty,
   odkodujKlaser,
   premiaZKlasera,
   zakodujKlaser,
+  zapiszDaty,
 } from '../src/game/album.js';
 
 /** Miecz wojownika, wzor 3, barwa 0. */
@@ -111,15 +114,17 @@ describe('Klaser Dokladnosci', () => {
   });
 
   describe('dopisywanie', () => {
+    const PUSTY = { dane: PUSTY_KLASER, ile: 0, daty: {} };
+
     it('liczy kazda pozycje raz', () => {
-      const raz = dopiszDoKlasera({ dane: PUSTY_KLASER, ile: 0 }, [MIECZ]);
+      const raz = dopiszDoKlasera(PUSTY, [MIECZ]);
       expect(raz.ile).toBe(1);
       expect(dopiszDoKlasera(raz, [MIECZ]).ile).toBe(1);
     });
 
     it('pomija to, czego klaser nie zbiera', () => {
       // Mikstury, klucze i sam klaser maja rodzaj wiekszy niz 10.
-      const stan = dopiszDoKlasera({ dane: PUSTY_KLASER, ile: 0 }, [
+      const stan = dopiszDoKlasera(PUSTY, [
         { ...MIECZ, item_type: 12 },
         { ...MIECZ, item_type: 13 },
       ]);
@@ -127,12 +132,38 @@ describe('Klaser Dokladnosci', () => {
     });
 
     it('rozne barwy tego samego wzoru to rozne pozycje', () => {
-      const stan = dopiszDoKlasera({ dane: PUSTY_KLASER, ile: 0 }, [
+      const stan = dopiszDoKlasera(PUSTY, [
         MIECZ,
         { ...MIECZ, dmg_min: 6 },
         { ...MIECZ, dmg_min: 7 },
       ]);
       expect(stan.ile).toBe(3);
+    });
+
+    it('zapisuje date odblokowania, ale tylko gdy ja podano', () => {
+      const bezDaty = dopiszDoKlasera(PUSTY, [MIECZ]);
+      expect(bezDaty.daty).toEqual({});
+
+      const zData = dopiszDoKlasera(PUSTY, [MIECZ], 1700000000);
+      expect(zData.daty).toEqual({ [miejsceWKlaserze(MIECZ)]: 1700000000 });
+
+      // Powtorzony przedmiot nie nadpisuje pierwszej daty.
+      const znowu = dopiszDoKlasera(zData, [MIECZ], 1800000000);
+      expect(znowu.daty).toEqual({ [miejsceWKlaserze(MIECZ)]: 1700000000 });
+    });
+
+    it('potwor tez dostaje date, a jego bit to numer minus jeden', () => {
+      const stan = dopiszPotworaDoKlasera(PUSTY, 7, 1700000000);
+      expect(stan.ile).toBe(1);
+      expect(stan.daty).toEqual({ 6: 1700000000 });
+    });
+
+    it('daty przezywaja zapis i odczyt kolumny', () => {
+      const stan = dopiszDoKlasera(PUSTY, [MIECZ], 1700000000);
+      expect(odczytajDaty(zapiszDaty(stan.daty))).toEqual(stan.daty);
+      expect(odczytajDaty('')).toEqual({});
+      expect(odczytajDaty('to nie jest JSON')).toEqual({});
+      expect(odczytajDaty(null)).toEqual({});
     });
   });
 

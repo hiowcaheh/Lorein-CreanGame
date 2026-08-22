@@ -1699,7 +1699,8 @@ button.postac-wierzchowiec-obraz img {
  * ile zajelaby pieszo i o ile skraca ja wierzchowiec.
  * SWIADOME ODSTEPSTWO, patrz tabela w CLAUDE.md.
  */
-.karczma-czas-wyprawy {
+.karczma-czas-wyprawy,
+.karczma-premia {
   padding: 0;
   border: none;
   background: none;
@@ -1707,6 +1708,21 @@ button.postac-wierzchowiec-obraz img {
   color: inherit;
   cursor: pointer;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.karczma-premia:disabled { cursor: default; }
+
+/*
+ * Znaczek premii — ikona „+" z oryginalu (`btnClassPlus`, 33x33).
+ * W wierszu nagrody stoi zmniejszona, zeby nie przerosla pisma.
+ */
+.karczma-czas-wyprawy img,
+.karczma-premia img {
+  width: 20px;
+  height: 20px;
 }
 
 /*
@@ -1715,7 +1731,8 @@ button.postac-wierzchowiec-obraz img {
  * Czas wedrowki - 50%" nie miescilo sie w ramce) i wiersz ma sie zawinac,
  * a nie wyjsc poza tlo.
  */
-.karczma-czas-podpowiedz {
+.karczma-czas-podpowiedz,
+.karczma-premia-podpowiedz {
   padding: 8px 10px;
   font-size: var(--pismo-cechy);
   line-height: 1.4;
@@ -1774,8 +1791,6 @@ button.postac-wierzchowiec-obraz img {
   font-size: var(--pismo);
   line-height: 1.35;
 }
-
-.okno-tekst .okno-wartosc { margin-top: 10px; color: var(--pergamin); }
 
 .okno-koszt {
   display: flex;

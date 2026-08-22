@@ -6,8 +6,11 @@
  * koncowki przy cenach powyzej 9999.
  */
 
-/** Ile punktow daje jeden zakup — `$newStatVal = 3 + $stat`. */
-export const PUNKTOW_ZA_ZAKUP = 3;
+/**
+ * Ile punktow daje jeden zakup. Jeden — patrz `backend/src/game/cechy.ts`
+ * i tabela odstepstw w CLAUDE.md.
+ */
+export const PUNKTOW_ZA_ZAKUP = 1;
 
 /**
  * Cena tak, jak POKAZUJE ja klient.

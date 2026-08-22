@@ -35,7 +35,13 @@ import { wylosujPrzedmiot } from '../game/generatorPrzedmiotow.js';
 import { czyEpicki } from '../game/grafikaPrzedmiotow.js';
 import { wczytajGracza, zbudujPrzedmiot } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
-import { BEZ_KLASERA, PUSTY_KLASER, dopiszDoKlasera } from '../game/album.js';
+import {
+  BEZ_KLASERA,
+  PUSTY_KLASER,
+  dopiszDoKlasera,
+  odczytajDaty,
+  zapiszDaty,
+} from '../game/album.js';
 import type { Context } from 'hono';
 
 export const sklep = new Hono();
@@ -328,7 +334,11 @@ sklep.post('/sklep/:numer/kup', async (c) => {
   if (maKlaser && rodzaj <= 10) {
     const przed = liczba(wiersz['album'] ?? 0);
     const stan = dopiszDoKlasera(
-      { dane: String(wiersz['album_data'] ?? '') || PUSTY_KLASER, ile: przed },
+      {
+        dane: String(wiersz['album_data'] ?? '') || PUSTY_KLASER,
+        ile: przed,
+        daty: odczytajDaty(wiersz['album_dates']),
+      },
       [
         {
           item_type: rodzaj,
@@ -343,10 +353,14 @@ sklep.post('/sklep/:numer/kup', async (c) => {
           atr_val_3: liczba(towar['atr_val_3']),
         },
       ],
+      time(),
     );
     if (stan.ile > przed) {
       await sql`
-        UPDATE user_data SET album_data = ${stan.dane}, album = ${stan.ile}
+        UPDATE user_data SET
+          album_data = ${stan.dane},
+          album = ${stan.ile},
+          album_dates = ${zapiszDaty(stan.daty)}
         WHERE user_id = ${wiersz.user_id}
       `;
     }

@@ -51,6 +51,35 @@ export interface StanKlasera {
   dane: string;
   ile: number;
   wszystkich: number;
+  /** Numer bitu -> czas uniksowy odblokowania. Starsze wpisy daty nie maja. */
+  daty: Record<number, number>;
+}
+
+/**
+ * Kiedy pozycja trafila do klasera.
+ *
+ * Wzor ma piec barw i kazda swoja date — bierzemy NAJWCZESNIEJSZA,
+ * czyli chwile, w ktorej gracz zobaczyl ten wzor po raz pierwszy.
+ */
+function dataOdblokowania(
+  daty: StanKlasera['daty'],
+  bit: number,
+  ile: number,
+  bity: readonly boolean[],
+): string {
+  let najwczesniej = 0;
+  for (let i = 0; i < ile; i++) {
+    if (!bity[bit + i]) continue;
+    const czas = daty[bit + i];
+    if (czas && (najwczesniej === 0 || czas < najwczesniej)) najwczesniej = czas;
+  }
+  if (najwczesniej === 0) return '';
+
+  return new Date(najwczesniej * 1000).toLocaleDateString('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
 
 /** Ile procent, z dokladnoscia do setnej — `Math.round(x * 10000) / 100`. */
@@ -177,6 +206,7 @@ export function Klaser({ stan }: { stan: StanKlasera }) {
           gniazdo={gniazdo}
           pozycja={pozycjaNaStronie(dzial, strona, i)}
           bity={bity}
+          daty={stan.daty}
         />
       ))}
 
@@ -218,12 +248,14 @@ function Gniazdo({
   gniazdo,
   pozycja,
   bity,
+  daty,
 }: {
   /** 0..3 — potrzebny licznikowi, ktory patrzy na PIERWSZE gniazdo. */
   numer: number;
   gniazdo: (typeof GNIAZDA)[number];
   pozycja: Pozycja;
   bity: readonly boolean[];
+  daty: StanKlasera['daty'];
 }) {
   if (pozycja.rodzaj === 'pusta') return null;
 
@@ -232,11 +264,14 @@ function Gniazdo({
 
   if (pozycja.rodzaj === 'potwor') {
     const znaleziony = bity[pozycja.bit] === true;
-    if (znaleziony) naglowek = NAZWY_POTWOROW[pozycja.bit] ?? NIEZNANE;
+    if (znaleziony) {
+      naglowek = NAZWY_POTWOROW[pozycja.bit] ?? NIEZNANE;
+      podpowiedz = zPodpisemDaty(dataOdblokowania(daty, pozycja.bit, 1, bity));
+    }
 
     return (
       <>
-        <Naglowek numer={numer} gniazdo={gniazdo} tekst={naglowek} podpowiedz="" />
+        <Naglowek numer={numer} gniazdo={gniazdo} tekst={naglowek} podpowiedz={podpowiedz} />
         {/*
           Ramka i portret sa skalowane 0,8 — `actor[...].scaleX = 0.8`.
           Ramka stoi o 8 px w lewo i w gore od portretu.
@@ -268,7 +303,9 @@ function Gniazdo({
     const jest = bity[pozycja.bit] === true;
     if (jest) {
       naglowek = nazwa.nazwa;
-      podpowiedz = nazwa.podpowiedz;
+      podpowiedz = [nazwa.podpowiedz, zPodpisemDaty(dataOdblokowania(daty, pozycja.bit, 1, bity))]
+        .filter(Boolean)
+        .join('\n');
     }
 
     return (
@@ -292,11 +329,14 @@ function Gniazdo({
    */
   const barwy = [0, 1, 2, 3, 4].map((b) => bity[pozycja.bit + b] === true);
   const cokolwiek = barwy.some(Boolean);
-  if (cokolwiek) naglowek = nazwa.nazwa;
+  if (cokolwiek) {
+    naglowek = nazwa.nazwa;
+    podpowiedz = zPodpisemDaty(dataOdblokowania(daty, pozycja.bit, 5, bity));
+  }
 
   return (
     <>
-      <Naglowek numer={numer} gniazdo={gniazdo} tekst={naglowek} podpowiedz="" />
+      <Naglowek numer={numer} gniazdo={gniazdo} tekst={naglowek} podpowiedz={podpowiedz} />
       {cokolwiek &&
         barwy.map((ma, b) => (
           <img
@@ -315,7 +355,12 @@ function Gniazdo({
   );
 }
 
-/** Napis nad pozycja i — przy epikach — cytat pod nim. */
+/** „Znaleziono: 22.08.2026" — pusty napis, gdy daty nie ma. */
+function zPodpisemDaty(data: string): string {
+  return data === '' ? '' : `Znaleziono: ${data}`;
+}
+
+/** Napis nad pozycja i — pod nim cytat epika oraz data odblokowania. */
 function Naglowek({
   numer,
   gniazdo,

@@ -49,6 +49,9 @@ import {
   PUSTY_KLASER,
   dopiszDoKlasera,
   dopiszPotworaDoKlasera,
+  odczytajDaty,
+  premiaZKlasera,
+  zapiszDaty,
   type StanKlasera,
 } from '../game/album.js';
 import type { Context } from 'hono';
@@ -303,6 +306,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   let stanKlasera: StanKlasera = {
     dane: String(wiersz['album_data'] ?? '') || PUSTY_KLASER,
     ile: liczba(wiersz['album'] ?? 0),
+    daty: odczytajDaty(wiersz['album_dates']),
   };
   const klaserPrzed = stanKlasera.ile;
 
@@ -312,13 +316,23 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
      * dnia — poznaje ja po tym, ze wytrzymalosc jest jeszcze pelna
      * i nie wypito ani jednego piwa.
      */
-    if (maKlaser) stanKlasera = dopiszPotworaDoKlasera(stanKlasera, potwor.obrazek);
+    if (maKlaser) stanKlasera = dopiszPotworaDoKlasera(stanKlasera, potwor.obrazek, teraz);
 
     if (rng.rand(1, 100) <= SZANSA_NA_GRZYBA) znalezioneGrzyby += ZNALEZIONYCH_GRZYBOW;
     if (wytrzymalosc === PELNA_WYTRZYMALOSC && liczba(wiersz['beers']) === 0) znalezioneGrzyby += 1;
     grzyby += znalezioneGrzyby;
 
-    zdobyteDoswiadczenie = doswiadczenieZWyprawy(zadanie.doswiadczenie, { premia: zadanie.premia });
+    /*
+     * Premia kolekcjonera wchodzi do doswiadczenia tak samo, jak
+     * w `req.php`: `exp * ($ebonus + $albumbonus + $rqbonus)`. Liczy sie
+     * stan klasera Z POCZATKU wyprawy — potwor dopisany przed chwila
+     * podnosi dopiero nastepna nagrode, dokladnie jak w oryginale,
+     * gdzie `$albumbonus` czyta sie przed `addMonster()`.
+     */
+    zdobyteDoswiadczenie = doswiadczenieZWyprawy(zadanie.doswiadczenie, {
+      premia: zadanie.premia,
+      album: klaserPrzed,
+    });
 
     srebro += zadanie.zloto;
     doswiadczenie += zdobyteDoswiadczenie;
@@ -354,7 +368,9 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
         zdobytyPrzedmiot = { ...zbudujPrzedmiot(czekajacy), slot: miejsce };
 
         if (maKlaser) {
-          stanKlasera = dopiszDoKlasera(stanKlasera, [
+          stanKlasera = dopiszDoKlasera(
+            stanKlasera,
+            [
             {
               item_type: liczba(czekajacy['item_type']),
               item_id: liczba(czekajacy['item_id']),
@@ -366,8 +382,10 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
               atr_val_1: liczba(czekajacy['atr_val_1']),
               atr_val_2: liczba(czekajacy['atr_val_2']),
               atr_val_3: liczba(czekajacy['atr_val_3']),
-            },
-          ]);
+              },
+            ],
+            teraz,
+          );
         }
       }
     }
@@ -392,7 +410,10 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   // Zapis klasera idzie osobno i tylko wtedy, gdy cos przybylo.
   if (maKlaser && stanKlasera.ile > klaserPrzed) {
     await sql`
-      UPDATE user_data SET album_data = ${stanKlasera.dane}, album = ${stanKlasera.ile}
+      UPDATE user_data SET
+        album_data = ${stanKlasera.dane},
+        album = ${stanKlasera.ile},
+        album_dates = ${zapiszDaty(stanKlasera.daty)}
       WHERE user_id = ${wiersz.user_id}
     `;
   }
@@ -593,6 +614,19 @@ async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<strin
   const teraz = time();
   const koniowanie = wierzchowiec(wiersz, teraz);
 
+  /*
+   * Premia kolekcjonera. `req.php` doklada ja do POKAZYWANEJ nagrody,
+   * a nie dopiero przy rozliczeniu:
+   *
+   *     $ret[$SF_QUEST_EXP_1] = round(quest_exp_1 * ($ebonus + $albumbonus + $rqbonus1));
+   *
+   * Robimy tak samo, zeby liczba w oknie wyboru byla ta, ktora naprawde
+   * wpadnie. Obok idzie rozbicie na skladniki — klient pokazuje je po
+   * klikniecu, jak `EnablePopup(LBL_QO_REWARDEXP, ...)`.
+   */
+  const klaser = liczba(wiersz['album'] ?? BEZ_KLASERA);
+  const premiaKlasera = Math.round(premiaZKlasera(klaser) * 100);
+
   const zajete = (
     await sql<{ slot: number }[]>`
       SELECT slot FROM items WHERE owner_id = ${wiersz.user_id} AND slot >= 10
@@ -624,6 +658,12 @@ async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<strin
         ...z,
         // Czas i koszt zaleza od wierzchowca, wiec licza sie tutaj.
         sekundy: czasWyprawy(z.dlugosc, koniowanie),
+        doswiadczenie: doswiadczenieZWyprawy(z.doswiadczenie, {
+          premia: z.premia,
+          album: klaser === BEZ_KLASERA ? 0 : klaser,
+        }),
+        /** Skladniki premii do doswiadczenia, w procentach. */
+        premie: { klaser: premiaKlasera, rzadkie: z.premia },
         /*
          * Przedmiot czekajacy przy zadaniu. Oryginal pokazuje go w oknie
          * wyboru w calosci — z obrazkiem i wartosciami — bo gracz ma

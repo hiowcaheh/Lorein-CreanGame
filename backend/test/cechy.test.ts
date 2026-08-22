@@ -16,9 +16,14 @@ const WOJOWNIK = 1;
 const CZLOWIEK = 1;
 
 describe('kupowanie cech', () => {
-  it('jeden zakup daje trzy punkty', () => {
-    // `$newStatVal = 3 + $db_data['stat'];`
-    expect(PUNKTOW_ZA_ZAKUP).toBe(3);
+  it('jeden zakup daje jeden punkt', () => {
+    /*
+     * `req.php` ma tu `$newStatVal = 3 + $db_data['stat']`, ale cennik
+     * jest indeksowany PUNKTEM (`TrueAttPreis[i] = GoldKurve[1 + i / 5]`,
+     * potem wygladzenie po piec kolejnych), wiec skok o trzy przeskakuje
+     * dwie ceny za darmo. Decyzja wlasciciela gry: jeden do jednego.
+     */
+    expect(PUNKTOW_ZA_ZAKUP).toBe(1);
   });
 
   it('tablica cen zgadza sie z krzywa oryginalu', () => {
@@ -58,9 +63,10 @@ describe('kupowanie cech', () => {
     expect(dokupionePunkty(WOJOWNIK, CZLOWIEK, 1, 0)).toBe(0);
   });
 
-  it('swieza postac placi za pierwszy zakup 25 srebra', () => {
+  it('swieza postac placi za pierwszy punkt 25 srebra', () => {
     const [sila] = loadDefaultStats(WOJOWNIK, CZLOWIEK);
     expect(cenaPunktow(WOJOWNIK, CZLOWIEK, 1, sila!)).toBe(25);
+    expect(cenaPunktow(WOJOWNIK, CZLOWIEK, 1, sila! + 1)).toBe(30);
     expect(cenaPunktow(WOJOWNIK, CZLOWIEK, 1, sila! + 3)).toBe(40);
   });
 
@@ -84,9 +90,9 @@ describe('kupowanie cech', () => {
   describe('zakup', () => {
     const baza = { klasa: WOJOWNIK, rasa: CZLOWIEK, wartosc: 17, srebro: 1000 };
 
-    it('podnosi cechę o trzy i zabiera cene', () => {
+    it('podnosi cechę o jeden i zabiera cene', () => {
       expect(sprawdzZakupCechy(1, baza)).toEqual({
-        wartosc: 20,
+        wartosc: 18,
         srebro: 975,
         cena: 25,
         zakupow: 1,
@@ -94,21 +100,21 @@ describe('kupowanie cech', () => {
     });
 
     it('hurtem liczy kolejne, coraz drozsze ceny', () => {
-      // Trzy zakupy pod rzad: 25 + 40 + 55 = 120 srebra i dziewiec punktow.
+      // Trzy punkty pod rzad: 25 + 30 + 35 = 90 srebra.
       expect(sprawdzZakupCechy(1, baza, 3)).toEqual({
-        wartosc: 26,
-        srebro: 880,
-        cena: 120,
+        wartosc: 20,
+        srebro: 910,
+        cena: 90,
         zakupow: 3,
       });
     });
 
     it('hurtem bierze tyle, na ile starczy', () => {
-      // Za 70 srebra wychodza dwa zakupy (25 + 40), na trzeci brakuje.
+      // Za 70 srebra wychodza dwa punkty (25 + 30), na trzeci brakuje.
       expect(sprawdzZakupCechy(1, { ...baza, srebro: 70 }, 5)).toEqual({
-        wartosc: 23,
-        srebro: 5,
-        cena: 65,
+        wartosc: 19,
+        srebro: 15,
+        cena: 55,
         zakupow: 2,
       });
     });
@@ -126,10 +132,10 @@ describe('kupowanie cech', () => {
     });
   });
 
-  it('liczy, ile zakupow starczy za dane srebro', () => {
-    // Ceny 25, 40, 55, 70... — za 120 srebra wychodza trzy.
-    expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 120)).toEqual({ ile: 3, koszt: 120 });
-    expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 119)).toEqual({ ile: 2, koszt: 65 });
+  it('liczy, ile punktow starczy za dane srebro', () => {
+    // Ceny 25, 30, 35, 40... — za 120 srebra wychodza trzy (90), na czwarty brak.
+    expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 130)).toEqual({ ile: 4, koszt: 130 });
+    expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 129)).toEqual({ ile: 3, koszt: 90 });
     expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 24)).toEqual({ ile: 0, koszt: 0 });
     // Gorna granica przycina wynik, nawet gdy srebra jest duzo.
     expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 10 ** 9, 2)).toMatchObject({ ile: 2 });

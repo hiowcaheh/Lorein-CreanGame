@@ -14,6 +14,7 @@ import {
   PUSTY_KLASER,
   RODZAJ_KLASERA,
   dopiszDoKlasera,
+  zapiszDaty,
   type PrzedmiotKlasera,
 } from '../game/album.js';
 import { intval, time } from '../compat/php.js';
@@ -367,10 +368,18 @@ konto.post('/ekwipunek', async (c) => {
       FROM items WHERE owner_id = ${wlasciciel} AND item_type <= 10
     `;
 
-    const klaser = dopiszDoKlasera({ dane: PUSTY_KLASER, ile: 0 }, doWpisania);
+    // Wszystko, co gracz akurat ma, wchodzi z data otwarcia klasera.
+    const klaser = dopiszDoKlasera(
+      { dane: PUSTY_KLASER, ile: 0, daty: {} },
+      doWpisania,
+      time(),
+    );
 
     await sql`
-      UPDATE user_data SET album = ${klaser.ile}, album_data = ${klaser.dane}
+      UPDATE user_data SET
+        album = ${klaser.ile},
+        album_data = ${klaser.dane},
+        album_dates = ${zapiszDaty(klaser.daty)}
       WHERE user_id = ${wlasciciel}
     `;
     await sql`DELETE FROM items WHERE id = ${wZrodle.id}`;

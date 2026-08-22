@@ -30,8 +30,8 @@ export interface Gracz {
 
   obrazenia: { min: number; max: number; srednio: number };
   /**
-   * Ile srebra kosztuje dokupienie kolejnych trzech punktow kazdej
-   * cechy — piec liczb w kolejnosci sila, zrecznosc, inteligencja,
+   * Ile srebra kosztuje dokupienie kolejnego punktu kazdej cechy —
+   * piec liczb w kolejnosci sila, zrecznosc, inteligencja,
    * wytrzymalosc, szczescie.
    */
   cenyCech: number[];
@@ -106,7 +106,10 @@ export interface Zadanie {
   /** Ile naprawde potrwa — z uwzglednieniem wierzchowca. */
   sekundy: number;
   zloto: number;
+  /** Doswiadczenie JUZ z premiami — tak samo pokazuje je oryginal. */
   doswiadczenie: number;
+  /** Z czego sklada sie premia do doswiadczenia, w procentach. */
+  premie: { klaser: number; rzadkie: number };
   /** Numer krainy 1..21. */
   lokacja: number;
   /** Rodzaj wyprawy — z niego bierze sie jej tytul. */

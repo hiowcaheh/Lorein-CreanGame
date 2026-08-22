@@ -370,7 +370,7 @@ export function Bohater({
               height: BOK_PLUSA,
             }}
             title={`${cecha.nazwa} +${PUNKTOW_ZA_ZAKUP}: ${opisCeny(gracz.cenyCech[i] ?? 0)}`}
-            aria-label={`Dokup ${PUNKTOW_ZA_ZAKUP} punkty: ${cecha.nazwa}`}
+            aria-label={`Dokup punkt: ${cecha.nazwa}`}
             disabled={!cecha.stac}
             onPointerEnter={() => setPokazCeny(true)}
             onPointerLeave={() => setPokazCeny(false)}

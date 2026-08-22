@@ -14,6 +14,7 @@
     "gen:protocol": "node scripts/gen-protocol.mjs",
     "test:db": "vitest run",
     "db:schema": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f db/schema.sql",
+    "db:migruj": "for f in db/migracje/*.sql; do psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f \"$f\"; done",
     "gen:gamedata": "node scripts/gen-gamedata.mjs",
     "gen:chardata": "node scripts/gen-chardata.mjs",
     "prepare:static": "node scripts/prepare-static.mjs",

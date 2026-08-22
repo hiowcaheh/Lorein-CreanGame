@@ -48,8 +48,8 @@ import type { Gracz } from '../gra/typy';
 const NAZWY = ['Siła', 'Zręczność', 'Inteligencja', 'Wytrzym.', 'Szczęście'];
 
 /**
- * Podzialka pod torem. Znacznik przy KAZDYM zakupie nie da sie odczytac —
- * przy stu zakupach staly by co dwa piksele — wiec opisane sa tylko co
+ * Podzialka pod torem. Znacznik przy KAZDYM punkcie nie da sie odczytac —
+ * przy stu punktach staly by co dwa piksele — wiec opisane sa tylko co
  * ktorys. Krok dobiera sie tak, zeby wyszlo najwyzej szesc podpisow.
  */
 const NAJWIECEJ_PODPISOW = 6;
@@ -87,13 +87,13 @@ export function OknoCechy({
   gracz: Gracz;
   /** Numer cechy 1..5. */
   cecha: number;
-  /** Kupuje `ile` zakupow po trzy punkty. */
+  /** Kupuje `ile` punktow — kazdy kolejny drozszy. */
   onKup: (cecha: number, ile: number) => void;
   onZamknij: () => void;
 }) {
   const dokupione = gracz.cechyDokupione[cecha - 1] ?? 0;
 
-  // Ile zakupow starczy srebra — to samo liczy serwer przy zakupie.
+  // Na ile punktow starczy srebra — to samo liczy serwer przy zakupie.
   const maks = useMemo(
     () => Math.max(1, ileStac(dokupione, gracz.srebro)),
     [dokupione, gracz.srebro],
@@ -152,9 +152,6 @@ export function OknoCechy({
         {pomocDoCechy(cecha, gracz.klasa).map((zdanie) => (
           <div key={zdanie}>{zdanie}</div>
         ))}
-        <div className="okno-wartosc">
-          {NAZWY[cecha - 1]}: {wartoscTeraz} → {wartoscTeraz + PUNKTOW_ZA_ZAKUP * ile}
-        </div>
       </div>
 
       {/* Suwak z Warty: tor, znaczniki i zlota strzalka. */}
@@ -205,7 +202,7 @@ export function OknoCechy({
           }}
         />
 
-        {/* Podpisy podzialki — ile zakupow, nie ile punktow. */}
+        {/* Podpisy podzialki — ile punktow dokupi suwak. */}
         {znaczniki.length > 1 &&
           znaczniki.map((v) => (
             <span
@@ -218,13 +215,18 @@ export function OknoCechy({
           ))}
       </div>
 
-      {/* Ile punktow i za ile — pod suwakiem, jak `LBL_SCR_ARBEITEN_TEXT2`. */}
+      {/*
+        Ile z tego wyjdzie i za ile — pod podzialka, jak
+        `LBL_SCR_ARBEITEN_TEXT2`. Wartosc cechy stoi wlasnie TU, a nie
+        pod podpowiedzia: nad suwakiem nie ma na nia miejsca, bo pole
+        okna konczy sie na `WNETRZE_DOL`.
+      */}
       <div
         className="okno-tekst okno-koszt"
         style={{ left: TEKST.lewo, top: TEKST2_Y, width: TEKST.szerokosc }}
       >
         <span>
-          + {PUNKTOW_ZA_ZAKUP * ile} {ile > 1 && `(${ile} × ${PUNKTOW_ZA_ZAKUP})`}
+          {NAZWY[cecha - 1]}: {wartoscTeraz} → {wartoscTeraz + PUNKTOW_ZA_ZAKUP * ile}
         </span>
         <span className="kwota">
           {cena.zloto > 0 && (

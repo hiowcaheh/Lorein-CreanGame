@@ -3,15 +3,23 @@
  * z `req.php` oraz tablicy `TrueAttPreis` z klienta Flash.
  *
  * Poziom NIE daje punktow. Wszystkie ponad startowe kupuje sie za
- * srebro, po TRZY na raz (`$newStatVal = 3 + $stat`), a cena zalezy
- * wylacznie od tego, ile punktow danej cechy juz sie DOKUPILO —
- * nie od poziomu ani od pozostalych cech.
+ * srebro, a cena zalezy wylacznie od tego, ile punktow danej cechy juz
+ * sie DOKUPILO — nie od poziomu ani od pozostalych cech.
  */
 
 import { loadDefaultStats } from './stats.js';
 
-/** Ile punktow daje jeden zakup — `$newStatVal = 3 + $db_data['stat']`. */
-export const PUNKTOW_ZA_ZAKUP = 3;
+/**
+ * Ile punktow daje jeden zakup.
+ *
+ * SWIADOME ODSTEPSTWO od `req.php` (tabela w CLAUDE.md): tamtejsze
+ * `$newStatVal = 3 + $db_data['stat']` doklada TRZY punkty za jedna
+ * cene. Cennik jest jednak indeksowany PUNKTEM, nie zakupem —
+ * `TrueAttPreis[i] = GoldKurve[1 + i / 5]` i wygladzenie po piec
+ * kolejnych — wiec przy skoku o trzy gracz przeskakuje dwie ceny za
+ * darmo. Wlasciciel gry zdecydowal: jeden zakup to jeden punkt.
+ */
+export const PUNKTOW_ZA_ZAKUP = 1;
 
 /** Numery cech, tak jak `getStatName()`: 1 sila ... 5 szczescie. */
 export const LICZBA_CECH = 5;
@@ -133,16 +141,15 @@ export interface WynikZakupu {
   srebro: number;
   /** Ile kosztowaly wszystkie zakupy razem. */
   cena: number;
-  /** Ile zakupow naprawde doszlo do skutku. */
+  /** Ile punktow naprawde doszlo do skutku. */
   zakupow: number;
 }
 
 /**
  * Czy da sie dokupic punkty i co z tego wyjdzie.
  *
- * `ile` to liczba ZAKUPOW, nie punktow — jeden zakup daje trzy punkty
- * i kosztuje kolejna cene z cennika. Odmowa przychodzi tylko wtedy, gdy
- * nie starcza nawet na pierwszy.
+ * `ile` to liczba punktow — kazdy kosztuje kolejna cene z cennika.
+ * Odmowa przychodzi tylko wtedy, gdy nie starcza nawet na pierwszy.
  */
 export function sprawdzZakupCechy(
   cecha: number,

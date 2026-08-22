@@ -156,6 +156,10 @@ CREATE TABLE user_data (
     magic_mirror        varchar(13) NOT NULL DEFAULT '0000000000000',
     album               integer     NOT NULL DEFAULT -1,
     album_data          text        NOT NULL,
+    -- Kiedy odblokowala sie ktora pozycja klasera: JSON {numer bitu: czas
+    -- uniksowy}. Oryginal tego nie zapisuje (patrz tabela odstepstw
+    -- w CLAUDE.md) — wpisy powstaja od chwili, gdy kolumna sie pojawila.
+    album_dates         text        NOT NULL DEFAULT '',
 
     portal_act          integer     NOT NULL DEFAULT 1,
     portal_monster      integer     NOT NULL DEFAULT 1,

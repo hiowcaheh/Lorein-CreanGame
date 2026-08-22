@@ -23,13 +23,20 @@ export const OKNO = {
 export const TLO_OKNA = '/res/ui/okno.png';
 
 /*
- * Widoczna ramka jest MNIEJSZA od pliku. `okno.png` ma 520x380, ale
- * przezroczysty margines zjada prawa i dolna krawedz: pomiar alfy daje
- * tresc od (0, 11) do (500, 363). Stad `REL_IF_WIN_WELCOME_X = 250` —
- * to srodek WIDOCZNEJ ramki, nie pliku. Dolna krawedz wychodzi wiec na
- * `POS_IF_WIN_Y + 363`, i nic ponizej tego nie moze stanac.
+ * Widoczna ramka jest MNIEJSZA od pliku, a POLE do pisania jeszcze
+ * mniejsze od ramki. `okno.png` ma 520x380, ale:
+ *
+ *   - przezroczysty margines zjada prawa krawedz — tresc konczy sie na
+ *     x = 500, stad `REL_IF_WIN_WELCOME_X = 250`: to srodek WIDOCZNEJ
+ *     ramki, nie pliku;
+ *   - przydymione wnetrze (alfa 204) siega od y = 49 do y = 330, dalej
+ *     zaczyna sie ozdobna listwa.
+ *
+ * Nic z tresci nie moze wejsc na listwe, wiec dolna granica pola to
+ * `POS_IF_WIN_Y + 330`. Oryginalna Warta trzyma sie tej granicy:
+ * przycisk konczy sie 15 px nad nia.
  */
-export const WIDOCZNY_DOL = 250 + 363 - POCZATEK_Y;
+export const WNETRZE_DOL = 250 + 330 - POCZATEK_Y;
 
 /** Srodek okna — `POS_IF_WIN_X + REL_IF_WIN_WELCOME_X`. */
 export const SRODEK_OKNA = 540 + 250 - POCZATEK_X;
@@ -38,15 +45,15 @@ export const NAGLOWEK_Y = 250 + 45 - POCZATEK_Y;
 
 /**
  * `POS_LBL_ARBEITEN_TEXT_X/_Y` i `SIZE_LBL_ARBEITEN_TEXT_X`. Warta ma
- * tu jedno zdanie, okno cechy — dwa zdania podpowiedzi i wiersz „21 → 24",
- * wiec zaczyna sie wyzej: inaczej ostatni wiersz wchodzi na tor suwaka.
+ * tu jedno zdanie, okno cechy — dwa. Zaczyna sie wiec wyzej (326
+ * zamiast 340), zeby trzeci wiersz nie wszedl na tor suwaka.
  */
 export const TEKST = { lewo: 590 - POCZATEK_X, gora: 326 - POCZATEK_Y, szerokosc: 400 };
 /** `POS_LBL_ARBEITEN_TEXT2_Y` — drugi wiersz opisu, pod podzialka suwaka. */
-export const TEKST2_Y = 508 - POCZATEK_Y;
+export const TEKST2_Y = 485 - POCZATEK_Y;
 
-/** `POS_ARBEITEN_SLIDER_X/_Y`, opuszczone o 32 px na podpowiedz nad torem. */
-export const SUWAK = { lewo: 650 - POCZATEK_X, gora: 452 - POCZATEK_Y };
+/** `POS_ARBEITEN_SLIDER_X/_Y`, opuszczone o 14 px na trzeci wiersz opisu. */
+export const SUWAK = { lewo: 650 - POCZATEK_X, gora: 434 - POCZATEK_Y };
 
 /** Podzialka pod torem — 4 px pod dolna krawedzia `suwak.png`. */
 export const PODZIALKA_POD_TOREM = 4;
@@ -63,11 +70,12 @@ export const PRZYCISK = {
 };
 
 /**
- * Dwa przyciski stoja OBOK siebie, po polowie odstepu od srodka okna.
- * Pod soba nie mieszcza sie: drugi wychodzilby na `WIDOCZNY_DOL`.
+ * Dwa przyciski stoja OBOK siebie, po polowie odstepu od srodka okna,
+ * na wysokosci z oryginalu (`REL_ARBEITEN_BTN_Y`). Pod soba nie
+ * mieszcza sie: drugi wszedlby na ozdobna listwe (`WNETRZE_DOL`).
  */
 export const ODSTEP_PRZYCISKOW = 20;
-export const PRZYCISKI_Y = 250 + 302 - POCZATEK_Y;
+export const PRZYCISKI_Y = PRZYCISK.gora;
 
 /*
  * SUWAK — `DefineSlider(actorID, Ticks, pos_x, pos_y, fn)`.

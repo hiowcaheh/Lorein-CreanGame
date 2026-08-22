@@ -75,6 +75,9 @@ const PODPISY = {
   piwoWypite: stala('TXT_BO_BOUGHT'),
   piwoTytulZaZdrowy: 191,
   piwoTekstZaZdrowy: 192,
+  // Rozpisanie premii do doswiadczenia — `EnablePopup(LBL_QO_REWARDEXP, ...)`.
+  wTym: stala('TXT_EXPBONUS_PREFIX'),
+  premiaKolekcjonera: stala('TXT_COLLECTION') + 1,
 };
 
 const podpisy = Object.fromEntries(Object.entries(PODPISY).map(([k, n]) => [k, wez(n)]));
