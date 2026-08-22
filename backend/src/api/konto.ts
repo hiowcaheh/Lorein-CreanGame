@@ -19,6 +19,7 @@ import {
 } from '../game/album.js';
 import { intval, time } from '../compat/php.js';
 import { maKolumne } from '../db/kolumny.js';
+import { KLUCZ_UZYTY, RODZAJ_KLUCZA, ZAMKNIETY, kolumnaLochu } from '../game/lochy.js';
 import {
   OSTATNI_SLOT_PLECAKA,
   PIERWSZY_SLOT_PLECAKA,
@@ -345,6 +346,48 @@ konto.post('/ekwipunek', async (c) => {
 
   const wZrodle = przedmioty.find((p) => p.slot === zrodlo);
   if (!wZrodle) return c.json({ blad: 'W tym miejscu nic nie leży.' }, 400);
+
+  /*
+   * Klucz do lochu tez sie nie zaklada — on OTWIERA loch.
+   *
+   * Oryginal (`$ACT_USE_ITEM`, galaz `item_type == 11`, `item_id` 1-9):
+   *
+   *     if ($db_data['dungeon_' . $item['item_id']] == 0) {
+   *         UPDATE user_data SET dungeon_N = 1;
+   *         DELETE FROM items WHERE id = ...;
+   *     }
+   *     ... i przenosi gracza na ekran lochow
+   *
+   * Stan 1 zyje tylko do chwili wejscia na liste lochow — tam kazda
+   * jedynka staje sie dwojka i loch jest gotowy do walki.
+   */
+  if (
+    wZrodle.item_type === RODZAJ_KLUCZA &&
+    wZrodle.item_id >= 1 &&
+    wZrodle.item_id <= 9 &&
+    (cel === null || cel < PIERWSZY_SLOT_PLECAKA)
+  ) {
+    const kolumna = kolumnaLochu(wZrodle.item_id);
+    if (!kolumna) return c.json({ blad: 'Ten klucz do niczego nie pasuje.' }, 400);
+
+    if (intval(gracz[kolumna] ?? 0) !== ZAMKNIETY) {
+      return c.json({ blad: 'Ten loch masz już otwarty.' }, 409);
+    }
+
+    await sql`
+      UPDATE user_data SET ${sql(kolumna)} = ${KLUCZ_UZYTY} WHERE user_id = ${wlasciciel}
+    `;
+    await sql`DELETE FROM items WHERE id = ${wZrodle.id}`;
+
+    const [poOtwarciu] = await sql<Record<string, unknown>[]>`
+      SELECT * FROM user_data WHERE ssid = ${token} LIMIT 1
+    `;
+    return c.json({
+      gracz: await wczytajGracza(sql, poOtwarciu ?? gracz),
+      /** Klient przelacza sie wtedy na lochy i pokazuje otwieranie wrot. */
+      otwartyLoch: wZrodle.item_id,
+    });
+  }
 
   /*
    * Klaser Dokladnosci sie nie zaklada — sie go OTWIERA.

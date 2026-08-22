@@ -45,6 +45,7 @@ import { wczytajGracza, zbudujPrzedmiot, type Przedmiot as PrzedmiotEkranu } fro
 import { barwaPrzedmiotu, plikIkony, plikPocisku, typAnimacjiBroni } from '../game/grafikaPrzedmiotow.js';
 import { tokenZNaglowka } from './konto.js';
 import { maKolumne } from '../db/kolumny.js';
+import { zamknieteLochy } from '../game/lochy.js';
 import {
   BEZ_KLASERA,
   PUSTY_KLASER,
@@ -100,7 +101,7 @@ function wierzchowiec(wiersz: WierszGracza, teraz: number): number {
 
 // ------------------------------------------------ zadania i nagrody --
 
-async function przedmiotyGracza(sql: Sql, userId: number): Promise<Przedmiot[]> {
+export async function przedmiotyGracza(sql: Sql, userId: number): Promise<Przedmiot[]> {
   return sql<Przedmiot[]>`
     SELECT slot, dmg_min, dmg_max, atr_type_1, atr_type_2, atr_type_3,
            atr_val_1, atr_val_2, atr_val_3
@@ -128,10 +129,43 @@ async function nowyKompletZadan(
   await sql`DELETE FROM items_tavern WHERE owner_id = ${wiersz.user_id}`;
 
   const klasa = liczba(wiersz['class']) || 1;
+
+  /*
+   * Klucz do lochu wypada TYLKO z wyprawy, i tylko wtedy, gdy w czterech
+   * pierwszych miejscach plecaka nie lezy juz jeden (`check_for_key()`).
+   * Trafia do pierwszego lochu, ktorego gracz nie otworzyl i na ktory
+   * ma juz poziom — stad lista zamknietych.
+   */
+  const maJuzKlucz =
+    (
+      await sql<{ id: number }[]>`
+        SELECT id FROM items
+        WHERE owner_id = ${wiersz.user_id} AND slot > 9 AND slot < 15 AND item_type = 11
+        LIMIT 1
+      `
+    ).length > 0;
+
+  const zamkniete = zamknieteLochy(wiersz);
+
   for (const zadanie of zadania) {
     if (rng.rand(1, 100) > SZANSA_NA_PRZEDMIOT) continue;
 
-    const nagroda = wylosujPrzedmiot(poziom, klasa);
+    /*
+     * `$shop = rand(0, 1); genItem($lvl, $class, $shop, 'tavern', ...)`.
+     * Zbrojownia daje bron i zbroje, gabinet — bizuterie albo klucz.
+     */
+    const sklep = rng.rand(0, 1);
+    const nagroda = wylosujPrzedmiot(poziom, klasa, {
+      sklep,
+      wyprawa: true,
+      maJuzKlucz,
+      zamknieteLochy: zamkniete,
+      losuj: (od, doo) => rng.rand(od, doo),
+    });
+
+    // Brak klucza do wydania znaczy, ze wyprawa nie ma zadnej nagrody.
+    if (!nagroda) continue;
+
     await sql`
       INSERT INTO items_tavern (item_type, item_id, dmg_min, dmg_max,
                                 atr_type_1, atr_type_2, atr_type_3,
@@ -485,6 +519,11 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   };
 }
 
+/*
+ * Ponizsze pomocniki sa wspolne z lochami — ekran walki jest ten sam,
+ * wiec i opis obu stron musi powstawac tak samo.
+ */
+
 /**
  * Czym rysowac cios — komplet grafik dla jednej strony pojedynku.
  *
@@ -501,7 +540,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
  * `pociskUderzenia` zastepuje przy broni dystansowej wybuch „SMASH":
  * mag dostaje czwarty wariant swojego pocisku, zwiadowca `arrowsmash.png`.
  */
-interface RysunekBroni {
+export interface RysunekBroni {
   typAnimacji: 1 | 2 | 3;
   bronObrazek: string | null;
   pociski: string[];
@@ -511,11 +550,11 @@ interface RysunekBroni {
 const OBRAZ_UDERZENIA_STRZALY = '/res/sfgame/scr/fight/arrowsmash.png';
 
 /** Gole piesci — `charHasWeapon` falszywe, klient rysuje `kampf_faust.png`. */
-function rysunekPiesci(): RysunekBroni {
+export function rysunekPiesci(): RysunekBroni {
   return { typAnimacji: 1, bronObrazek: null, pociski: [], pociskUderzenia: null };
 }
 
-function rysunekBroni(wiersz: Record<string, unknown>): RysunekBroni {
+export function rysunekBroni(wiersz: Record<string, unknown>): RysunekBroni {
   const numer = liczba(wiersz['item_id']);
   const typAnimacji = typAnimacjiBroni(numer);
   const przedmiot = zbudujPrzedmiot(wiersz);
@@ -547,7 +586,7 @@ function rysunekBroni(wiersz: Record<string, unknown>): RysunekBroni {
  * to 8 (`Monster::getWeapon()`), a jego blok statystyk jest staly, wiec
  * barwa wychodzi z niego, a nie z bazy.
  */
-function rysunekBroniPotwora(numer: number): RysunekBroni {
+export function rysunekBroniPotwora(numer: number): RysunekBroni {
   if (numer <= 0) return { typAnimacji: 1, bronObrazek: null, pociski: [], pociskUderzenia: null };
 
   const typAnimacji = typAnimacjiBroni(numer);
@@ -598,7 +637,7 @@ function pociskiBroni(
  * pazurow i klow potwora (`$weapons` w `getQuestMonster`). Zero znaczy
  * gole piesci — wtedy oryginal animuje uderzenie dlonia.
  */
-function opisWojownika(w: Wojownik, zycie: number, bron: number) {
+export function opisWojownika(w: Wojownik, zycie: number, bron: number) {
   return {
     nazwa: w.nazwa,
     klasa: w.klasa,

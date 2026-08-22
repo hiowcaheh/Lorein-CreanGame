@@ -22,36 +22,47 @@ function zListy(wyniki: number[]): Losowanie {
   return () => wyniki[i++] ?? 0;
 }
 
+/**
+ * Generator zwraca `null` tylko wtedy, gdy mial wydac klucz do lochu,
+ * a nie ma juz do czego. Tutaj to sie nie zdarza, wiec od razu upominamy
+ * sie o przedmiot — inaczej kazdy test musialby dopisywac wykrzyknik.
+ */
+function wygeneruj(...args: Parameters<typeof wylosujPrzedmiot>) {
+  const przedmiot = wylosujPrzedmiot(...args);
+  if (!przedmiot) throw new Error('generator nie zwrocil przedmiotu');
+  return przedmiot;
+}
+
 describe('wylosujPrzedmiot', () => {
   it('koduje klase w tysiacach numeru przedmiotu', () => {
-    const mag = wylosujPrzedmiot(1, 2, { rodzaj: 3, losuj: NAJNIZEJ });
+    const mag = wygeneruj(1, 2, { rodzaj: 3, losuj: NAJNIZEJ });
     expect(mag.item_id).toBe(1001);
 
-    const lowca = wylosujPrzedmiot(1, 3, { rodzaj: 3, losuj: NAJNIZEJ });
+    const lowca = wygeneruj(1, 3, { rodzaj: 3, losuj: NAJNIZEJ });
     expect(lowca.item_id).toBe(2001);
   });
 
   it('cecha nigdy nie schodzi ponizej jedynki', () => {
     // Na pierwszym poziomie wzor `(poziom - 1) * 3 + drgniecie` dalby
     // liczbe ujemna: (1-1)*3 + (5-10) = -5.
-    const rzecz = wylosujPrzedmiot(1, 1, { rodzaj: 4, losuj: NAJNIZEJ });
+    const rzecz = wygeneruj(1, 1, { rodzaj: 4, losuj: NAJNIZEJ });
     expect(rzecz.atr_val_1).toBe(1);
     expect(rzecz.atr_type_1).toBeGreaterThan(0);
   });
 
   it('pancerz rosnie z poziomem wedlug mnoznika klasy', () => {
     // Wojownik, buty (rodzaj 4): mnoznik 7. Poziom 10 -> 10*7 + 1.
-    const buty = wylosujPrzedmiot(10, 1, { rodzaj: 4, losuj: NAJNIZEJ });
+    const buty = wygeneruj(10, 1, { rodzaj: 4, losuj: NAJNIZEJ });
     expect(buty.dmg_min).toBe(71);
 
     // Mag w tych samych butach ma mnoznik 2.
-    expect(wylosujPrzedmiot(10, 2, { rodzaj: 4, losuj: NAJNIZEJ }).dmg_min).toBe(21);
+    expect(wygeneruj(10, 2, { rodzaj: 4, losuj: NAJNIZEJ }).dmg_min).toBe(21);
   });
 
   it('tarcza blokuje wedlug progow poziomu', () => {
-    expect(wylosujPrzedmiot(1, 1, { rodzaj: 2, losuj: NAJNIZEJ }).dmg_min).toBe(10);
-    expect(wylosujPrzedmiot(15, 1, { rodzaj: 2, losuj: NAJNIZEJ }).dmg_min).toBe(15);
-    expect(wylosujPrzedmiot(30, 1, { rodzaj: 2, losuj: NAJNIZEJ }).dmg_min).toBe(25);
+    expect(wygeneruj(1, 1, { rodzaj: 2, losuj: NAJNIZEJ }).dmg_min).toBe(10);
+    expect(wygeneruj(15, 1, { rodzaj: 2, losuj: NAJNIZEJ }).dmg_min).toBe(15);
+    expect(wygeneruj(30, 1, { rodzaj: 2, losuj: NAJNIZEJ }).dmg_min).toBe(25);
   });
 
   it('tarcza wojownika nigdy nie kosztuje grzybow', () => {
@@ -64,13 +75,13 @@ describe('wylosujPrzedmiot', () => {
       1, //  numer przedmiotu
       1, 2, 5, 5, // cechy
     ]);
-    expect(wylosujPrzedmiot(1, 1, { rodzaj: 2, losuj }).mush).toBe(0);
+    expect(wygeneruj(1, 1, { rodzaj: 2, losuj }).mush).toBe(0);
   });
 
   it('mag nigdy nie dostaje tarczy', () => {
     // Pierwsze losowanie rodzaju daje tarcze, drugie helm.
     const losuj = zListy([2, 6, 50, 14, 30, 2, 1, 2, 1, 1, 1]);
-    expect(wylosujPrzedmiot(1, 2, { losuj }).item_type).toBe(6);
+    expect(wygeneruj(1, 2, { losuj }).item_type).toBe(6);
   });
 
   it('co siodmy przedmiot ma dwie rozne cechy', () => {
@@ -85,7 +96,7 @@ describe('wylosujPrzedmiot', () => {
       3, 3, //  obie cechy wyszly te same
       10, 10, // drgniecia wartosci
     ]);
-    const rzecz = wylosujPrzedmiot(1, 1, { rodzaj: 4, losuj });
+    const rzecz = wygeneruj(1, 1, { rodzaj: 4, losuj });
     expect(rzecz.atr_type_1).toBe(3);
     // Ta sama cecha dwa razy nie ma sensu — oryginal przesuwa druga o jeden.
     expect(rzecz.atr_type_2).toBe(2);
@@ -112,7 +123,7 @@ describe('wylosujPrzedmiot', () => {
       3, 3, //  cechy
       10, 10, // drgniecia wartosci
     ]);
-    const rzecz = wylosujPrzedmiot(1, 1, { rodzaj: 4, losuj });
+    const rzecz = wygeneruj(1, 1, { rodzaj: 4, losuj });
     expect(rzecz.atr_type_2).toBeGreaterThan(0);
     expect(rzecz.mush).toBe(0);
   });
@@ -120,7 +131,7 @@ describe('wylosujPrzedmiot', () => {
   it('zaden zwykly przedmiot nie kosztuje grzybow, na zadnym poziomie', () => {
     for (const poziom of [1, 5, 20, 49, 80]) {
       for (let i = 0; i < 200; i++) {
-        const p = wylosujPrzedmiot(poziom, 1);
+        const p = wygeneruj(poziom, 1);
         // Jedyne grzyby, jakie moga wyjsc, to epik i eliksir zycia.
         if (p.item_id % 1000 < 50) expect(p.mush).toBe(0);
       }
@@ -129,15 +140,15 @@ describe('wylosujPrzedmiot', () => {
 
   it('obrazenia broni rosna z mnoznikiem klasy', () => {
     // Poziom 21, wojownik (mnoznik 2) kontra mag (mnoznik 4,2).
-    const wojownik = wylosujPrzedmiot(21, 1, { rodzaj: 1, losuj: NAJNIZEJ });
-    const mag = wylosujPrzedmiot(21, 2, { rodzaj: 1, losuj: NAJNIZEJ });
+    const wojownik = wygeneruj(21, 1, { rodzaj: 1, losuj: NAJNIZEJ });
+    const mag = wygeneruj(21, 2, { rodzaj: 1, losuj: NAJNIZEJ });
     expect(mag.dmg_max).toBeGreaterThan(wojownik.dmg_max);
     expect(wojownik.dmg_max).toBeGreaterThan(wojownik.dmg_min);
   });
 
   it('zawsze wychodzi przedmiot ze zbrojowni', () => {
     for (let i = 0; i < 300; i++) {
-      const rzecz = wylosujPrzedmiot(1 + (i % 40), 1 + (i % 3));
+      const rzecz = wygeneruj(1 + (i % 40), 1 + (i % 3));
       expect(rzecz.item_type).toBeGreaterThanOrEqual(1);
       expect(rzecz.item_type).toBeLessThanOrEqual(7);
       expect(rzecz.gold).toBeGreaterThan(0);
@@ -169,14 +180,14 @@ describe('wylosujPrzedmiot', () => {
     it('nie pojawiaja sie ponizej piecdziesiatego poziomu', () => {
       for (let poziom = 1; poziom < POZIOM_EPIKOW; poziom++) {
         for (let i = 0; i < 40; i++) {
-          const p = wylosujPrzedmiot(poziom, 1);
+          const p = wygeneruj(poziom, 1);
           expect(p.item_id % 1000).toBeLessThan(50);
         }
       }
     });
 
     it('od piecdziesiatki trafiaja sie i maja numer 50 lub wyzszy', () => {
-      const p = wylosujPrzedmiot(60, 1, { rodzaj: 3, losuj: zEpikiem(50) });
+      const p = wygeneruj(60, 1, { rodzaj: 3, losuj: zEpikiem(50) });
       expect(p.item_id % 1000).toBe(50);
       // `ITEMGEN_PMUSH_EPIC` i potrojona cena w zlocie.
       expect(p.mush).toBe(15);
@@ -184,26 +195,26 @@ describe('wylosujPrzedmiot', () => {
 
     it('numer decyduje o komplecie cech', () => {
       // 50 — trzy cechy: glowna klasy, wytrzymalosc i szczescie.
-      const trzy = wylosujPrzedmiot(60, 1, { rodzaj: 3, losuj: zEpikiem(50) });
+      const trzy = wygeneruj(60, 1, { rodzaj: 3, losuj: zEpikiem(50) });
       expect([trzy.atr_type_1, trzy.atr_type_2, trzy.atr_type_3]).toEqual([1, 4, 5]);
 
       // 53 — wszystkie piec naraz (cecha numer 6).
-      const wszystkie = wylosujPrzedmiot(60, 1, { rodzaj: 3, losuj: zEpikiem(53) });
+      const wszystkie = wygeneruj(60, 1, { rodzaj: 3, losuj: zEpikiem(53) });
       expect(wszystkie.atr_type_1).toBe(6);
       expect(wszystkie.atr_type_2).toBe(0);
 
       // 52 — samo szczescie.
-      const szczescie = wylosujPrzedmiot(60, 1, { rodzaj: 3, losuj: zEpikiem(52) });
+      const szczescie = wygeneruj(60, 1, { rodzaj: 3, losuj: zEpikiem(52) });
       expect(szczescie.atr_type_1).toBe(5);
     });
 
     it('bron maga i lowcy ma cechy podwojone', () => {
-      const wojownik = wylosujPrzedmiot(60, 1, { rodzaj: 1, losuj: zEpikiem(53) });
-      const mag = wylosujPrzedmiot(60, 2, { rodzaj: 1, losuj: zEpikiem(53) });
+      const wojownik = wygeneruj(60, 1, { rodzaj: 1, losuj: zEpikiem(53) });
+      const mag = wygeneruj(60, 2, { rodzaj: 1, losuj: zEpikiem(53) });
       // `$increasedStats` — dotyczy WYLACZNIE broni klas 2 i 3.
       expect(mag.atr_val_1).toBe(wojownik.atr_val_1 * 2);
 
-      const helmMaga = wylosujPrzedmiot(60, 2, { rodzaj: 6, losuj: zEpikiem(53) });
+      const helmMaga = wygeneruj(60, 2, { rodzaj: 6, losuj: zEpikiem(53) });
       expect(helmMaga.atr_val_1).toBe(wojownik.atr_val_1);
     });
   });
@@ -216,7 +227,7 @@ describe('wylosujPrzedmiot', () => {
   describe('gabinet magii', () => {
     it('handluje rodzajami od 8 w gore i nigdy kluczem do lochu', () => {
       for (let i = 0; i < 300; i++) {
-        const p = wylosujPrzedmiot(40, 2, { sklep: SKLEP_GABINET });
+        const p = wygeneruj(40, 2, { sklep: SKLEP_GABINET });
         expect(p.item_type).toBeGreaterThanOrEqual(8);
         expect(p.item_type).toBeLessThanOrEqual(13);
         // `if ($type == 11 && $option !== "tavern") $type = rand(8, 10);`
@@ -230,7 +241,7 @@ describe('wylosujPrzedmiot', () => {
     it('nie koduje klasy w numerze przedmiotu', () => {
       for (const klasa of [1, 2, 3]) {
         for (let i = 0; i < 50; i++) {
-          const p = wylosujPrzedmiot(40, klasa, { sklep: SKLEP_GABINET });
+          const p = wygeneruj(40, klasa, { sklep: SKLEP_GABINET });
           expect(p.item_id).toBeLessThan(1000);
         }
       }
@@ -239,7 +250,7 @@ describe('wylosujPrzedmiot', () => {
     it('album trafia na pólke tylko wtedy, kiedy gracza jeszcze nie ma', () => {
       let zAlbumem = 0;
       for (let i = 0; i < 400; i++) {
-        if (wylosujPrzedmiot(40, 1, { sklep: SKLEP_GABINET, maAlbum: true }).item_type === 13) {
+        if (wygeneruj(40, 1, { sklep: SKLEP_GABINET, maAlbum: true }).item_type === 13) {
           zAlbumem++;
         }
       }
@@ -247,7 +258,7 @@ describe('wylosujPrzedmiot', () => {
 
       let bezAlbumu = 0;
       for (let i = 0; i < 400; i++) {
-        if (wylosujPrzedmiot(40, 1, { sklep: SKLEP_GABINET, maAlbum: false }).item_type === 13) {
+        if (wygeneruj(40, 1, { sklep: SKLEP_GABINET, maAlbum: false }).item_type === 13) {
           bezAlbumu++;
         }
       }
@@ -255,7 +266,7 @@ describe('wylosujPrzedmiot', () => {
     });
 
     it('mikstura niesie czas dzialania i swoje dzialanie', () => {
-      const p = wylosujPrzedmiot(40, 1, { sklep: SKLEP_GABINET, rodzaj: 12 });
+      const p = wygeneruj(40, 1, { sklep: SKLEP_GABINET, rodzaj: 12 });
       // Pierwsza cecha to zawsze czas — `$potionDur = 11` i `POTION_DUR`.
       expect(p.atr_type_1).toBe(11);
       expect(p.atr_val_1).toBeGreaterThanOrEqual(72);
@@ -272,7 +283,7 @@ describe('wylosujPrzedmiot', () => {
        * oryginal losuje wprost `rand(1, 16)`.
        */
       const losuj: Losowanie = (od, doWlacznie) => (od === 1 && doWlacznie === 8 ? 1 : od);
-      const p = wylosujPrzedmiot(20, 1, { sklep: SKLEP_GABINET, rodzaj: 12, losuj });
+      const p = wygeneruj(20, 1, { sklep: SKLEP_GABINET, rodzaj: 12, losuj });
       expect(p.item_id).toBe(16);
       expect(p.atr_val_1).toBe(72 + 96);
       expect(p.atr_type_2).toBe(12);

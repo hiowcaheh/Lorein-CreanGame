@@ -20,7 +20,8 @@
     "prepare:static": "node scripts/prepare-static.mjs",
     "vercel-build": "node scripts/prepare-static.mjs",
     "gen:nazwy": "node scripts/gen-nazwy-przedmiotow.mjs",
-    "gen:klaser": "node scripts/gen-teksty-klasera.mjs"
+    "gen:klaser": "node scripts/gen-teksty-klasera.mjs",
+    "gen:lochy": "node scripts/gen-lochy.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

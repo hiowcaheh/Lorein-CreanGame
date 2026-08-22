@@ -158,6 +158,43 @@ function losujRodzajGabinetu(poziom: number, maAlbum: boolean, losuj: Losowanie)
   return typ === KLUCZ ? losuj(8, 10) : typ;
 }
 
+/**
+ * Rodzaj nagrody z WYPRAWY, gdy losowanie wskazalo „gabinet".
+ *
+ *     if (rand(1, 2) == 1 && check_for_key($SSID) === "go") $type = 11;
+ *     else                                                  $type = rand(8, 10);
+ *
+ * `check_for_key()` sprawdza, czy w czterech pierwszych miejscach plecaka
+ * nie lezy juz klucz — dopoki lezy, drugi nie wypadnie. To JEDYNE miejsce
+ * w grze, w ktorym rodzi sie rodzaj 11.
+ */
+function losujRodzajZWyprawy(maJuzKlucz: boolean, losuj: Losowanie): number {
+  return losuj(1, 2) === 1 && !maJuzKlucz ? KLUCZ : losuj(8, 10);
+}
+
+/**
+ * Progi poziomu, od ktorych z wyprawy moze wypasc klucz do kolejnego lochu:
+ *
+ *     'dungeon_1' => [9, 1], 'dungeon_2' => [19, 2], ... 'dungeon_9' => [109, 9]
+ *
+ * Klucz wypada do PIERWSZEGO lochu, ktorego gracz jeszcze nie otworzyl
+ * i na ktory ma juz poziom. Zamknietego lochu poznaje sie po `dungeon_N == 0`.
+ */
+export const PROGI_KLUCZY: { loch: number; poziom: number }[] = [
+  { loch: 1, poziom: 9 },
+  { loch: 2, poziom: 19 },
+  { loch: 3, poziom: 29 },
+  { loch: 4, poziom: 39 },
+  { loch: 5, poziom: 49 },
+  { loch: 6, poziom: 69 },
+  { loch: 7, poziom: 79 },
+  { loch: 8, poziom: 94 },
+  { loch: 9, poziom: 109 },
+];
+
+/** Ile zlota jest wart klucz — `$item['gold'] = 25000`. */
+export const CENA_KLUCZA = 25000;
+
 function dzialanieMikstury(numer: number): { cecha: number; moc: number; dodatkowyCzas: number } {
   if (numer === 16) return { cecha: 12, moc: 25, dodatkowyCzas: 96 };
   const moce = [10, 15, 25];
@@ -204,6 +241,9 @@ export function wylosujPrzedmiot(
     rodzaj,
     sklep = SKLEP_ZBROJOWNIA,
     maAlbum = false,
+    wyprawa = false,
+    maJuzKlucz = false,
+    zamknieteLochy = [],
     losuj = LOSUJ,
     ustawienia = DOMYSLNE,
   }: {
@@ -212,13 +252,25 @@ export function wylosujPrzedmiot(
     sklep?: number;
     /** Czy gracz ma juz album — bez niego gabinet bywa nim handluje. */
     maAlbum?: boolean;
+    /** Nagroda z wyprawy — tylko tedy trafiaja sie klucze do lochow. */
+    wyprawa?: boolean;
+    /** Czy w plecaku lezy juz klucz — wtedy drugi nie wypadnie. */
+    maJuzKlucz?: boolean;
+    /** Numery lochow, ktorych gracz jeszcze nie otworzyl. */
+    zamknieteLochy?: readonly number[];
     losuj?: Losowanie;
     ustawienia?: Ustawienia;
   } = {},
-): Przedmiot {
+): Przedmiot | null {
   const gabinet = sklep === SKLEP_GABINET;
 
-  let typ = rodzaj ?? (gabinet ? losujRodzajGabinetu(poziom, maAlbum, losuj) : losuj(NAJNIZSZY_RODZAJ, NAJWYZSZY_RODZAJ));
+  let typ =
+    rodzaj ??
+    (gabinet
+      ? wyprawa
+        ? losujRodzajZWyprawy(maJuzKlucz, losuj)
+        : losujRodzajGabinetu(poziom, maAlbum, losuj)
+      : losuj(NAJNIZSZY_RODZAJ, NAJWYZSZY_RODZAJ));
 
   // Tarcze nosi tylko wojownik — oryginal losuje rodzaj od nowa, dopoki
   // nie trafi w cos, co dana klasa uniesie.
@@ -472,6 +524,44 @@ export function wylosujPrzedmiot(
     przedmiot.atr_type_2 = 0;
     przedmiot.atr_val_2 = 0;
     przedmiot.atr_type_3 = 0;
+    przedmiot.atr_val_3 = 0;
+  }
+
+  /*
+   * KLUCZ DO LOCHU. Poza wyprawa rodzaj 11 w ogole tu nie dochodzi —
+   * `losujRodzajGabinetu()` zamienia go na bizuterie.
+   *
+   *     $item['item_id'] = -1;
+   *     if (rand(1,2) == 1 && $lvl >= 50 && magic_mirror != '1111111111111') ... odlamek lustra
+   *     if (rand(1,2) == 1 && $lvl > 99 && toilet == 0) { item_id = 20; gold = 2500000; }
+   *     if (rand(1,2) == 1 && $lvl > 99 && toilet == 1) { item_id = 10; gold =  500000; }
+   *     if (item_id == -1) { pierwszy zamkniety loch powyzej progu, albo BRAK NAGRODY }
+   *
+   * Odlamkow lustra i klucza do wychodka jeszcze nie ma czym obsluzyc —
+   * ale ich LOSOWANIA zuzywamy, bo inaczej caly dalszy ciag generatora
+   * rozjechalby sie z oryginalem.
+   */
+  if (typ === KLUCZ) {
+    losuj(1, 2); // odlamek lustra
+    losuj(1, 2); // klucz do wychodka, wariant pierwszy
+    losuj(1, 2); // klucz do wychodka, wariant drugi
+
+    const prog = PROGI_KLUCZY.find(
+      (p) => zamknieteLochy.includes(p.loch) && poziom > p.poziom,
+    );
+    // `return '0/0/0/0/0/0/0/0/0/0/0/0'` — wyprawa nie ma wtedy nagrody.
+    if (!prog) return null;
+
+    przedmiot.item_id = prog.loch;
+    przedmiot.gold = CENA_KLUCZA;
+    przedmiot.mush = 0;
+    przedmiot.dmg_min = 0;
+    przedmiot.dmg_max = 0;
+    przedmiot.atr_type_1 = 0;
+    przedmiot.atr_type_2 = 0;
+    przedmiot.atr_type_3 = 0;
+    przedmiot.atr_val_1 = 0;
+    przedmiot.atr_val_2 = 0;
     przedmiot.atr_val_3 = 0;
   }
 

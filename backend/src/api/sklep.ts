@@ -99,10 +99,14 @@ async function towarSklepu(sql: Sql, sklepNr: number, userId: number) {
  * w oryginale znaczy wlasnie „nie ma".
  */
 function nowyTowar(sklepNr: number, wiersz: WierszGracza) {
+  /*
+   * Sklep nigdy nie zostaje bez towaru: `null` wraca wylacznie z galezi
+   * klucza do lochu, a ta chodzi tylko przy nagrodzie z wyprawy.
+   */
   return wylosujPrzedmiot(liczba(wiersz['lvl']) || 1, liczba(wiersz['class']) || 1, {
     sklep: sklepNr,
     maAlbum: liczba(wiersz['album']) !== -1,
-  });
+  })!;
 }
 
 async function wstawTowar(

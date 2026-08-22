@@ -1,0 +1,399 @@
+/**
+ * Lochy — lista, wejscie i walka.
+ *
+ * Port `$ACT_ENTER_DUNGEON` (lista) i `$ACT_MAINQUEST` (jedna walka)
+ * z `req.php`. Cala rozgrywka liczy sie tutaj: klient dostaje gotowy
+ * zapis walki i nowy stan lochu, tak samo jak przy wyprawie.
+ */
+
+import { Hono } from 'hono';
+import type { Context } from 'hono';
+import { getSql } from '../db/client.js';
+import { PhpMtRand } from '../compat/rng.js';
+import { time } from '../compat/php.js';
+import { LEVELS } from '../protocol/gamedata.js';
+import { rozegrajWalke, wojownikZGracza, type Wojownik } from '../game/walka.js';
+import { wolneMiejsceWPlecaku } from '../game/karczma.js';
+import { wylosujPrzedmiot } from '../game/generatorPrzedmiotow.js';
+import {
+  GRZYBOW_ZA_POMINIECIE,
+  KLUCZ_UZYTY,
+  LOCHOW,
+  PIERWSZY_POZIOM,
+  POZIOMOW_W_LOCHU,
+  PRZERWA_SEKUND,
+  PRZESZEDL,
+  kolumnaLochu,
+  kopiaGracza,
+  opisPotwora,
+  otwarty,
+  potworZLochu,
+  poziomZeStanu,
+} from '../game/lochy.js';
+import {
+  BEZ_KLASERA,
+  PUSTY_KLASER,
+  dopiszDoKlasera,
+  dopiszPotworaDoKlasera,
+  odczytajDaty,
+  zapiszDaty,
+  type StanKlasera,
+} from '../game/album.js';
+import { maKolumne } from '../db/kolumny.js';
+import {
+  opisWojownika,
+  przedmiotyGracza,
+  rysunekBroni,
+  rysunekBroniPotwora,
+  rysunekPiesci,
+} from './karczma.js';
+import { wczytajGracza, zbudujPrzedmiot, type Przedmiot as PrzedmiotEkranu } from './gracz.js';
+import { tokenZNaglowka } from './konto.js';
+
+export const lochy = new Hono();
+
+type Sql = ReturnType<typeof getSql>;
+
+interface WierszGracza extends Record<string, unknown> {
+  user_id: number;
+}
+
+function liczba(wartosc: unknown): number {
+  const n = Number(wartosc);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function wczytaj(c: Context): Promise<{ sql: Sql; wiersz: WierszGracza } | null> {
+  const token = tokenZNaglowka(c);
+  if (!token) return null;
+
+  const sql = getSql();
+  const [wiersz] = await sql<WierszGracza[]>`SELECT * FROM user_data WHERE ssid = ${token} LIMIT 1`;
+  return wiersz ? { sql, wiersz } : null;
+}
+
+/** Jeden loch tak, jak widzi go ekran listy. */
+export interface OpisLochu {
+  numer: number;
+  /** Wartosc kolumny `dungeon_N`: 0 zamkniety, 2-11 poziom, 12 przejsty. */
+  stan: number;
+  /** Poziom, przed ktorym stoi gracz (1..10). */
+  poziom: number;
+  /** Numer potwora czekajacego na tym poziomie; `-1` przy kopii gracza. */
+  potwor: number;
+}
+
+export interface StanLochow {
+  lochy: OpisLochu[];
+  /** Do kiedy trwa przerwa — czas uniksowy. */
+  przerwaDo: number;
+  teraz: number;
+  grzyby: number;
+  wolneMiejsceWPlecaku: boolean;
+}
+
+/**
+ * Wejscie na liste lochow.
+ *
+ * `$ACT_ENTER_DUNGEON` przy okazji podnosi kazda jedynke do dwojki —
+ * to wlasnie tu klucz uzyty na ekranie postaci staje sie otwartym lochem.
+ */
+async function stanLochow(sql: Sql, wiersz: WierszGracza): Promise<StanLochow> {
+  for (let loch = 1; loch < 10; loch++) {
+    if (liczba(wiersz[`dungeon_${loch}`]) !== KLUCZ_UZYTY) continue;
+    wiersz[`dungeon_${loch}`] = PIERWSZY_POZIOM;
+    await sql`
+      UPDATE user_data SET ${sql(`dungeon_${loch}`)} = ${PIERWSZY_POZIOM}
+      WHERE user_id = ${wiersz.user_id}
+    `;
+  }
+
+  const zajete = (
+    await sql<{ slot: number }[]>`
+      SELECT slot FROM items WHERE owner_id = ${wiersz.user_id} AND slot >= 10
+    `
+  ).map((w) => w.slot);
+
+  const opisy: OpisLochu[] = [];
+  for (let loch = 1; loch <= LOCHOW; loch++) {
+    const stan = liczba(wiersz[`dungeon_${loch}`]);
+    const opis = opisPotwora(loch, stan);
+    opisy.push({
+      numer: loch,
+      stan,
+      poziom: poziomZeStanu(stan),
+      potwor: opis ? opis.numer : -1,
+    });
+  }
+
+  return {
+    lochy: opisy,
+    przerwaDo: liczba(wiersz['dungeon_time']),
+    teraz: time(),
+    grzyby: liczba(wiersz['mushroom']),
+    wolneMiejsceWPlecaku: wolneMiejsceWPlecaku(zajete) !== null,
+  };
+}
+
+lochy.get('/lochy', async (c) => {
+  const dane = await wczytaj(c);
+  if (!dane) return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
+
+  const stan = await stanLochow(dane.sql, dane.wiersz);
+  return c.json({ ...stan, gracz: await wczytajGracza(dane.sql, dane.wiersz) });
+});
+
+/** Rozliczenie jednej walki w lochu — ten sam ksztalt, co przy wyprawie. */
+interface RozliczenieLochu {
+  wygrana: boolean;
+  /** Numer lochu — z niego bierze sie tlo walki (`location{50 + N}.jpg`). */
+  loch: number;
+  poziom: number;
+  awans: number | null;
+  nagroda: { zloto: number; doswiadczenie: number } | null;
+  zdobytyPrzedmiot: PrzedmiotEkranu | null;
+  /** Loch przeszedl do konca — `stage == 12`. */
+  ukonczony: boolean;
+  walka: unknown;
+}
+
+lochy.post('/lochy/:numer/walcz', async (c) => {
+  const dane = await wczytaj(c);
+  if (!dane) return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
+
+  const { sql } = dane;
+  const wiersz = dane.wiersz;
+  const numer = Number(c.req.param('numer'));
+  const kolumna = kolumnaLochu(numer);
+  if (!kolumna) return c.json({ blad: 'Nie ma takiego lochu.' }, 400);
+
+  const stan = liczba(wiersz[kolumna]);
+  // `if ($db_data['dungeon_' . $dung] >= 12) break;` — po nim nie ma co robic.
+  if (stan >= PRZESZEDL) return c.json({ blad: 'Ten loch masz już za sobą.' }, 409);
+  // `if ($db_data['dungeon_' . $dung] < 2) $ret = [$ERR_SESSION_ID_EXPIRED];`
+  if (!otwarty(stan)) return c.json({ blad: 'Nie masz klucza do tego miejsca.' }, 409);
+
+  /*
+   * Miejsce w plecaku sprawdza sie PRZED walka:
+   *
+   *     $slotInfo = findFreeSlot(...);
+   *     if ($slotInfo[0] == false) { $ret = [$ERR_INVENTORY_FULL]; break; }
+   */
+  const zajete = (
+    await sql<{ slot: number }[]>`
+      SELECT slot FROM items WHERE owner_id = ${wiersz.user_id} AND slot >= 10
+    `
+  ).map((w) => w.slot);
+  const miejsce = wolneMiejsceWPlecaku(zajete);
+  if (miejsce === null) return c.json({ blad: 'Plecak jest pełny.' }, 409);
+
+  /*
+   * Przerwa miedzy walkami. Grzyb ja pomija, ale NIE skraca — oryginal
+   * zostawia wtedy stary `dungeon_time`, wiec kolejna walka znowu
+   * kosztuje grzyba, dopoki godzina nie minie.
+   */
+  const teraz = time();
+  let koniecPrzerwy = liczba(wiersz['dungeon_time']);
+  let grzyby = liczba(wiersz['mushroom']);
+
+  if (teraz < koniecPrzerwy) {
+    if (grzyby <= 0) return c.json({ blad: 'Musisz odczekać albo zapłacić grzybem.' }, 409);
+    grzyby -= GRZYBOW_ZA_POMINIECIE;
+  } else {
+    koniecPrzerwy = teraz + PRZERWA_SEKUND;
+  }
+
+  // ------------------------------------------------------------ walka --
+
+  const rng = new PhpMtRand();
+  const przedmioty = await przedmiotyGracza(sql, wiersz.user_id);
+  const gracz = wojownikZGracza(wiersz, przedmioty);
+
+  const opis = opisPotwora(numer, stan);
+  const potwor: Wojownik = opis
+    ? potworZLochu(opis, 'Potwór')
+    : kopiaGracza(gracz, String(wiersz['user_name'] ?? 'Sobowtór'));
+  const numerPotwora = opis ? opis.numer : -1;
+  const doswiadczeniePotwora = opis ? opis.doswiadczenie : 13322552;
+  const bronPotwora = opis ? opis.bron : 0;
+
+  const doRysowania = await sql<Record<string, unknown>[]>`
+    SELECT slot, item_type, item_id, upgrade_level, dmg_min, dmg_max,
+           atr_type_1, atr_type_2, atr_type_3, atr_val_1, atr_val_2, atr_val_3,
+           gold, mush
+    FROM items WHERE owner_id = ${wiersz.user_id} AND slot IN (8, 9)
+  `;
+  const bronWSlocie = doRysowania.find((p) => liczba(p['slot']) === 8);
+  const tarczaWSlocie = doRysowania.find((p) => liczba(p['slot']) === 9);
+  const bronGracza = bronWSlocie ? liczba(bronWSlocie['item_id']) : 0;
+  const rysunekBroniGracza = bronWSlocie ? rysunekBroni(bronWSlocie) : rysunekPiesci();
+  const ikonaTarczyGracza = tarczaWSlocie ? zbudujPrzedmiot(tarczaWSlocie).obrazek : null;
+
+  const zycieGraczaPrzed = gracz.zycie;
+  const zyciePotworaPrzed = potwor.zycie;
+  const walka = rozegrajWalke(gracz, potwor, rng);
+  const wygrana = walka.wygral === 1;
+
+  // ------------------------------------------------------- rozliczenie --
+
+  let poziom = liczba(wiersz['lvl']) || 1;
+  const poziomPrzed = poziom;
+  let doswiadczenie = liczba(wiersz['exp']);
+  let srebro = liczba(wiersz['silver']);
+  let nowyStan = stan;
+  let zdobytyPrzedmiot: PrzedmiotEkranu | null = null;
+
+  /*
+   * Nagroda. Oryginal losuje `rand(1, 3)` PRZED sprawdzeniem wygranej
+   * i po tej liczbie poznaje, czy zamiast zlota wypadnie przedmiot:
+   *
+   *     if ($itemRand == 1 || $stage == 12 || $db_data['dungeon_13'] >= 2)
+   *         $db_data['silver'] += 0;  // i leci przedmiot
+   *     else
+   *         $db_data['silver'] += $OP->getGold();
+   */
+  const losPrzedmiotu = rng.rand(1, 3);
+
+  const maKlaser = liczba(wiersz['album'] ?? BEZ_KLASERA) !== BEZ_KLASERA;
+  let stanKlasera: StanKlasera = {
+    dane: String(wiersz['album_data'] ?? '') || PUSTY_KLASER,
+    ile: liczba(wiersz['album'] ?? 0),
+    daty: odczytajDaty(wiersz['album_dates']),
+  };
+  const klaserPrzed = stanKlasera.ile;
+
+  if (wygrana) {
+    nowyStan = stan + 1;
+    doswiadczenie += doswiadczeniePotwora;
+
+    // `$this->silver = $exp * 2.5;` — zloto potwora liczy sie z doswiadczenia.
+    const zlotoPotwora = Math.trunc(doswiadczeniePotwora * 2.5);
+    const zamiastZlota =
+      losPrzedmiotu === 1 || nowyStan === PRZESZEDL || liczba(wiersz['dungeon_13']) >= 2;
+
+    if (!zamiastZlota) srebro += zlotoPotwora;
+
+    if (maKlaser && numerPotwora > 0) {
+      stanKlasera = dopiszPotworaDoKlasera(stanKlasera, numerPotwora, teraz);
+    }
+
+    if (zamiastZlota) {
+      /*
+       * `genItem($statvalue, $class, $shop, 'dungeon')`, gdzie
+       * `$statvalue = min($OP->getLvl(), $lvl)` i `$shop = max(0, rand(0,2) - 1)`.
+       */
+      const naJakiPoziom = Math.min(potwor.poziom, poziom);
+      const sklep = Math.max(0, rng.rand(0, 2) - 1);
+      const zdobycz = wylosujPrzedmiot(naJakiPoziom, liczba(wiersz['class']) || 1, {
+        sklep,
+        losuj: (od, doo) => rng.rand(od, doo),
+      });
+
+      if (zdobycz) {
+        await sql`
+          INSERT INTO items (item_type, item_id, dmg_min, dmg_max,
+                             atr_type_1, atr_type_2, atr_type_3,
+                             atr_val_1, atr_val_2, atr_val_3,
+                             gold, mush, slot, owner_id)
+          VALUES (${zdobycz.item_type}, ${zdobycz.item_id}, ${zdobycz.dmg_min}, ${zdobycz.dmg_max},
+                  ${zdobycz.atr_type_1}, ${zdobycz.atr_type_2}, ${zdobycz.atr_type_3},
+                  ${zdobycz.atr_val_1}, ${zdobycz.atr_val_2}, ${zdobycz.atr_val_3},
+                  ${zdobycz.gold}, ${zdobycz.mush}, ${miejsce}, ${wiersz.user_id})
+        `;
+        zdobytyPrzedmiot = {
+          ...zbudujPrzedmiot({ ...zdobycz, upgrade_level: 0 }),
+          slot: miejsce,
+        };
+        if (maKlaser) stanKlasera = dopiszDoKlasera(stanKlasera, [zdobycz], teraz);
+      }
+    }
+
+    // Awans — ten sam wzor, co po wyprawie.
+    while (doswiadczenie > (LEVELS[poziom] ?? Number.MAX_SAFE_INTEGER)) {
+      doswiadczenie -= LEVELS[poziom]!;
+      poziom += 1;
+    }
+  }
+
+  await sql`
+    UPDATE user_data SET
+      exp = ${doswiadczenie}, lvl = ${poziom}, silver = ${srebro},
+      mushroom = ${grzyby}, dungeon_time = ${koniecPrzerwy},
+      ${sql(kolumna)} = ${nowyStan}
+    WHERE user_id = ${wiersz.user_id}
+  `;
+
+  /*
+   * Przejscie lochu 9-12 otwiera nastepny:
+   *
+   *     if ($dung >= 9 && $dung <= 12 && $stage == 12) $stage2 = 2;
+   */
+  if (numer >= 9 && numer <= 12 && nowyStan === PRZESZEDL) {
+    const kolejny = kolumnaLochu(numer + 1);
+    if (kolejny) {
+      await sql`
+        UPDATE user_data SET ${sql(kolejny)} = ${PIERWSZY_POZIOM}
+        WHERE user_id = ${wiersz.user_id}
+      `;
+    }
+  }
+
+  if (maKlaser && stanKlasera.ile > klaserPrzed) {
+    if (await maKolumne(sql, 'user_data', 'album_dates')) {
+      await sql`
+        UPDATE user_data SET
+          album_data = ${stanKlasera.dane},
+          album = ${stanKlasera.ile},
+          album_dates = ${zapiszDaty(stanKlasera.daty)}
+        WHERE user_id = ${wiersz.user_id}
+      `;
+    } else {
+      await sql`
+        UPDATE user_data SET album_data = ${stanKlasera.dane}, album = ${stanKlasera.ile}
+        WHERE user_id = ${wiersz.user_id}
+      `;
+    }
+  }
+
+  const [swiezy] = await sql<WierszGracza[]>`
+    SELECT * FROM user_data WHERE user_id = ${wiersz.user_id} LIMIT 1
+  `;
+
+  const rozliczenie: RozliczenieLochu = {
+    wygrana,
+    loch: numer,
+    poziom: poziomZeStanu(stan),
+    awans: poziom > poziomPrzed ? poziom : null,
+    nagroda: wygrana
+      ? {
+          zloto: losPrzedmiotu === 1 || nowyStan === PRZESZEDL ? 0 : Math.trunc(doswiadczeniePotwora * 2.5),
+          doswiadczenie: doswiadczeniePotwora,
+        }
+      : null,
+    zdobytyPrzedmiot,
+    ukonczony: nowyStan >= PRZESZEDL,
+    walka: {
+      gracz: {
+        ...opisWojownika(gracz, zycieGraczaPrzed, bronGracza),
+        ...rysunekBroniGracza,
+        tarczaObrazek: ikonaTarczyGracza,
+      },
+      potwor: {
+        ...opisWojownika(potwor, zyciePotworaPrzed, bronPotwora),
+        obrazek: numerPotwora,
+        ...rysunekBroniPotwora(bronPotwora),
+        tarczaObrazek: null,
+      },
+      ciosy: walka.ciosy,
+    },
+  };
+
+  const stanPo = await stanLochow(sql, swiezy ?? wiersz);
+  return c.json({
+    ...stanPo,
+    rozliczenie,
+    gracz: await wczytajGracza(sql, swiezy ?? wiersz),
+  });
+});
+
+export { POZIOMOW_W_LOCHU };
