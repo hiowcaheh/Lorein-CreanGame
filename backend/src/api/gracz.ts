@@ -8,6 +8,7 @@
 
 import { bonusyZPrzedmiotow } from '../game/ekwipunek.js';
 import { cenaPunktow, dokupionePunkty } from '../game/cechy.js';
+import { BEZ_KLASERA } from '../game/album.js';
 import { barwaPrzedmiotu, plikIkony } from '../game/grafikaPrzedmiotow.js';
 import {
   RODZAJ_MIKSTURY,
@@ -118,6 +119,13 @@ export interface Gracz {
    * pokazac, ktora mikstura dziala i do kiedy.
    */
   mikstury: Mikstura[];
+
+  /**
+   * Klaser Dokladnosci: ile pozycji zebrano, albo `-1`, gdy gracz go
+   * jeszcze nie ma. Kupuje sie go w gabinecie magii, a przeciagniecie
+   * na postac go otwiera — nie zaklada.
+   */
+  klaser: number;
 
   /**
    * Osiem odznak, kazda w stopniu 0..4.
@@ -395,6 +403,7 @@ export function zbudujGracza(
 
     ...wierzchowiecGracza(wiersz),
     ekwipunek,
+    klaser: intval(wiersz['album'] ?? BEZ_KLASERA),
     mikstury: mikstury.map(opiszMiksture),
     osiagniecia: [0, 0, 0, 0, 0, 0, 0, 0],
   };

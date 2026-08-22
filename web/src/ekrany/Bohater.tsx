@@ -40,6 +40,9 @@ import {
   IKONA_TARCZY,
   IKONY_KLAS,
   KATALOG_ODZNAK,
+  KLASER,
+  OBRAZ_KLASERA,
+  POZYCJI_W_KLASERZE,
   KATALOG_SLOTOW,
   KOLUMNA_CENY,
   KOLUMNY_CECH,
@@ -263,6 +266,7 @@ export function Bohater({
    */
   const [otwartaCecha, setOtwartaCecha] = useState<number | null>(null);
   const [pokazPancerz, setPokazPancerz] = useState(false);
+  const [pokazKlaser, setPokazKlaser] = useState(false);
   const [pokazCeny, setPokazCeny] = useState(false);
 
   /*
@@ -506,6 +510,48 @@ export function Bohater({
             </span>
           </div>
           <div className="cytat">= (Pancerz / Poziom przeciwnika) zaokrąglone</div>
+        </div>
+      )}
+
+      {/*
+        Klaser Dokladnosci — `IMG_CHAR_ALBUM` pokazuje sie dopiero, gdy
+        gracz go ma (`SG_ALBUM >= 10000`, u nas `klaser >= 0`).
+        Podpowiedz z oryginalu: „Znaleziono: N / 1700, X%".
+      */}
+      {gracz.klaser >= 0 && (
+        <button
+          type="button"
+          className="postac-klaser"
+          style={styl(KLASER)}
+          title={`Klaser Dokładności — znaleziono: ${gracz.klaser} / ${POZYCJI_W_KLASERZE} (${
+            Math.round((gracz.klaser / POZYCJI_W_KLASERZE) * 10000) / 100
+          }%)`}
+          onClick={() => setPokazKlaser((czy) => !czy)}
+        >
+          <img src={OBRAZ_KLASERA} alt="Klaser Dokładności" />
+        </button>
+      )}
+
+      {pokazKlaser && (
+        <div
+          className="podpowiedz postac-podpowiedz-klasera"
+          style={{ left: parseFloat(KLASER.lewo) - 240, top: parseFloat(KLASER.gora) + 54, width: 300 }}
+          role="dialog"
+          aria-label="Klaser Dokładności"
+        >
+          <div className="nazwa">Klaser Dokładności</div>
+          <div className="wiersz">
+            <span>Znaleziono:</span>
+            <span style={{ left: 137 }}>
+              {gracz.klaser} / {POZYCJI_W_KLASERZE}
+            </span>
+          </div>
+          <div className="wiersz">
+            <span>Premia do doświadczenia:</span>
+            <span style={{ left: 220 }}>
+              +{Math.round((gracz.klaser / POZYCJI_W_KLASERZE) * 100)}%
+            </span>
+          </div>
         </div>
       )}
 

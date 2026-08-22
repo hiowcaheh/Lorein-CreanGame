@@ -9,9 +9,17 @@ import { Hono } from 'hono';
 import { getSql } from '../db/client.js';
 import { zapiszWDzienniku } from '../db/dziennik.js';
 import { loadDefaultStats } from '../game/stats.js';
-import { time } from '../compat/php.js';
+import {
+  BEZ_KLASERA,
+  PUSTY_KLASER,
+  RODZAJ_KLASERA,
+  dopiszDoKlasera,
+  type PrzedmiotKlasera,
+} from '../game/album.js';
+import { intval, time } from '../compat/php.js';
 import {
   OSTATNI_SLOT_PLECAKA,
+  PIERWSZY_SLOT_PLECAKA,
   zaplanujPrzeniesienie,
   type PrzedmiotWBazie,
 } from '../game/ekwipunek.js';
@@ -335,6 +343,43 @@ konto.post('/ekwipunek', async (c) => {
 
   const wZrodle = przedmioty.find((p) => p.slot === zrodlo);
   if (!wZrodle) return c.json({ blad: 'W tym miejscu nic nie leży.' }, 400);
+
+  /*
+   * Klaser Dokladnosci sie nie zaklada — sie go OTWIERA.
+   *
+   * Oryginal robi to w tej samej akcji (`$ACT_USE_ITEM`, galaz
+   * `item_type == 13`): kolumna `album` przestaje byc -1, `album_data`
+   * dostaje pusty zestaw bitow, przedmiot znika, a wszystko, co gracz
+   * akurat ma, od razu sie w klaserze zapisuje.
+   *
+   * Liczy sie upuszczenie NA POSTAC — czyli poza plecak. Przelozenie
+   * klasera z jednej kieszeni do drugiej zostaje zwyklym przelozeniem.
+   */
+  if (wZrodle.item_type === RODZAJ_KLASERA && (cel === null || cel < PIERWSZY_SLOT_PLECAKA)) {
+    if (intval(gracz['album'] ?? BEZ_KLASERA) !== BEZ_KLASERA) {
+      return c.json({ blad: 'Klaser już masz.' }, 409);
+    }
+
+    const doWpisania = await sql<PrzedmiotKlasera[]>`
+      SELECT item_type, item_id, dmg_min, dmg_max,
+             atr_type_1, atr_type_2, atr_type_3,
+             atr_val_1, atr_val_2, atr_val_3
+      FROM items WHERE owner_id = ${wlasciciel} AND item_type <= 10
+    `;
+
+    const klaser = dopiszDoKlasera({ dane: PUSTY_KLASER, ile: 0 }, doWpisania);
+
+    await sql`
+      UPDATE user_data SET album = ${klaser.ile}, album_data = ${klaser.dane}
+      WHERE user_id = ${wlasciciel}
+    `;
+    await sql`DELETE FROM items WHERE id = ${wZrodle.id}`;
+
+    const [poOtwarciu] = await sql<Record<string, unknown>[]>`
+      SELECT * FROM user_data WHERE ssid = ${token} LIMIT 1
+    `;
+    return c.json({ gracz: await wczytajGracza(sql, poOtwarciu ?? gracz) });
+  }
 
   const plan = zaplanujPrzeniesienie(
     wZrodle,

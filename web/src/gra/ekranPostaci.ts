@@ -207,6 +207,16 @@ export const MIEJSCA_MIKSTUR: Ramka[] = [0, 1, 2].map((i) =>
  */
 export const PIERWSZE_MIEJSCE_MIKSTURY = 300;
 
+/*
+ * Klaser Dokladnosci — `IMG_CHAR_ALBUM` w punkcie (280 + 500 + 350,
+ * 100 + 20). Oryginalna ikonka `icon_foliant.png` nie doszla do naszej
+ * paczki zasobow, wiec stoi tam obrazek samego przedmiotu z `itm/13-1`.
+ */
+export const KLASER = ramka(280 + 500 + 350, 100 + 20, 48, 48);
+export const OBRAZ_KLASERA = '/res/sfgame/itm/13-1/itm13-1-1.png';
+/** Ile pozycji miesci klaser — `contentMax` w kliencie. */
+export const POZYCJI_W_KLASERZE = 1700;
+
 export const KATALOG_ODZNAK = '/res/sfgame/scr/char/ach/';
 /** Ikony klas: 1 wojownik, 2 mag, 3 lowca — tak jak w oryginale. */
 export const IKONY_KLAS: Record<number, string> = {

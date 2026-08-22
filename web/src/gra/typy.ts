@@ -52,6 +52,9 @@ export interface Gracz {
 
   ekwipunek: Przedmiot[];
 
+  /** Klaser Dokladnosci: ile pozycji zebrano, albo -1, gdy gracza go nie ma. */
+  klaser: number;
+
   /** Trzy miejsca na dzialajace mikstury; puste maja `rodzaj` rowny zeru. */
   mikstury: Mikstura[];
 
