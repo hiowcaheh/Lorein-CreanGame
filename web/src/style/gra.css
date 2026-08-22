@@ -1803,6 +1803,19 @@ button.postac-wierzchowiec-obraz img {
 .okno-suwak .uchwyt { top: 1px; }
 .okno-suwak .znacznik { pointer-events: none; }
 
+/*
+ * Podpisy podzialki — malutkie liczby pod torem. Oryginal ich nie ma
+ * (Warta ma podzialke bez opisu), ale bez nich nie widac, ile zakupow
+ * wybiera suwak. Kazda liczba stoi srodkiem na swoim znaczniku.
+ */
+.okno-suwak .podpis {
+  pointer-events: none;
+  transform: translateX(-50%);
+  font-size: 13px;
+  color: var(--pergamin);
+  text-shadow: 0 1px 2px #000;
+}
+
 .okno-cechy .przycisk { z-index: 22; }
 
 /*
@@ -1898,3 +1911,120 @@ button.postac-pancerz {
 
 .postac-klaser img { width: 100%; height: 100%; object-fit: contain; }
 .postac-klaser:hover img { filter: brightness(1.15); }
+
+/*
+ * KLASER DOKLADNOSCI — `BNC_SCREEN_ALBUM`.
+ *
+ * Tlo `scr/album/album.jpg` idzie w (280, 100) i wypelnia caly ekran gry.
+ * Wszystko inne stoi na wspolrzednych z `ShowAlbumContent()`, przeliczonych
+ * na piksele obszaru gry (minus 280 i 100).
+ */
+.klaser {
+  position: absolute;
+  inset: 0;
+}
+
+.klaser > * { position: absolute; }
+
+.klaser-tlo {
+  left: 0;
+  top: 0;
+  width: 1000px;
+  height: 700px;
+}
+
+/* `FontFormat_BookLeft` — 16 px, czarny, do lewej. */
+.klaser-licznik {
+  font-size: 16px;
+  line-height: 1.25;
+  color: #000;
+  white-space: nowrap;
+}
+
+/* `FontFormat_Book` — 20 px, czarny, wysrodkowany na `srodekX`. */
+.klaser-naglowek,
+.klaser-numer {
+  font-size: 20px;
+  color: #000;
+  white-space: nowrap;
+}
+
+.klaser-naglowek { transform: translateX(-50%); }
+
+/*
+ * Prawy numer strony konczy sie na 1205 — `x = 1205 - textWidth`.
+ * Zamiast mierzyc napis, przyklejamy go prawa krawedzia.
+ */
+.klaser-numer-prawy { transform: translateX(-100%); }
+
+/* `FontFormat_BookHint` — 18 px, kolor 136 (0x000088), wysrodkowany. */
+.klaser-podpowiedz {
+  font-size: 18px;
+  line-height: 1.2;
+  color: #000088;
+  text-align: center;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Zakladki dzialow — `tab_N_out.jpg` / `tab_N_in.jpg`, 46x70. */
+.klaser-zakladka {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.klaser-zakladka img {
+  width: 46px;
+  height: 70px;
+  display: block;
+}
+
+/*
+ * Portret potwora i jego ramka — `scaleX = scaleY = 0.8`. Ramka stoi
+ * o 8 px w lewo i w gore od portretu, a nie o 8 * 0,8: `DefineCnt`
+ * ustawia polozenie kontenera, a skala dotyczy tego, co w srodku.
+ */
+.klaser-potwor,
+.klaser-ramka {
+  transform-origin: 0 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+.klaser-potwor { width: 300px; height: 300px; }
+.klaser-ramka { width: 320px; height: 320px; }
+
+/* Ikony przedmiotow — 90x90, tak jak w katalogu `itm/`. */
+.klaser-wzor {
+  width: 90px;
+  height: 90px;
+  pointer-events: none;
+}
+
+/* Strzalki przewracania stron — `btnClassArrowLeft` i `-Right`, 33x33. */
+.klaser-strzalka {
+  width: 33px;
+  height: 33px;
+  padding: 0;
+  border: 0;
+  background: transparent center / 33px 33px no-repeat;
+  cursor: pointer;
+}
+
+.klaser-wstecz { background-image: url('/res/ui/strzalka-lewo.png'); }
+.klaser-wstecz:hover { background-image: url('/res/ui/strzalka-lewo-najazd.png'); }
+.klaser-wstecz:active { background-image: url('/res/ui/strzalka-lewo-wcisnieta.png'); }
+
+.klaser-dalej { background-image: url('/res/ui/strzalka-prawo.png'); }
+.klaser-dalej:hover { background-image: url('/res/ui/strzalka-prawo-najazd.png'); }
+.klaser-dalej:active { background-image: url('/res/ui/strzalka-prawo-wcisnieta.png'); }
+
+/* Przycisk „Klaser" na ekranie postaci — `BTN_CHAR_ALBUM` w (830, 715). */
+.postac-klaser-guzik {
+  left: 550px;
+  top: 615px;
+  width: 174px;
+}

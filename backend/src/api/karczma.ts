@@ -44,6 +44,13 @@ import {
 import { wczytajGracza, zbudujPrzedmiot, type Przedmiot as PrzedmiotEkranu } from './gracz.js';
 import { barwaPrzedmiotu, plikIkony, plikPocisku, typAnimacjiBroni } from '../game/grafikaPrzedmiotow.js';
 import { tokenZNaglowka } from './konto.js';
+import {
+  BEZ_KLASERA,
+  PUSTY_KLASER,
+  dopiszDoKlasera,
+  dopiszPotworaDoKlasera,
+  type StanKlasera,
+} from '../game/album.js';
 import type { Context } from 'hono';
 
 export const karczma = new Hono();
@@ -279,12 +286,34 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   let plecakBylPelny = false;
   let zdobyteDoswiadczenie = 0;
 
+  /*
+   * Klaser. Po wygranej wyprawie oryginal wpisuje do niego POTWORA
+   * i przedmiot, ktory z niej wypadl:
+   *
+   *     $AlbumObj->addMonster($OP->getId());
+   *     ...
+   *     if ($hasAlbum && (int)$item['item_type'] <= 10) $AlbumObj->addItem($item);
+   *
+   * i zapisuje wszystko jednym UPDATE-em, tylko gdy licznik urosl.
+   * W oryginale wyprawa zawsze sie udaje, wiec nie ma tam czego
+   * rozstrzygac; u nas potwor moze wygrac, a wtedy — zgodnie z opisem
+   * klasera („trafiaja tam wszystkie pokonane potwory") — nie wchodzi.
+   */
+  const maKlaser = liczba(wiersz['album'] ?? BEZ_KLASERA) !== BEZ_KLASERA;
+  let stanKlasera: StanKlasera = {
+    dane: String(wiersz['album_data'] ?? '') || PUSTY_KLASER,
+    ile: liczba(wiersz['album'] ?? 0),
+  };
+  const klaserPrzed = stanKlasera.ile;
+
   if (wygrana) {
     /*
      * Grzyb z wyprawy. Do tego oryginal dorzuca jeden ZA PIERWSZA wyprawe
      * dnia — poznaje ja po tym, ze wytrzymalosc jest jeszcze pelna
      * i nie wypito ani jednego piwa.
      */
+    if (maKlaser) stanKlasera = dopiszPotworaDoKlasera(stanKlasera, potwor.obrazek);
+
     if (rng.rand(1, 100) <= SZANSA_NA_GRZYBA) znalezioneGrzyby += ZNALEZIONYCH_GRZYBOW;
     if (wytrzymalosc === PELNA_WYTRZYMALOSC && liczba(wiersz['beers']) === 0) znalezioneGrzyby += 1;
     grzyby += znalezioneGrzyby;
@@ -323,6 +352,23 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
                   ${liczba(czekajacy['gold'])}, ${liczba(czekajacy['mush'])}, ${miejsce}, ${wiersz.user_id})
         `;
         zdobytyPrzedmiot = { ...zbudujPrzedmiot(czekajacy), slot: miejsce };
+
+        if (maKlaser) {
+          stanKlasera = dopiszDoKlasera(stanKlasera, [
+            {
+              item_type: liczba(czekajacy['item_type']),
+              item_id: liczba(czekajacy['item_id']),
+              dmg_min: liczba(czekajacy['dmg_min']),
+              dmg_max: liczba(czekajacy['dmg_max']),
+              atr_type_1: liczba(czekajacy['atr_type_1']),
+              atr_type_2: liczba(czekajacy['atr_type_2']),
+              atr_type_3: liczba(czekajacy['atr_type_3']),
+              atr_val_1: liczba(czekajacy['atr_val_1']),
+              atr_val_2: liczba(czekajacy['atr_val_2']),
+              atr_val_3: liczba(czekajacy['atr_val_3']),
+            },
+          ]);
+        }
       }
     }
   }
@@ -342,6 +388,14 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
       medal_adventurer = ${liczba(wiersz['medal_adventurer']) + (wygrana ? 1 : 0)}
     WHERE user_id = ${wiersz.user_id}
   `;
+
+  // Zapis klasera idzie osobno i tylko wtedy, gdy cos przybylo.
+  if (maKlaser && stanKlasera.ile > klaserPrzed) {
+    await sql`
+      UPDATE user_data SET album_data = ${stanKlasera.dane}, album = ${stanKlasera.ile}
+      WHERE user_id = ${wiersz.user_id}
+    `;
+  }
 
   // Nowy komplet zadan po kazdej wyprawie — jak w oryginale.
   const [swiezy] = await sql<WierszGracza[]>`

@@ -30,10 +30,12 @@ export const POZIOM_KLASERA = 10;
 /**
  * Pusty klaser — `Album::getDefaultData()`.
  *
- * Oryginal ma tam 425 znakow „A", czyli 425 * 6 bitow po zdekodowaniu.
- * Trzymamy dlugosc, a nie sam napis: tak widac, skad sie bierze.
+ * Oryginal ma tam 532 znaki „A". Trzymamy dlugosc, a nie sam napis: tak
+ * widac, skad sie bierze. Krotszy zapis NIE wystarczy — najdalsza pozycja
+ * klasera to epicki miecz zwiadowcy pod bitem 3187 (`ShowAlbumContent()`,
+ * dzial 4, strona 29), a 532 znaki daja 399 bajtow, czyli 3192 bity.
  */
-const ZNAKOW_DANYCH = 425;
+const ZNAKOW_DANYCH = 532;
 export const PUSTY_KLASER = 'A'.repeat(ZNAKOW_DANYCH);
 
 /** Przedmiot w postaci, w jakiej trzyma go tabela `items`. */
@@ -58,8 +60,8 @@ export interface PrzedmiotKlasera {
  * zrobiony przez stary serwer da sie u nas odczytac.
  */
 
-/** Ile pozycji miesci pusty zapis: 425 znakow to 318 bajtow. */
-const BAJTOW = 318;
+/** Ile pozycji miesci pusty zapis: 532 znaki to 399 bajtow, czyli 3192 bity. */
+const BAJTOW = 399;
 
 /** Zamienia zapis klasera na tablice bitow. */
 export function odkodujKlaser(dane: string): boolean[] {
@@ -121,14 +123,30 @@ export function miejsceWKlaserze(p: PrzedmiotKlasera): number {
   let miejsce = POCZATKI[dlaKlasy]?.[typ] ?? 0;
 
   if (epicki) {
-    // Zwykle wzory kazdego rodzaju stoja przed epickimi, wiec epik
-    // przeskakuje caly ich blok. Bron wojownika ma go najdluzszy.
-    if (typ === 1 && dlaKlasy === 1) miejsce += 250;
-    else if (typ === 1) miejsce += 50;
-    else if (typ >= 2 && typ <= 7) miejsce += 50;
-    else if (typ === 8) miejsce += 160;
-    else if (typ === 9) miejsce += 110;
-    else if (typ === 10) miejsce += 24;
+    /*
+     * Zwykle wzory kazdego rodzaju stoja przed epickimi, wiec epik
+     * przeskakuje caly ich blok.
+     *
+     * PRZESUNIECIA SA Z KLIENTA, NIE Z `req.php`. Stary serwer PHP ma tu
+     * kazda liczbe o 50 za mala (`+250/+50/+160/+110/+24`) i wpisuje
+     * epiki w miejsca, ktorych `ShowAlbumContent()` NIGDY nie rysuje.
+     * Klient czyta je tak:
+     *
+     *   rodzaj 8   strona 6  -> 510   (300 + 210)
+     *   rodzaj 9   strona 12 -> 686   (526 + 160)
+     *   rodzaj 10  strona 24 -> 776   (702 +  74)
+     *   bron woj.  strona 8  -> 1092  (792 + 300)
+     *   reszta     ...       -> baza + 100
+     *
+     * Ze suma sie zgadza, widac po `catMax = [252, 246, 506, 348, 348]`
+     * z klienta: przy TYCH przesunieciach kazdy dzial wychodzi co do
+     * jednego, a razem daje 1700, czyli `contentMax`.
+     */
+    if (typ === 1 && dlaKlasy === 1) miejsce += 300;
+    else if (typ >= 1 && typ <= 7) miejsce += 100;
+    else if (typ === 8) miejsce += 210;
+    else if (typ === 9) miejsce += 160;
+    else if (typ === 10) miejsce += 74;
 
     miejsce += numer - 50;
   } else if (typ === 10) {
@@ -175,4 +193,27 @@ export function dopiszDoKlasera(
 export function premiaZKlasera(album: number): number {
   if (album === BEZ_KLASERA) return 0;
   return Math.round((album / POZYCJI_W_KLASERZE) * 100) / 100;
+}
+
+/**
+ * Najwyzszy numer potwora, ktory klaser przyjmuje — `addMonster()`:
+ *
+ *     $id = abs($id) - 1;
+ *     if (($id < 0) || ($id > 252)) return false;
+ *
+ * Potwory leza na samym poczatku zapisu, przed przedmiotami: bit `id-1`
+ * to potwor o numerze `id`. Klient rysuje ich 252 (63 strony po cztery).
+ */
+export const NAJWYZSZY_POTWOR = 252;
+
+/** Wpisuje pokonanego potwora. Numer liczy sie od jedynki, tak jak w bazie. */
+export function dopiszPotworaDoKlasera(stan: StanKlasera, idPotwora: number): StanKlasera {
+  const miejsce = Math.abs(idPotwora) - 1;
+  if (miejsce < 0 || miejsce > NAJWYZSZY_POTWOR) return stan;
+
+  const bity = odkodujKlaser(stan.dane);
+  if (miejsce >= bity.length || bity[miejsce]) return stan;
+
+  bity[miejsce] = true;
+  return { dane: zakodujKlaser(bity), ile: stan.ile + 1 };
 }

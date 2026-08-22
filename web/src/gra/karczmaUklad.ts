@@ -440,14 +440,21 @@ export const OBRAZ_WYPELNIENIA_ZYCIA = '/res/sfgame/scr/fight/lifebar_red.png';
 export const OBRAZ_RAMKI_STATOW = '/res/sfgame/scr/fight/box1.png';
 export const OBRAZ_RAMKI_SRODKOWEJ = '/res/sfgame/scr/fight/box2.png';
 /**
- * Portret potwora.
+ * Portret potwora. Numer liczy sie od jedynki — tak samo jak plik.
  *
- * Numer z serwera liczy od jedynki, a plik od dwojki: klient definiuje
- * obrazek jako `monster{i + 1}.jpg` dla pozycji `i` w tablicy, a serwer
- * wysyla te pozycje wprost. Stad przesuniecie o jeden.
+ * Klient definiuje obrazki petla `DefineImg(IMG_OPPIMG_MONSTER + k,
+ * "monster" + (k + 1) + ".jpg")`, czyli pozycja `k` to plik `k + 1`,
+ * ale pokazuje je o jeden nizej:
+ *
+ *     Add((IMG_OPPIMG_MONSTER + oppMonster) - 1);
+ *
+ * gdzie `oppMonster` to numer wprost z serwera. Obie zamiany sie znosza
+ * i zostaje `monster{numer}.jpg`. Zgadza sie to z nazwa potwora, ktora
+ * klient bierze z `TXT_MONSTER_NAME + oppMonster - 1`, i z klaserem,
+ * gdzie potwor o numerze `n` siedzi pod bitem `n - 1`.
  */
 export function obrazPotwora(numer: number): string {
-  return `/res/sfgame/scr/fight/monster/monster${numer + 1}.jpg`;
+  return `/res/sfgame/scr/fight/monster/monster${numer}.jpg`;
 }
 
 /**

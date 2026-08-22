@@ -244,3 +244,42 @@ export function cenaPrzedmiotu(p: Przedmiot): { zloto: number; srebro: number; g
     grzyby: p.grzyby % 100,
   };
 }
+
+/**
+ * Nazwa pozycji klasera — `GetItemName(itmTyp, itmPic, albumMode)`.
+ *
+ * Klaser wola te sama funkcje z trzecim argumentem, co przelacza ja
+ * w tryb „mam gole typ, numer i klase":
+ *
+ *     if (albumMode >= 0) { itmTyp = SGIndex; itmPic = SG; itmClass = albumMode; }
+ *
+ * Przyrostka nie ma, bo nie ma z czego go policzyc — w klaserze nie
+ * stoi konkretny przedmiot, tylko sam WZOR. Nazwa epika bywa dwuczlonowa:
+ * po pionowej kresce idzie cytat, ktory klaser stawia osobnym wierszem
+ * pod nazwa.
+ */
+export function nazwaWKlaserze(
+  typ: number,
+  obrazek: number,
+  klasa: number,
+): { nazwa: string; podpowiedz: string } {
+  let baza = BEZ_PRZYROSTKA.includes(typ)
+    ? BAZY_WSPOLNE[typ]
+    : (BAZY_WSPOLNE[typ] ?? BAZY_KLASOWE[typ]?.[klasa]);
+  if (baza === undefined) return { nazwa: '', podpowiedz: '' };
+
+  let numer = obrazek;
+  if (numer >= PIERWSZY_EPICKI && typ !== 14) {
+    baza += PRZESUNIECIE_EPICKICH;
+    numer -= PIERWSZY_EPICKI - 1;
+  }
+
+  const pelna = tekst(baza + numer - 1);
+  if (pelna === undefined) return { nazwa: '', podpowiedz: '' };
+
+  const czesci = pelna.split('|');
+  return {
+    nazwa: czesci[0] ?? '',
+    podpowiedz: (czesci[1] ?? '').split('#').join('\n'),
+  };
+}

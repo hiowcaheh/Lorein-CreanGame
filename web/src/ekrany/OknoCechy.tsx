@@ -27,7 +27,9 @@ import {
   OBRAZ_ZNACZNIKA,
   ODSTEP_PRZYCISKOW,
   OKNO,
+  PODZIALKA_POD_TOREM,
   PRZYCISK,
+  PRZYCISKI_Y,
   SRODEK_OKNA,
   SUWAK,
   TEKST,
@@ -46,10 +48,30 @@ import type { Gracz } from '../gra/typy';
 const NAZWY = ['Siła', 'Zręczność', 'Inteligencja', 'Wytrzym.', 'Szczęście'];
 
 /**
- * Powyzej tylu zakupow suwak nie ma juz podzialki — znaczniki staly by
- * jeden na drugim i niczego nie pokazywaly. Sam tor dziala tak samo.
+ * Podzialka pod torem. Znacznik przy KAZDYM zakupie nie da sie odczytac —
+ * przy stu zakupach staly by co dwa piksele — wiec opisane sa tylko co
+ * ktorys. Krok dobiera sie tak, zeby wyszlo najwyzej szesc podpisow.
  */
-const NAJWIECEJ_ZNACZNIKOW = 12;
+const NAJWIECEJ_PODPISOW = 6;
+const KROKI = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+
+function krokPodzialki(maks: number): number {
+  for (const k of KROKI) if (Math.ceil(maks / k) + 1 <= NAJWIECEJ_PODPISOW) return k;
+  return Math.ceil(maks / (NAJWIECEJ_PODPISOW - 1));
+}
+
+/** Wartosci, przy ktorych stoi znacznik i podpis: 1, potem co `krok`, na koncu `maks`. */
+function podzialka(maks: number): number[] {
+  if (maks <= 1) return [1];
+  const krok = krokPodzialki(maks);
+  const wartosci = [1];
+  for (let v = krok; v < maks; v += krok) if (v > 1) wartosci.push(v);
+  // Ostatni podpis to zawsze maksimum — ale nie wtedy, gdy przykrylby poprzedni.
+  const ostatni = wartosci[wartosci.length - 1] ?? 1;
+  if (maks - ostatni < krok / 2) wartosci.pop();
+  wartosci.push(maks);
+  return wartosci;
+}
 
 /** Ile srebra to jedno zloto — tak samo jak w pasku u gory. */
 function naZloto(srebro: number): { zloto: number; srebro: number } {
@@ -104,7 +126,7 @@ export function OknoCechy({
     setIle(wartoscZPolozenia(x, maks));
   }
 
-  const znaczniki = maks <= NAJWIECEJ_ZNACZNIKOW ? maks : 0;
+  const znaczniki = useMemo(() => podzialka(maks), [maks]);
 
   return (
     <div className="okno-cechy">
@@ -156,15 +178,15 @@ export function OknoCechy({
       >
         <img className="tor" src={OBRAZ_TORU} alt="" />
 
-        {znaczniki > 1 &&
-          Array.from({ length: znaczniki }, (_, i) => (
+        {znaczniki.length > 1 &&
+          znaczniki.map((v) => (
             <img
-              key={i}
+              key={`z${v}`}
               className="znacznik"
               src={OBRAZ_ZNACZNIKA}
               alt=""
               style={{
-                left: polozenieUchwytu(i + 1, znaczniki) - ZNACZNIK.szerokosc / 2,
+                left: polozenieUchwytu(v, maks) - ZNACZNIK.szerokosc / 2,
                 top: -ZNACZNIK_NAD_TOREM,
                 width: ZNACZNIK.szerokosc,
                 height: ZNACZNIK.wysokosc,
@@ -182,6 +204,18 @@ export function OknoCechy({
             height: UCHWYT.wysokosc,
           }}
         />
+
+        {/* Podpisy podzialki — ile zakupow, nie ile punktow. */}
+        {znaczniki.length > 1 &&
+          znaczniki.map((v) => (
+            <span
+              key={`p${v}`}
+              className="podpis"
+              style={{ left: polozenieUchwytu(v, maks), top: TOR_SUWAKA.wysokosc + PODZIALKA_POD_TOREM }}
+            >
+              {v}
+            </span>
+          ))}
       </div>
 
       {/* Ile punktow i za ile — pod suwakiem, jak `LBL_SCR_ARBEITEN_TEXT2`. */}
@@ -208,8 +242,8 @@ export function OknoCechy({
         type="button"
         className="przycisk"
         style={{
-          left: PRZYCISK.lewo,
-          top: PRZYCISK.gora,
+          left: SRODEK_OKNA - PRZYCISK.szerokosc - ODSTEP_PRZYCISKOW / 2,
+          top: PRZYCISKI_Y,
           width: PRZYCISK.szerokosc,
           minHeight: PRZYCISK.wysokosc,
         }}
@@ -223,8 +257,8 @@ export function OknoCechy({
         type="button"
         className="przycisk"
         style={{
-          left: PRZYCISK.lewo,
-          top: PRZYCISK.gora + ODSTEP_PRZYCISKOW,
+          left: SRODEK_OKNA + ODSTEP_PRZYCISKOW / 2,
+          top: PRZYCISKI_Y,
           width: PRZYCISK.szerokosc,
           minHeight: PRZYCISK.wysokosc,
         }}

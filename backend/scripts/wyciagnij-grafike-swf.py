@@ -141,6 +141,15 @@ NAZWANE = {
     183: 'tarcza-ikona',      # ikona pancerza przy prawej polowie ekranu
     # Suwak z ekranu Warty (`DefineSlider`): tor ze smoczymi glowami
     # na koncach, zlota strzalka jako uchwyt i niebieski znacznik podzialki.
+    # Strzalki przewracania stron klasera (`btnClassArrowLeft` = obiekt 109,
+    # `btnClassArrowRight` = 116). Kazda ma trzy stany 33x33 w kolejnosci
+    # zwykly, najazd, wcisniety — poznac po jasnosci srodka: 50, 62, 55.
+    103: 'strzalka-lewo',
+    105: 'strzalka-lewo-najazd',
+    107: 'strzalka-lewo-wcisnieta',
+    110: 'strzalka-prawo',
+    112: 'strzalka-prawo-najazd',
+    114: 'strzalka-prawo-wcisnieta',
     39: 'suwak',              # 279x24 — `DragonSlider`
     41: 'suwak-uchwyt',       # 14x22
     85: 'suwak-znacznik',     # 10x19 — `SliderTick`

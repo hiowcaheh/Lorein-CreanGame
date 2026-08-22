@@ -135,6 +135,7 @@ export function Bohater({
   onWypij,
   onUsunMiksture,
   onDoStajni,
+  onDoKlasera,
   onKupCeche,
 }: {
   gracz: Gracz;
@@ -147,6 +148,8 @@ export function Bohater({
   onUsunMiksture: (miejsce: number) => void;
   /** Przejscie do stajni — klikniecie portretu wierzchowca. */
   onDoStajni: () => void;
+  /** Otwiera ekran klasera — `RequestAlbum`. */
+  onDoKlasera: () => void;
   /** Dokupienie `ile` razy po trzy punkty cechy 1..5. */
   onKupCeche: (cecha: number, ile: number) => void;
 }) {
@@ -529,6 +532,22 @@ export function Bohater({
           onClick={() => setPokazKlaser((czy) => !czy)}
         >
           <img src={OBRAZ_KLASERA} alt="Klaser Dokładności" />
+        </button>
+      )}
+
+      {/*
+        Przycisk „Klaser" — `BTN_CHAR_ALBUM` w `POS_CHAR_PLAYERBTN_X1`
+        i `POS_CHAR_PLAYERBTN_Y` (830, 715). Oryginal stawia go dopiero
+        wtedy, gdy `Savegame[SG_ALBUM] >= 10000`, czyli gdy gracz klaser
+        ma — tak samo jak ikonke obok.
+      */}
+      {gracz.klaser >= 0 && (
+        <button
+          type="button"
+          className="przycisk postac-klaser-guzik"
+          onClick={onDoKlasera}
+        >
+          Klaser
         </button>
       )}
 

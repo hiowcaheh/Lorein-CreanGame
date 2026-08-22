@@ -21,6 +21,7 @@ import { GABINET, ZBROJOWNIA } from './gra/sklepUklad';
 import { Sklep } from './ekrany/Sklep';
 import { Stajnia, type StanStajni } from './ekrany/Stajnia';
 import { Grzybiarz } from './ekrany/Grzybiarz';
+import { Klaser, type StanKlasera } from './ekrany/Klaser';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, StanKarczmy, StanSklepu } from './gra/typy';
@@ -28,7 +29,10 @@ import type { Gracz, OdpowiedzZTokenem, StanKarczmy, StanSklepu } from './gra/ty
 type Zakladka =
   | 'miasto'
   | 'karczma' | 'arena' | 'warta' | 'zbrojownia' | 'magia' | 'stajnia' | 'grzybiarz'
-  | 'bohater' | 'poczta' | 'gildia' | 'sala' | 'lochy' | 'opcje';
+  | 'bohater' | 'poczta' | 'gildia' | 'sala' | 'lochy' | 'opcje'
+  /* Klaser nie ma swojego przycisku w menu — wchodzi sie do niego
+     z ekranu postaci, tak jak w oryginale (`BTN_CHAR_ALBUM`). */
+  | 'klaser';
 
 /*
  * Trzynascie przyciskow, dokladnie tyle i w tej kolejnosci, co w oryginale
@@ -54,10 +58,10 @@ const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'stajnia', 'grzybiarz', 'opcje'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'stajnia', 'grzybiarz', 'opcje', 'klaser'];
 
 /** Zakladki, ktore wypelniaja cala rame wlasnym obrazem. */
-const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia'];
+const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'klaser'];
 
 /** Co widzi gracz, zanim wejdzie do gry. */
 type Brama = 'sprawdzam' | 'logowanie' | 'tworzenie';
@@ -71,6 +75,7 @@ export function App() {
   const [karczma, setKarczma] = useState<StanKarczmy | null>(null);
   const [sklep, setSklep] = useState<StanSklepu | null>(null);
   const [stajnia, setStajnia] = useState<StanStajni | null>(null);
+  const [klaser, setKlaser] = useState<StanKlasera | null>(null);
   const odliczanie = useOdliczanieWyprawy(karczma);
 
   /** Zapisany token moze byc juz niewazny — sprawdzamy go przy starcie. */
@@ -187,6 +192,16 @@ export function App() {
       .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Stajnia jest zamknięta.'));
   }, []);
 
+  /*
+   * Klaser. Serwer oddaje same bity — `ACT_ALBUM` w oryginale robi
+   * dokladnie to samo. Cala mapa „ktory bit jest czym" siedzi u klienta.
+   */
+  const wczytajKlaser = useCallback(() => {
+    void zapytaj<StanKlasera>('/klaser')
+      .then(setKlaser)
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się otworzyć klasera.'));
+  }, []);
+
   function wynajmijWierzchowca(wierzchowiec: number) {
     setBlad(null);
     void zapytaj<StanStajni & { gracz?: Gracz }>('/stajnia/kup', { wierzchowiec })
@@ -253,6 +268,7 @@ export function App() {
     if (zakladka === 'zbrojownia' && gracz) wczytajSklep(0);
     if (zakladka === 'magia' && gracz) wczytajSklep(1);
     if (zakladka === 'stajnia' && gracz) wczytajStajnie();
+    if (zakladka === 'klaser' && gracz) wczytajKlaser();
   }, [zakladka, gracz, wczytajSklep]);
 
   function wyloguj() {
@@ -400,6 +416,7 @@ export function App() {
         {zakladka === 'stajnia' && stajnia && (
           <Stajnia stan={stajnia} gracz={gracz} onWynajmij={wynajmijWierzchowca} />
         )}
+        {zakladka === 'klaser' && klaser && <Klaser stan={klaser} />}
         {zakladka === 'bohater' && (
           <Bohater
             gracz={gracz}
@@ -408,6 +425,7 @@ export function App() {
             onWypij={wypijMiksture}
             onUsunMiksture={usunMiksture}
             onDoStajni={() => setZakladka('stajnia')}
+            onDoKlasera={() => setZakladka('klaser')}
             onKupCeche={kupCeche}
           />
         )}

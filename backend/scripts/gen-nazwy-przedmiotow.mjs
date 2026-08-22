@@ -98,7 +98,19 @@ for (const klasy of Object.values(BAZY_KLASOWE)) {
     dodajZakres(baza + PRZESUNIECIE_EPICKICH, DLUGOSC_TABLICY);
   }
 }
-for (const baza of Object.values(BAZY_WSPOLNE)) dodajZakres(baza, DLUGOSC_TABLICY);
+/*
+ * Rodzaje wspolne (naszyjniki, pierscienie, talizmany) tez maja epiki —
+ * `GetItemName` przeskakuje na tablice epicka dla KAZDEGO rodzaju poza
+ * zwojami (14):
+ *
+ *     if (itmPic >= 50 && itmTyp != 14) txtBase += (TXT_ITMNAME_1_1_EPIC - TXT_ITMNAME_1_1);
+ *
+ * Bez tego zakresu klaser pokazywal epicki naszyjnik bez nazwy.
+ */
+for (const [rodzaj, baza] of Object.entries(BAZY_WSPOLNE)) {
+  dodajZakres(baza, DLUGOSC_TABLICY);
+  if (Number(rodzaj) !== 14) dodajZakres(baza + PRZESUNIECIE_EPICKICH, DLUGOSC_TABLICY);
+}
 
 // Przyrostki: 4600 + kod cechy (1,2,4,8,16,32) + prog wartosci (0..250).
 dodajZakres(BAZA_PRZYROSTKOW, 300);

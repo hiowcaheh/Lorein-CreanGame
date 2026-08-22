@@ -22,18 +22,34 @@ export const OKNO = {
 
 export const TLO_OKNA = '/res/ui/okno.png';
 
+/*
+ * Widoczna ramka jest MNIEJSZA od pliku. `okno.png` ma 520x380, ale
+ * przezroczysty margines zjada prawa i dolna krawedz: pomiar alfy daje
+ * tresc od (0, 11) do (500, 363). Stad `REL_IF_WIN_WELCOME_X = 250` —
+ * to srodek WIDOCZNEJ ramki, nie pliku. Dolna krawedz wychodzi wiec na
+ * `POS_IF_WIN_Y + 363`, i nic ponizej tego nie moze stanac.
+ */
+export const WIDOCZNY_DOL = 250 + 363 - POCZATEK_Y;
+
 /** Srodek okna — `POS_IF_WIN_X + REL_IF_WIN_WELCOME_X`. */
 export const SRODEK_OKNA = 540 + 250 - POCZATEK_X;
 /** Naglowek: `POS_IF_WIN_Y + REL_IF_WIN_WELCOME_Y`, wysrodkowany. */
 export const NAGLOWEK_Y = 250 + 45 - POCZATEK_Y;
 
-/** `POS_LBL_ARBEITEN_TEXT_X/_Y` i `SIZE_LBL_ARBEITEN_TEXT_X`. */
-export const TEKST = { lewo: 590 - POCZATEK_X, gora: 340 - POCZATEK_Y, szerokosc: 400 };
-/** `POS_LBL_ARBEITEN_TEXT2_Y` — drugi wiersz opisu, pod suwakiem. */
-export const TEKST2_Y = 475 - POCZATEK_Y;
+/**
+ * `POS_LBL_ARBEITEN_TEXT_X/_Y` i `SIZE_LBL_ARBEITEN_TEXT_X`. Warta ma
+ * tu jedno zdanie, okno cechy — dwa zdania podpowiedzi i wiersz „21 → 24",
+ * wiec zaczyna sie wyzej: inaczej ostatni wiersz wchodzi na tor suwaka.
+ */
+export const TEKST = { lewo: 590 - POCZATEK_X, gora: 326 - POCZATEK_Y, szerokosc: 400 };
+/** `POS_LBL_ARBEITEN_TEXT2_Y` — drugi wiersz opisu, pod podzialka suwaka. */
+export const TEKST2_Y = 508 - POCZATEK_Y;
 
-/** `POS_ARBEITEN_SLIDER_X/_Y`. */
-export const SUWAK = { lewo: 650 - POCZATEK_X, gora: 420 - POCZATEK_Y };
+/** `POS_ARBEITEN_SLIDER_X/_Y`, opuszczone o 32 px na podpowiedz nad torem. */
+export const SUWAK = { lewo: 650 - POCZATEK_X, gora: 452 - POCZATEK_Y };
+
+/** Podzialka pod torem — 4 px pod dolna krawedzia `suwak.png`. */
+export const PODZIALKA_POD_TOREM = 4;
 
 /**
  * Przycisk pod oknem — `POS_IF_WIN_X + REL_IF_WIN_WELCOME_X + REL_IF_WIN_BTN_X`
@@ -46,8 +62,12 @@ export const PRZYCISK = {
   wysokosc: 45,
 };
 
-/** Drugi przycisk stoi pod pierwszym — 50 px nizej, jak w oknie wyboru zadania. */
-export const ODSTEP_PRZYCISKOW = 50;
+/**
+ * Dwa przyciski stoja OBOK siebie, po polowie odstepu od srodka okna.
+ * Pod soba nie mieszcza sie: drugi wychodzilby na `WIDOCZNY_DOL`.
+ */
+export const ODSTEP_PRZYCISKOW = 20;
+export const PRZYCISKI_Y = 250 + 302 - POCZATEK_Y;
 
 /*
  * SUWAK — `DefineSlider(actorID, Ticks, pos_x, pos_y, fn)`.

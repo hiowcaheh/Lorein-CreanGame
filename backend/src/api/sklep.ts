@@ -35,6 +35,7 @@ import { wylosujPrzedmiot } from '../game/generatorPrzedmiotow.js';
 import { czyEpicki } from '../game/grafikaPrzedmiotow.js';
 import { wczytajGracza, zbudujPrzedmiot } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
+import { BEZ_KLASERA, PUSTY_KLASER, dopiszDoKlasera } from '../game/album.js';
 import type { Context } from 'hono';
 
 export const sklep = new Hono();
@@ -313,6 +314,43 @@ sklep.post('/sklep/:numer/kup', async (c) => {
             ${liczba(towar['atr_val_1'])}, ${liczba(towar['atr_val_2'])}, ${liczba(towar['atr_val_3'])},
             ${cenaPoZakupie(cenaZloto)}, 0, ${cel}, ${wiersz.user_id})
   `;
+
+  /*
+   * Kupiony przedmiot idzie od razu do klasera:
+   *
+   *     if (isset($db_data['album']) && $db_data['album'] != -1
+   *         && (int)$item['item_type'] <= 10) $albumObj->addItem($item);
+   *
+   * Cena i grzyby na to nie wplywaja — liczy sie sam przedmiot, wiec
+   * bierzemy dane Z POLKI, jeszcze przed zerowaniem grzybow.
+   */
+  const maKlaser = liczba(wiersz['album'] ?? BEZ_KLASERA) !== BEZ_KLASERA;
+  if (maKlaser && rodzaj <= 10) {
+    const przed = liczba(wiersz['album'] ?? 0);
+    const stan = dopiszDoKlasera(
+      { dane: String(wiersz['album_data'] ?? '') || PUSTY_KLASER, ile: przed },
+      [
+        {
+          item_type: rodzaj,
+          item_id: liczba(towar['item_id']),
+          dmg_min: liczba(towar['dmg_min']),
+          dmg_max: liczba(towar['dmg_max']),
+          atr_type_1: liczba(towar['atr_type_1']),
+          atr_type_2: liczba(towar['atr_type_2']),
+          atr_type_3: liczba(towar['atr_type_3']),
+          atr_val_1: liczba(towar['atr_val_1']),
+          atr_val_2: liczba(towar['atr_val_2']),
+          atr_val_3: liczba(towar['atr_val_3']),
+        },
+      ],
+    );
+    if (stan.ile > przed) {
+      await sql`
+        UPDATE user_data SET album_data = ${stan.dane}, album = ${stan.ile}
+        WHERE user_id = ${wiersz.user_id}
+      `;
+    }
+  }
 
   // Puste miejsce od razu dostaje nowy towar — `genNewItem()`.
   const swiezy = nowyTowar(sklepNr, wiersz);

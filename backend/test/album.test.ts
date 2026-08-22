@@ -27,8 +27,9 @@ const MIECZ = {
 describe('Klaser Dokladnosci', () => {
   it('pusty zapis nie ma zadnej pozycji', () => {
     const bity = odkodujKlaser(PUSTY_KLASER);
-    // 425 znakow base64 to 318 bajtow, czyli 2544 bity.
-    expect(bity.length).toBe(2544);
+    // 532 znaki base64 to 399 bajtow, czyli 3192 bity — tyle, ile trzeba,
+    // zeby zmiescil sie ostatni epik zwiadowcy (bit 3187).
+    expect(bity.length).toBe(3192);
     expect(bity.some(Boolean)).toBe(false);
   });
 
@@ -64,9 +65,38 @@ describe('Klaser Dokladnosci', () => {
     });
 
     it('epik nie ma barwy i stoi za zwyklymi wzorami', () => {
-      // Bron wojownika: blok zwyklych ma 250 miejsc, potem epiki po jednym.
-      expect(miejsceWKlaserze({ ...MIECZ, item_id: 50 })).toBe(792 + 250 + 0);
-      expect(miejsceWKlaserze({ ...MIECZ, item_id: 51, dmg_min: 7 })).toBe(792 + 250 + 1);
+      /*
+       * Bron wojownika: epiki zaczynaja sie na 1092, bo tam ich szuka
+       * `ShowAlbumContent()` (strona 8 dzialu wojownika liczy
+       * `(1076 + 16) + (page - 8) * 4 + i`). `req.php` ma tu 1042
+       * i wpisuje je w martwy zakres.
+       */
+      expect(miejsceWKlaserze({ ...MIECZ, item_id: 50 })).toBe(1092);
+      expect(miejsceWKlaserze({ ...MIECZ, item_id: 51, dmg_min: 7 })).toBe(1093);
+    });
+
+    it('epiki stoja tam, gdzie ich szuka klient', () => {
+      /*
+       * Punkty zaczepienia wprost z `ShowAlbumContent()` — pierwsza
+       * strona epikow kazdego rodzaju daje `aOffs` dla numeru 50.
+       *
+       *   rodzaj 8   strona 6  ->  510 + (page - 6) * 4 + i
+       *   rodzaj 9   strona 12 ->  686 + ...
+       *   rodzaj 10  strona 24 -> (760 + 16) + ...
+       *   tarcza woj strona 13 -> (1192 + 16) + ...
+       *   bron maga  strona 3  -> (1888 + 16) + ...
+       *   bron lowcy strona 3  -> (1888 + 712) + ...
+       */
+      const epik = (typ: number, klasa: number) =>
+        miejsceWKlaserze({ ...MIECZ, item_type: typ, item_id: 50 + klasa * 1000 });
+
+      expect(epik(8, 0)).toBe(510);
+      expect(epik(9, 0)).toBe(686);
+      expect(epik(10, 0)).toBe(776);
+      expect(epik(1, 0)).toBe(1092);
+      expect(epik(2, 0)).toBe(1208);
+      expect(epik(1, 1)).toBe(1904);
+      expect(epik(1, 2)).toBe(2600);
     });
 
     it('talizman tez nie ma barwy', () => {
