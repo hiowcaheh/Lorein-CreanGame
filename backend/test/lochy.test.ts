@@ -15,6 +15,7 @@ import {
 } from '../src/game/lochy.js';
 import { POTWORY } from '../src/game/lochy-dane.js';
 import { PROGI_KLUCZY, wylosujPrzedmiot } from '../src/game/generatorPrzedmiotow.js';
+import { PELNE_LUSTRO } from '../src/game/lustro.js';
 import type { Wojownik } from '../src/game/walka.js';
 
 describe('lochy', () => {
@@ -111,6 +112,12 @@ describe('lochy', () => {
   });
 
   describe('klucze z wypraw', () => {
+    /*
+     * Rodzaj 11 to najpierw ODLAMEK lustra, a dopiero potem klucz —
+     * wiec zeby dojsc do klucza, lustro musi byc juz kompletne.
+     */
+    const ZLOZONE_LUSTRO = { lustro: PELNE_LUSTRO } as const;
+
     it('progi poziomu sa te z req.php', () => {
       expect(PROGI_KLUCZY.map((p) => p.poziom)).toEqual([9, 19, 29, 39, 49, 69, 79, 94, 109]);
       expect(PROGI_KLUCZY.map((p) => p.loch)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -121,6 +128,7 @@ describe('lochy', () => {
         rodzaj: 11,
         sklep: 1,
         wyprawa: true,
+        ...ZLOZONE_LUSTRO,
         zamknieteLochy: [3, 5, 9],
         losuj: () => 1,
       });
@@ -137,6 +145,7 @@ describe('lochy', () => {
           rodzaj: 11,
           sklep: 1,
           wyprawa: true,
+          ...ZLOZONE_LUSTRO,
           zamknieteLochy: [5, 6],
           losuj: () => 1,
         }),
@@ -146,10 +155,10 @@ describe('lochy', () => {
     it('prog jest ostry — na rownym poziomie klucz jeszcze nie wypada', () => {
       // `$lvl > $keyData[0]`, wiec loch 1 otwiera sie dopiero od dziesiatki.
       const na9 = wylosujPrzedmiot(9, 1, {
-        rodzaj: 11, sklep: 1, wyprawa: true, zamknieteLochy: [1], losuj: () => 1,
+        rodzaj: 11, sklep: 1, wyprawa: true, ...ZLOZONE_LUSTRO, zamknieteLochy: [1], losuj: () => 1,
       });
       const na10 = wylosujPrzedmiot(10, 1, {
-        rodzaj: 11, sklep: 1, wyprawa: true, zamknieteLochy: [1], losuj: () => 1,
+        rodzaj: 11, sklep: 1, wyprawa: true, ...ZLOZONE_LUSTRO, zamknieteLochy: [1], losuj: () => 1,
       });
       expect(na9).toBeNull();
       expect(na10?.item_id).toBe(1);

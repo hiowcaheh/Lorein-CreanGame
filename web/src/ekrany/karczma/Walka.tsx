@@ -150,6 +150,22 @@ const WIERSZE_CECH: { nazwa: string; klucz: keyof CechyWalki }[] = [
   { nazwa: 'Szczęście', klucz: 'szczescie' },
 ];
 
+/**
+ * Podskakujaca strzalka przy nagrodzie podbitej premia — ta sama, co
+ * w oknie wyboru zadania (`btnClassArrowUp` z oryginalu). Stoi WEWNATRZ
+ * grupy z liczba, wiec nie ma jak wejsc na sasiednie napisy.
+ */
+function ZnaczekPremii() {
+  return (
+    <img
+      className="walka-premia"
+      src="/res/ui/strzalka-gora.png"
+      alt="z premią"
+      title="w tym: Premia kolekcjonera"
+    />
+  );
+}
+
 export function Walka({
   rozliczenie,
   gracz,
@@ -160,6 +176,13 @@ export function Walka({
   onZamknij: () => void;
 }) {
   const { walka, wygrana, nagroda, awans, zdobytyPrzedmiot, plecakBylPelny } = rozliczenie;
+
+  /*
+   * Ile procent nagrody dokladaja premie. Przy wyprawie liczba jest juz
+   * podbita w oknie wyboru i tam stoi znaczek; po walce w lochu nagroda
+   * powstaje dopiero teraz, wiec znaczek nalezy sie tutaj.
+   */
+  const premiaLacznie = rozliczenie.premie?.klaser ?? 0;
 
   /*
    * `odgrywany` to numer ciosu, ktory wlasnie leci; `zaliczonych` — ile
@@ -459,6 +482,7 @@ export function Walka({
                   style={{ left: WALKA_DOSWIADCZENIE_X, top: WALKA_PIENIADZE_Y }}
                 >
                   {PODPISY.doswiadczenie}: {liczba(nagroda.doswiadczenie)}
+                  {premiaLacznie > 0 && <ZnaczekPremii />}
                 </div>
               )}
 
@@ -485,6 +509,7 @@ export function Walka({
                     top: WALKA_PIENIADZE_Y,
                   }}
                 >
+                  {premiaLacznie > 0 && <ZnaczekPremii />}
                   {/* Zloto to sto srebra; oba czlony pokazuja sie tylko, gdy sa. */}
                   {Math.floor(nagroda.zloto / 100) > 0 && (
                     <>

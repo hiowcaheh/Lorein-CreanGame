@@ -40,6 +40,7 @@ import {
   IKONA_TARCZY,
   IKONY_KLAS,
   KATALOG_ODZNAK,
+  KAWALEK_LUSTRA,
   KLASER,
   OBRAZ_KLASERA,
   POZYCJI_W_KLASERZE,
@@ -58,6 +59,8 @@ import {
   PLECAK,
   PORTRET,
   PORTRET_WIERZCHOWCA,
+  PRZEZROCZYSTOSC_LUSTRA,
+  plikKawalkaLustra,
   PRZESUNIECIE_PLUSA,
   TLO_CZCI,
   TLO_LEWE,
@@ -515,6 +518,23 @@ export function Bohater({
           </div>
           <div className="cytat">= (Pancerz / Poziom przeciwnika) zaokrąglone</div>
         </div>
+      )}
+
+      {/*
+        Kawalki Magicznego Lustra — `IMG_MIRROR_PIECE + i` w tym samym
+        punkcie, co portret, przygaszone do 0,3. Widac tylko te, ktore
+        gracz juz wprawil.
+      */}
+      {gracz.lustro.map((jest, i) =>
+        jest ? (
+          <img
+            key={i}
+            className="postac-lustro"
+            src={plikKawalkaLustra(i + 1)}
+            alt=""
+            style={{ ...styl(KAWALEK_LUSTRA), opacity: PRZEZROCZYSTOSC_LUSTRA }}
+          />
+        ) : null,
       )}
 
       {/*

@@ -145,6 +145,22 @@ async function nowyKompletZadan(
       `
     ).length > 0;
 
+  /*
+   * Odlamek lustra ma WLASNE sprawdzenie, szersze niz klucz: liczy sie
+   * kazdy odlamek w plecaku, nie tylko w czterech pierwszych kieszeniach.
+   *
+   *     SELECT * FROM items WHERE owner_id = :uid AND slot >= 10
+   *       AND item_type = 11 AND item_id >= 30
+   */
+  const maJuzOdlamek =
+    (
+      await sql<{ id: number }[]>`
+        SELECT id FROM items
+        WHERE owner_id = ${wiersz.user_id} AND slot >= 10 AND item_type = 11 AND item_id >= 30
+        LIMIT 1
+      `
+    ).length > 0;
+
   const zamkniete = zamknieteLochy(wiersz);
 
   for (const zadanie of zadania) {
@@ -159,6 +175,8 @@ async function nowyKompletZadan(
       sklep,
       wyprawa: true,
       maJuzKlucz,
+      maJuzOdlamek,
+      lustro: String(wiersz['magic_mirror'] ?? ''),
       zamknieteLochy: zamkniete,
       losuj: (od, doo) => rng.rand(od, doo),
     });

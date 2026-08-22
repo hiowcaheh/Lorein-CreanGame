@@ -386,7 +386,14 @@ function EkranLochu({
           width: PRZYCISK.szerokosc,
           minHeight: PRZYCISK.wysokosc,
         }}
-        disabled={przeszedl || (czekamy && stan.grzyby <= 0) || !stan.wolneMiejsceWPlecaku}
+        /*
+          Wylaczamy TYLKO przejsty loch — tam naprawde nie ma co robic.
+          O pelnym plecaku i braku grzyba decyduje serwer i odsyla powod
+          (`ERR_INVENTORY_FULL` w oryginale), ktory laduje w pasku
+          komunikatow. Guzik, ktory sam z siebie nie da sie kliknac i nie
+          mowi dlaczego, wyglada jak zepsuty.
+        */
+        disabled={przeszedl}
         title={
           czekamy
             ? PODPOWIEDZ_GRZYBA.split('%1').join(czas(zostalo))
@@ -403,7 +410,7 @@ function EkranLochu({
           lewej — ale tamto miejsce zajmuje u nas przycisk „Wroc",
           ktorego oryginal nie ma (wychodzi sie krzyzykiem).
         */}
-        <NapisZIkona tekst={czekamy ? `OK ${czas(zostalo)} (1~P)` : 'OK'} />
+        <NapisZIkona tekst={czekamy ? `${czas(zostalo)} (~P)` : 'OK'} />
       </button>
 
       <button

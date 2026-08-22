@@ -42,16 +42,16 @@ zrobic sama wieze bez nich i dolozyc ich pozniej.
 | grafika | `scr/dungeons/portal/portal_dungeons_1..24.jpg` (animacja juz chodzi na kaflu), tla `scr/quest/locations/location_portal_1..10.jpg`, `button_portal.jpg`, `unknown_portal.png`, `done_portal.png` |
 | nazwa | plik jezykowy, pozycja 9539 („Portal do piekiel") |
 
-## 3. Drobniejsze braki z rodzaju 11
+## 3. Klucz do wychodka
 
-Losowania sa juz zuzywane w `backend/src/game/generatorPrzedmiotow.ts`,
-wiec dolozenie tych dwoch NIE przesunie ciagu generatora.
+Ostatni brak w rodzaju 11. Losowanie jest juz zuzywane
+w `backend/src/game/generatorPrzedmiotow.ts`, wiec dolozenie go NIE
+przesunie ciagu generatora.
 
-- **Odlamki Magicznego Lustra** — `item_id` 30-42, od 50. poziomu, dopoki
-  `magic_mirror != '1111111111111'`. Trzynascie kawalkow, kazdy odblokowuje
-  jeden bit kolumny.
-- **Klucz do wychodka** — `item_id` 20 albo 10 (zaleznie od `toilet`),
-  powyzej 99. poziomu. Sam wychodek to `$ACT_TOILET_*`.
+- `item_id` 20 albo 10 (zaleznie od kolumny `toilet`), powyzej 99. poziomu.
+  Sam wychodek to `$ACT_TOILET_*`.
+
+Magiczne Lustro jest juz zrobione — patrz `backend/src/game/lustro.ts`.
 
 ## 4. Zaleglosci oznaczone w kodzie
 

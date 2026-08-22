@@ -1394,6 +1394,21 @@ button.postac-wierzchowiec-obraz img {
 .walka-nagroda.kwota img { width: 24px; height: 20px; margin-right: 14px; }
 .walka-nagroda.kwota img:last-child { margin-right: 0; }
 
+/*
+ * Znaczek premii przy nagrodzie po walce. Stoi WEWNATRZ grupy z liczba,
+ * wiec nie ma jak wejsc na sasiednie napisy. Musi byc bardziej
+ * szczegolowy niz `.walka-nagroda.kwota img`, ktore narzuca 24x20.
+ */
+.walka-nagroda .walka-premia {
+  width: 18px;
+  height: 18px;
+  margin: 0 6px 0 0;
+  vertical-align: -3px;
+  animation: podskok 0.8s ease-in-out infinite;
+}
+
+.walka-nagroda.doswiadczenie .walka-premia { margin: 0 0 0 6px; }
+
 .walka-nagroda.ostrzezenie { color: var(--zly); text-align: center; }
 
 /*
@@ -1733,7 +1748,8 @@ button.postac-wierzchowiec-obraz img {
   height: 18px;
 }
 
-.karczma-premia .skacze { animation: podskok 1.6s ease-in-out infinite; }
+.karczma-premia .skacze,
+
 
 @keyframes podskok {
   0%, 60%, 100% { transform: translateY(0); }
@@ -1741,7 +1757,8 @@ button.postac-wierzchowiec-obraz img {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .karczma-premia .skacze { animation: none; }
+  .karczma-premia .skacze,
+  .walka-nagroda .walka-premia { animation: none; }
 }
 
 /* Kolory premii — po nich widac, skad sie wziela. */
@@ -1963,6 +1980,15 @@ button.postac-pancerz {
 
 .grzybiarz-testy .przycisk { font-size: 17px; }
 
+/*
+ * Kawalki Magicznego Lustra — leza NA portrecie, przygaszone.
+ * Nie da sie ich kliknac: `actor[IMG_MIRROR_PIECE + i].mouseEnabled = false`.
+ */
+.postac-lustro {
+  pointer-events: none;
+  z-index: 3;
+}
+
 /* Klaser Dokladnosci — ikona przy prawej polowie ekranu postaci. */
 .postac-klaser {
   padding: 0;
@@ -2135,11 +2161,17 @@ button.postac-pancerz {
 /* Przydymiona plansza — `SHP_MAINQUEST`, czarny prostokat o alfie 0,6. */
 .lochy-plansza { background: #000; }
 
+/*
+ * Opis lochu. Oryginal ma go do lewej (`FontFormat_DefaultLeft`), ale
+ * caly ekran jest osiowy — tytul i portret stoja na srodku — wiec
+ * wlasciciel gry poprosil o wysrodkowanie takze tego bloku.
+ */
 .lochy-tekst {
   font-size: var(--pismo);
   line-height: 1.35;
   color: var(--pergamin);
   text-shadow: 0 1px 2px #000;
+  text-align: center;
 }
 
 /* Motto lochu — w oryginale osobnym, blekitnym formatem. */

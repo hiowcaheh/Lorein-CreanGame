@@ -36,10 +36,12 @@ import {
   dopiszDoKlasera,
   dopiszPotworaDoKlasera,
   odczytajDaty,
+  premiaZKlasera,
   zapiszDaty,
   type StanKlasera,
 } from '../game/album.js';
 import { maKolumne } from '../db/kolumny.js';
+import { maPelneLustro } from '../game/lustro.js';
 import {
   opisWojownika,
   przedmiotyGracza,
@@ -102,6 +104,20 @@ export interface StanLochow {
 }
 
 /**
+ * Czy bohater jest zajety na tyle, ze nie zejdzie do lochu.
+ *
+ *     if ($status === 1 && $mirror < $fullMirror) { ... }
+ *     if ($status === 2 && $mirror < $fullMirror) { ... }
+ *
+ * `status` 1 to praca na warcie, 2 to wyprawa. Komplet Magicznego Lustra
+ * znosi oba warunki — to cala jego moc.
+ */
+function zajetyBezLustra(wiersz: WierszGracza): boolean {
+  const status = liczba(wiersz['status']);
+  return (status === 1 || status === 2) && !maPelneLustro(wiersz['magic_mirror']);
+}
+
+/**
  * Wejscie na liste lochow.
  *
  * `$ACT_ENTER_DUNGEON` przy okazji podnosi kazda jedynke do dwojki —
@@ -152,6 +168,13 @@ lochy.get('/lochy', async (c) => {
   const dane = await wczytaj(c);
   if (!dane) return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
 
+  if (zajetyBezLustra(dane.wiersz)) {
+    return c.json(
+      { blad: 'Jesteś zajęty. Dopiero komplet Magicznego Lustra pozwala zejść do lochu w trakcie wyprawy.' },
+      409,
+    );
+  }
+
   const stan = await stanLochow(dane.sql, dane.wiersz);
   return c.json({ ...stan, gracz: await wczytajGracza(dane.sql, dane.wiersz) });
 });
@@ -173,6 +196,8 @@ interface RozliczenieLochu {
    * ani grzybow loch nie daje, wiec stoja tam zera.
    */
   nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
+  /** Skladniki premii, w procentach — klient rozpisuje je po klikniecu. */
+  premie: { klaser: number };
   /** Ekran walki potrafi pokazac, ze plecak byl pelny; tutaj nigdy nie jest. */
   plecakBylPelny: boolean;
   zdobytyPrzedmiot: PrzedmiotEkranu | null;
@@ -190,6 +215,13 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
   const numer = Number(c.req.param('numer'));
   const kolumna = kolumnaLochu(numer);
   if (!kolumna) return c.json({ blad: 'Nie ma takiego lochu.' }, 400);
+
+  if (zajetyBezLustra(wiersz)) {
+    return c.json(
+      { blad: 'Jesteś zajęty. Dopiero komplet Magicznego Lustra pozwala zejść do lochu w trakcie wyprawy.' },
+      409,
+    );
+  }
 
   const stan = liczba(wiersz[kolumna]);
   // `if ($db_data['dungeon_' . $dung] >= 12) break;` — po nim nie ma co robic.
@@ -286,12 +318,21 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
   };
   const klaserPrzed = stanKlasera.ile;
 
+  /*
+   * SWIADOME ODSTEPSTWO (tabela w CLAUDE.md): premia kolekcjonera liczy
+   * sie takze w lochu, i to zarowno do doswiadczenia, jak i do zlota.
+   * `req.php` doklada `$OP->getExp()` i `$OP->getGold()` surowo — premie
+   * chodza tam tylko przy wyprawie (`finishQuest`).
+   */
+  const bonusKlasera = maKlaser ? premiaZKlasera(klaserPrzed) : 0;
+  const zPremia = (ile: number) => Math.trunc(ile * (1 + bonusKlasera));
+
   if (wygrana) {
     nowyStan = stan + 1;
-    doswiadczenie += doswiadczeniePotwora;
+    doswiadczenie += zPremia(doswiadczeniePotwora);
 
     // `$this->silver = $exp * 2.5;` — zloto potwora liczy sie z doswiadczenia.
-    const zlotoPotwora = Math.trunc(doswiadczeniePotwora * 2.5);
+    const zlotoPotwora = zPremia(Math.trunc(doswiadczeniePotwora * 2.5));
     const zamiastZlota =
       losPrzedmiotu === 1 || nowyStan === PRZESZEDL || liczba(wiersz['dungeon_13']) >= 2;
 
@@ -394,12 +435,13 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
           zloto:
             losPrzedmiotu === 1 || nowyStan === PRZESZEDL
               ? 0
-              : Math.trunc(doswiadczeniePotwora * 2.5),
-          doswiadczenie: doswiadczeniePotwora,
+              : zPremia(Math.trunc(doswiadczeniePotwora * 2.5)),
+          doswiadczenie: zPremia(doswiadczeniePotwora),
           honor: 0,
           grzyby: 0,
         }
       : null,
+    premie: { klaser: Math.round(bonusKlasera * 100) },
     zdobytyPrzedmiot,
     plecakBylPelny: false,
     ukonczony: nowyStan >= PRZESZEDL,

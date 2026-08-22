@@ -21,6 +21,12 @@ import { intval, time } from '../compat/php.js';
 import { maKolumne } from '../db/kolumny.js';
 import { KLUCZ_UZYTY, RODZAJ_KLUCZA, ZAMKNIETY, kolumnaLochu } from '../game/lochy.js';
 import {
+  PIERWSZY_ODLAMEK,
+  czyOdlamek,
+  dopiszKawalek,
+  maPelneLustro,
+} from '../game/lustro.js';
+import {
   OSTATNI_SLOT_PLECAKA,
   PIERWSZY_SLOT_PLECAKA,
   zaplanujPrzeniesienie,
@@ -346,6 +352,37 @@ konto.post('/ekwipunek', async (c) => {
 
   const wZrodle = przedmioty.find((p) => p.slot === zrodlo);
   if (!wZrodle) return c.json({ blad: 'W tym miejscu nic nie leży.' }, 400);
+
+  /*
+   * Odlamek Magicznego Lustra wprawia sie w lustro, a nie zaklada.
+   *
+   *     $user_data['magic_mirror'][$item['item_id'] - 30] = '1';
+   *     UPDATE user_data SET magic_mirror = ...;
+   *     DELETE FROM items WHERE id = ...;
+   *
+   * Komplet trzynastu kawalkow pozwala wejsc na arene i do lochow
+   * w trakcie wyprawy — patrz `backend/src/game/lustro.ts`.
+   */
+  if (
+    czyOdlamek(wZrodle.item_type, wZrodle.item_id) &&
+    (cel === null || cel < PIERWSZY_SLOT_PLECAKA)
+  ) {
+    const przed = String(gracz['magic_mirror'] ?? '');
+    const po = dopiszKawalek(przed, wZrodle.item_id);
+
+    await sql`UPDATE user_data SET magic_mirror = ${po} WHERE user_id = ${wlasciciel}`;
+    await sql`DELETE FROM items WHERE id = ${wZrodle.id}`;
+
+    const [poWprawieniu] = await sql<Record<string, unknown>[]>`
+      SELECT * FROM user_data WHERE ssid = ${token} LIMIT 1
+    `;
+    return c.json({
+      gracz: await wczytajGracza(sql, poWprawieniu ?? gracz),
+      /** Numer kawalka 1..13 — klient rozswietla go na portrecie. */
+      wprawionyKawalek: wZrodle.item_id - PIERWSZY_ODLAMEK + 1,
+      lustroPelne: maPelneLustro(po),
+    });
+  }
 
   /*
    * Klucz do lochu tez sie nie zaklada — on OTWIERA loch.

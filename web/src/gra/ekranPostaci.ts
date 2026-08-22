@@ -90,6 +90,22 @@ export const PLECAK: Ramka[] = [304, 398, 493, 588, 680].map((x) => ramka(x, 679
  */
 export const PORTRET = ramka(408, 119, 258, 258);
 
+/*
+ * Kawalki Magicznego Lustra leza NA portrecie, w tym samym punkcie
+ * (`POS_SCR_CHAR_CHARIMG_X/Y` = 408, 119) i w naturalnym rozmiarze
+ * 260x260. Oryginal trzyma je przygaszone:
+ *
+ *     DefineImg(IMG_MIRROR_PIECE + i, "scr/char/mirror/mirror" + (i+1) + ".png", ...);
+ *     actor[IMG_MIRROR_PIECE + i].alpha = 0.3;
+ */
+export const KAWALEK_LUSTRA = ramka(408, 119, 260, 260);
+export const PRZEZROCZYSTOSC_LUSTRA = 0.3;
+export const KAWALKOW_LUSTRA = 13;
+
+export function plikKawalkaLustra(numer: number): string {
+  return `/res/sfgame/scr/char/mirror/mirror${numer}.png`;
+}
+
 /** Imie stoi na dole pola portretu: POS_CHAR_NAME = (410, 345). */
 export const NAZWA_W_POLU = ramka(408, 345, 258, 26);
 

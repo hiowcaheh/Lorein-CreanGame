@@ -31,6 +31,7 @@ export type Sztuczka =
   | 'awans-10'
   | 'zloto-1000'
   | 'zloto-10000'
+  | 'zloto-10000000'
   | 'grzyby-1000'
   | 'piwa-zeruj'
   | 'poziom-1';
@@ -68,8 +69,10 @@ testy.post('/testy/:sztuczka', async (c) => {
     }
 
     case 'zloto-1000':
-    case 'zloto-10000': {
-      const zloto = sztuczka === 'zloto-10000' ? 10000 : 1000;
+    case 'zloto-10000':
+    case 'zloto-10000000': {
+      const zloto =
+        sztuczka === 'zloto-10000000' ? 10000000 : sztuczka === 'zloto-10000' ? 10000 : 1000;
       await sql`
         UPDATE user_data SET silver = silver + ${zloto * SREBRA_W_ZLOCIE}
         WHERE user_id = ${wiersz.user_id}

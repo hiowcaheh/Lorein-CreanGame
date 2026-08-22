@@ -90,6 +90,7 @@ export const SZTUCZKI: SztuczkaTestowa[] = [
   { klucz: 'awans-10', napis: '+10 poziomów' },
   { klucz: 'zloto-1000', napis: '+1000 złota' },
   { klucz: 'zloto-10000', napis: '+10 000 złota' },
+  { klucz: 'zloto-10000000', napis: '+10 mln złota' },
   { klucz: 'grzyby-1000', napis: '+1000 grzybów' },
   { klucz: 'piwa-zeruj', napis: 'Wyzeruj piwa' },
   { klucz: 'poziom-1', napis: 'Poziom 1 (reset)' },

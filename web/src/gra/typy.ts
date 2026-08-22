@@ -55,6 +55,12 @@ export interface Gracz {
   /** Klaser Dokladnosci: ile pozycji zebrano, albo -1, gdy gracza go nie ma. */
   klaser: number;
 
+  /**
+   * Magiczne Lustro — trzynascie znacznikow, po jednym na kawalek.
+   * Komplet pozwala wejsc na arene i do lochow w trakcie wyprawy.
+   */
+  lustro: boolean[];
+
   /** Trzy miejsca na dzialajace mikstury; puste maja `rodzaj` rowny zeru. */
   mikstury: Mikstura[];
 
@@ -183,6 +189,12 @@ export interface Rozliczenie {
   lokacja: number;
   awans: number | null;
   nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
+  /**
+   * Skladniki premii do nagrody, w procentach. Wyprawa ich nie odsyla —
+   * tam premia siedzi juz w liczbie zadania; loch odsyla, bo tam nagroda
+   * powstaje dopiero po walce.
+   */
+  premie?: { klaser: number };
   /**
    * Zdobyty przedmiot — caly, bo ekran walki pokazuje jego ikone
    * i podpowiedz ze statystykami, a nie sam napis.

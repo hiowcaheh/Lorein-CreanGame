@@ -22,6 +22,7 @@ import {
 import { LEVELS } from '../protocol/gamedata.js';
 import { intval, time } from '../compat/php.js';
 import type { Sql } from '../db/client.js';
+import { kawalkiLustra } from '../game/lustro.js';
 
 export interface Gracz {
   id: number;
@@ -126,6 +127,12 @@ export interface Gracz {
    * na postac go otwiera — nie zaklada.
    */
   klaser: number;
+
+  /**
+   * Magiczne Lustro: trzynascie znacznikow, po jednym na kawalek.
+   * Komplet pozwala wejsc na arene i do lochow w trakcie wyprawy.
+   */
+  lustro: boolean[];
 
   /**
    * Osiem odznak, kazda w stopniu 0..4.
@@ -404,6 +411,7 @@ export function zbudujGracza(
     ...wierzchowiecGracza(wiersz),
     ekwipunek,
     klaser: intval(wiersz['album'] ?? BEZ_KLASERA),
+    lustro: kawalkiLustra(wiersz['magic_mirror']),
     mikstury: mikstury.map(opiszMiksture),
     osiagniecia: [0, 0, 0, 0, 0, 0, 0, 0],
   };

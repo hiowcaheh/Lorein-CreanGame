@@ -12,6 +12,8 @@
  * zachowuje sie inaczej niz JavaScript, jest o tym osobna uwaga.
  */
 
+import { POZIOM_ODLAMKOW, brakujaceOdlamki, maPelneLustro } from './lustro.js';
+
 /** Rodzaje przedmiotow ze zbrojowni. */
 const NAJNIZSZY_RODZAJ = 1;
 const NAJWYZSZY_RODZAJ = 7;
@@ -243,6 +245,8 @@ export function wylosujPrzedmiot(
     maAlbum = false,
     wyprawa = false,
     maJuzKlucz = false,
+    maJuzOdlamek = false,
+    lustro = '',
     zamknieteLochy = [],
     losuj = LOSUJ,
     ustawienia = DOMYSLNE,
@@ -254,8 +258,12 @@ export function wylosujPrzedmiot(
     maAlbum?: boolean;
     /** Nagroda z wyprawy — tylko tedy trafiaja sie klucze do lochow. */
     wyprawa?: boolean;
-    /** Czy w plecaku lezy juz klucz — wtedy drugi nie wypadnie. */
+    /** Czy w plecaku lezy juz klucz albo odlamek — wtedy drugi nie wypadnie. */
     maJuzKlucz?: boolean;
+    /** Czy w plecaku lezy juz ODLAMEK lustra — osobne sprawdzenie w oryginale. */
+    maJuzOdlamek?: boolean;
+    /** Zapis kolumny `magic_mirror` — z niego wychodza brakujace kawalki. */
+    lustro?: string;
     /** Numery lochow, ktorych gracz jeszcze nie otworzyl. */
     zamknieteLochy?: readonly number[];
     losuj?: Losowanie;
@@ -542,9 +550,46 @@ export function wylosujPrzedmiot(
    * rozjechalby sie z oryginalem.
    */
   if (typ === KLUCZ) {
-    losuj(1, 2); // odlamek lustra
+    /*
+     * ODLAMEK MAGICZNEGO LUSTRA idzie PIERWSZY:
+     *
+     *     if (rand(1, 2) == 1 && $lvl >= 50 && $magic_mirror !== '1111111111111') {
+     *         ... jesli w plecaku nie lezy juz odlamek ...
+     *         $canGen = [30 + k dla kazdego brakujacego kawalka];
+     *         $item['item_id'] = $canGen[rand(0, count($canGen) - 1)];
+     *         $item['gold'] = 0;
+     *     }
+     *
+     * Pierwsze losowanie idzie ZAWSZE, takze ponizej piecdziesiatki —
+     * tam wynik jest tylko odrzucany.
+     */
+    const szansaNaOdlamek = losuj(1, 2) === 1;
+    let odlamek = 0;
+
+    if (szansaNaOdlamek && poziom >= POZIOM_ODLAMKOW && !maPelneLustro(lustro) && !maJuzOdlamek) {
+      const brakujace = brakujaceOdlamki(lustro);
+      if (brakujace.length > 0) {
+        odlamek = brakujace[losuj(0, brakujace.length - 1)] ?? 0;
+      }
+    }
+
     losuj(1, 2); // klucz do wychodka, wariant pierwszy
     losuj(1, 2); // klucz do wychodka, wariant drugi
+
+    if (odlamek > 0) {
+      przedmiot.item_id = odlamek;
+      przedmiot.gold = 0;
+      przedmiot.mush = 0;
+      przedmiot.dmg_min = 0;
+      przedmiot.dmg_max = 0;
+      przedmiot.atr_type_1 = 0;
+      przedmiot.atr_type_2 = 0;
+      przedmiot.atr_type_3 = 0;
+      przedmiot.atr_val_1 = 0;
+      przedmiot.atr_val_2 = 0;
+      przedmiot.atr_val_3 = 0;
+      return przedmiot;
+    }
 
     const prog = PROGI_KLUCZY.find(
       (p) => zamknieteLochy.includes(p.loch) && poziom > p.poziom,
