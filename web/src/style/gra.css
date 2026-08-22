@@ -1298,30 +1298,48 @@ button.postac-wierzchowiec-obraz img {
  * w niej klada. Polozenie i szerokosc podaje komponent, bo obie liczby
  * sa stalymi klienta.
  */
-.walka-podsumowanie {
+/*
+ * Zdanie o wyniku — `LBL_FIGHT_SUMMARY`. `FontFormat_Default` to 20 px,
+ * CLR_SFORANGE i `align = "center"`, a pole ma `wordWrap = true`
+ * i szerokosc `SIZE_FIGHT_RESULT_TEXT_X`.
+ */
+.walka-wynik {
   position: absolute;
   z-index: 8;
   text-align: center;
   pointer-events: none;
-}
-
-/* `FontFormat_Default`: 20 px, CLR_SFORANGE, zawijanie wierszy. */
-.walka-wynik {
   font-size: var(--pismo);
   line-height: 1.25;
   color: var(--zloto);
 }
 
-.walka-nagrody {
-  margin-top: 8px;
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  font-size: var(--pismo-cechy);
-  color: var(--pergamin);
+/*
+ * Nagrody. Kazda stoi na swoim miejscu ze stalych `POS_FIGHT_REWARD*`,
+ * wiec nie ma tu zadnego wspolnego ukladu — tylko wyrownanie.
+ * Doswiadczenie idzie od lewej, kwoty koncza sie na prawej krawedzi.
+ */
+.walka-nagroda {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  font-size: var(--pismo);
+  color: var(--zloto);
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
 }
 
-.walka-nagrody img { width: 24px; height: 20px; vertical-align: -3px; margin: 0 3px; }
+.walka-nagroda.kwota {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* Odstepy jak w kliencie: 8 px miedzy liczba a ikona, 14 px miedzy grupami. */
+.walka-nagroda.kwota img { width: 24px; height: 20px; margin-right: 14px; }
+.walka-nagroda.kwota img:last-child { margin-right: 0; }
+
+.walka-nagroda.ostrzezenie { color: var(--zly); text-align: center; }
 
 /*
  * Awans po walce.
@@ -1379,25 +1397,19 @@ button.postac-wierzchowiec-obraz img {
   95% { transform: translateY(-15.9px) scale(1.095, 1.794); }
   100% { transform: translateY(0) scale(1, 1); }
 }
-.walka-przedmiot { margin-top: 4px; color: var(--pergamin); font-size: var(--pismo-cechy); }
-.walka-przedmiot.ostrzezenie { color: var(--zly); }
 
 /*
- * Zdobyty przedmiot — ikona, nie napis. Klikniecie otwiera te sama
- * podpowiedz ze statystykami, co w plecaku, wiec ramka musi lapac
- * kliknięcia mimo `pointer-events: none` na calym podsumowaniu.
+ * Zdobyty przedmiot — `CNT_FIGHT_SLOT`, zwykly pojemnik na przedmiot
+ * 90x90 bez zadnej ramki, tak jak miejsca w plecaku. Klikniecie otwiera
+ * te sama podpowiedz ze statystykami (`ItemPopup`).
  */
 .walka-zdobycz {
-  margin: 6px auto 0;
-  width: 60px;
-  height: 60px;
+  position: absolute;
+  z-index: 9;
   padding: 0;
-  border: 1px solid var(--zloto);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, .45);
+  border: none;
+  background: none;
   cursor: pointer;
-  pointer-events: auto;
-  display: block;
 }
 
 .walka-zdobycz img { width: 100%; height: 100%; object-fit: contain; }

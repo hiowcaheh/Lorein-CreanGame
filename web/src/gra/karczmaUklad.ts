@@ -208,6 +208,33 @@ export const WALKA_OBRAZENIA_ODSTEP = 200;
 export const WALKA_PRZYCISK = ramka(770 - 90, 710, 180, 50);
 /** Podsumowanie walki: POS_FIGHT_SUMMARY_Y = 520, wysrodkowane. */
 export const WALKA_PODSUMOWANIE_Y = 520 - POCZATEK_Y;
+/** Szerokosc zdania o wyniku — `SIZE_FIGHT_RESULT_TEXT_X = 490`. */
+export const WALKA_SZEROKOSC_PODSUMOWANIA = 490;
+
+/*
+ * NAGRODY W RAMCE PODSUMOWANIA.
+ *
+ * Klient rozklada je czterema stalymi i jedna zasada: ikony z liczbami
+ * ida od PRAWEJ do lewej, poczawszy od `POS_FIGHT_REWARDGOLD_X`.
+ *
+ *   CNT_FIGHT_SLOT        (POS_SCREEN_TITLE_X - 45, POS_FIGHT_SLOT_Y)
+ *   LBL_FIGHT_REWARDEXP   (POS_FIGHT_REWARDEXP_X, POS_FIGHT_REWARDGOLD_Y)
+ *   grzyby                prawa krawedz POS_FIGHT_REWARDGOLD_X, y POS_FIGHT_REWARDMUSH_Y
+ *   zloto i srebro        prawa krawedz POS_FIGHT_REWARDGOLD_X, y POS_FIGHT_REWARDGOLD_Y
+ *
+ * Kolejnosc w wierszu pieniedzy wynika z kolejnosci galezi w kodzie:
+ * najpierw ustawia sie SREBRO (i idzie w lewo), potem zloto. Na ekranie
+ * wychodzi wiec „zloto, ikona, srebro, ikona" konczace sie na 1000.
+ */
+/** Ikonka zdobytego przedmiotu, 90x90. */
+export const WALKA_ZDOBYCZ = ramka(770 - 45, 580, 90, 90);
+/** Lewa krawedz napisu o doswiadczeniu. */
+export const WALKA_DOSWIADCZENIE_X = 535 - POCZATEK_X;
+/** Prawa krawedz obu wierszy z pieniedzmi i grzybami. */
+export const WALKA_NAGRODY_PRAWA = 1000 - POCZATEK_X;
+export const WALKA_GRZYBY_Y = 610 - POCZATEK_Y;
+export const WALKA_PIENIADZE_Y = 640 - POCZATEK_Y;
+
 /**
  * Napis o awansie — tuz pod dolna krawedzia `box2.png` (505 + 177 = 682),
  * nad przyciskiem na 710. Podskok unosi go z powrotem nad ramke.

@@ -53,7 +53,13 @@ import {
   WALKA_OBRAZENIA_ODSTEP,
   WALKA_OBRAZENIA_Y,
   WALKA_AWANS_Y,
+  WALKA_DOSWIADCZENIE_X,
+  WALKA_GRZYBY_Y,
+  WALKA_NAGRODY_PRAWA,
+  WALKA_PIENIADZE_Y,
   WALKA_PODSUMOWANIE_Y,
+  WALKA_SZEROKOSC_PODSUMOWANIA,
+  WALKA_ZDOBYCZ,
   WALKA_PRZYCISK,
   WALKA_SKALA_SPRITE,
   bronCiezkaObrot,
@@ -101,9 +107,6 @@ const PRZERWA_MIEDZY_CIOSAMI = 200;
 
 /** Kto uderzyl: 1 to bohater, 2 przeciwnik. */
 const BOHATER = 1;
-
-/** `SIZE_FIGHT_RESULT_TEXT_X` — szerokosc napisu z podsumowaniem. */
-const SZEROKOSC_PODSUMOWANIA = 490;
 
 /** Ekran gry ma 1000 px szerokosci — potrzebne do przeliczenia skali. */
 const SZEROKOSC_EKRANU_GRY = 1000;
@@ -329,13 +332,23 @@ export function Walka({
         }
       />
 
-      {/* Ozdobna ramka miedzy tabelkami cech — `box2.png` z oryginalu. */}
-      <img
-        className="walka-ramka"
-        style={ramkaNaStyl(WALKA_RAMKA_SRODKOWA)}
-        src={OBRAZ_RAMKI_SRODKOWEJ}
-        alt=""
-      />
+      {/*
+        Srodkowa ramka `box2.png` pokazuje sie DOPIERO PO WALCE.
+
+        SWIADOME ODSTEPSTWO (tabela w CLAUDE.md): klient 5.55 trzyma ja
+        na scenie od poczatku (`AddBunch(BNC_SCREEN_FIGHT, ..., IMG_FIGHT_BOX2, ...)`
+        i nigdzie jej nie zdejmuje), wiec przez cala walke stoi tam pusty
+        szary prostokat. Wlasciciel gry pokazal zrzuty, na ktorych w
+        trakcie walki widac samo pole bitwy i przycisk „Pomin".
+      */}
+      {koniec && (
+        <img
+          className="walka-ramka"
+          style={ramkaNaStyl(WALKA_RAMKA_SRODKOWA)}
+          src={OBRAZ_RAMKI_SRODKOWEJ}
+          alt=""
+        />
+      )}
 
       {biezacy && atakujacy && (
         <Cios
@@ -389,77 +402,118 @@ export function Walka({
       {koniec && (
         <>
           {/*
-            Podsumowanie stoi W TEJ RAMCE, ktora przez cala walke jest
-            pusta — `box2.png` na (770 - 254, 505). Klient wpisuje tam
-            `LBL_FIGHT_SUMMARY`: `POS_FIGHT_SUMMARY_Y = 520`, szerokosc
-            `SIZE_FIGHT_RESULT_TEXT_X = 490`, zawijanie wierszy,
-            wysrodkowane na `POS_SCREEN_TITLE_X = 770`.
+            Zdanie o wyniku — `LBL_FIGHT_SUMMARY`: `POS_FIGHT_SUMMARY_Y = 520`,
+            szerokosc `SIZE_FIGHT_RESULT_TEXT_X = 490`, zawijane
+            i WYSRODKOWANE (`FontFormat_Default` ma `align = "center"`),
+            na `POS_SCREEN_TITLE_X = 770`.
           */}
           <div
-            className="walka-podsumowanie"
+            className="walka-wynik"
             style={{
-              left: WALKA_SRODEK_X - SZEROKOSC_PODSUMOWANIA / 2,
+              left: WALKA_SRODEK_X - WALKA_SZEROKOSC_PODSUMOWANIA / 2,
               top: WALKA_PODSUMOWANIE_Y,
-              width: SZEROKOSC_PODSUMOWANIA,
+              width: WALKA_SZEROKOSC_PODSUMOWANIA,
             }}
           >
-            <div className="walka-wynik">{zdanieWyniku}</div>
-
-            {/*
-              Wiersze z nagrodami sa NASZYM dodatkiem — oryginal pokazuje
-              tu samo zdanie, a zdobycze widac na gornym pasku. Wlasciciel
-              gry poprosil o nie wprost; szczegoly w tabelce swiadomych
-              odstepstw w CLAUDE.md.
-            */}
-            {nagroda && (
-              <div className="walka-nagrody">
-                <span>
-                  {PODPISY.doswiadczenie}: {nagroda.doswiadczenie.toLocaleString('pl-PL')}
-                </span>
-                <span>
-                  {PODPISY.wynagrodzenie} {Math.floor(nagroda.zloto / 100).toLocaleString('pl-PL')}
-                  <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
-                  {String(nagroda.zloto % 100).padStart(2, '0')}
-                  <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
-                </span>
-                {nagroda.grzyby > 0 && (
-                  <span>
-                    {nagroda.grzyby}
-                    <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/*
-              Zdobyty przedmiot pokazuje sie IKONA, tak jak nagroda w oknie
-              wyboru zadania — po kliknieciu wychodzi ta sama podpowiedz ze
-              statystykami, co w plecaku.
-            */}
-            {zdobytyPrzedmiot && (
-              <>
-                <button
-                  type="button"
-                  className="walka-zdobycz"
-                  ref={ramkaZdobyczy}
-                  onClick={() => setPokazZdobycz((czy) => !czy)}
-                >
-                  <img src={zdobytyPrzedmiot.obrazek} alt="" draggable={false} />
-                </button>
-                {pokazZdobycz && (
-                  <PodpowiedzPrzedmiotu
-                    przedmiot={zdobytyPrzedmiot}
-                    miejsce={miejsceZdobyczy()}
-                    onZamknij={() => setPokazZdobycz(false)}
-                  />
-                )}
-              </>
-            )}
-
-            {plecakBylPelny && (
-              <div className="walka-przedmiot ostrzezenie">Nagroda przepadła — plecak był pełny.</div>
-            )}
+            {zdanieWyniku}
           </div>
+
+          {/*
+            Zdobyty przedmiot — `CNT_FIGHT_SLOT` na
+            (POS_SCREEN_TITLE_X - 45, POS_FIGHT_SLOT_Y), czyli ikona 90x90
+            wysrodkowana pod zdaniem. Klik pokazuje te sama podpowiedz ze
+            statystykami, co przedmiot w plecaku (`ItemPopup`).
+          */}
+          {zdobytyPrzedmiot && (
+            <>
+              <button
+                type="button"
+                className="walka-zdobycz"
+                ref={ramkaZdobyczy}
+                style={ramkaNaStyl(WALKA_ZDOBYCZ)}
+                onClick={() => setPokazZdobycz((czy) => !czy)}
+              >
+                <img src={zdobytyPrzedmiot.obrazek} alt="" draggable={false} />
+              </button>
+              {pokazZdobycz && (
+                <PodpowiedzPrzedmiotu
+                  przedmiot={zdobytyPrzedmiot}
+                  miejsce={miejsceZdobyczy()}
+                  onZamknij={() => setPokazZdobycz(false)}
+                />
+              )}
+            </>
+          )}
+
+          {nagroda && (
+            <>
+              {/*
+                Doswiadczenie — `LBL_FIGHT_REWARDEXP` na
+                (POS_FIGHT_REWARDEXP_X, POS_FIGHT_REWARDGOLD_Y),
+                wyrownane do lewej: „Doswiadczenie: N".
+              */}
+              {nagroda.doswiadczenie > 0 && (
+                <div
+                  className="walka-nagroda doswiadczenie"
+                  style={{ left: WALKA_DOSWIADCZENIE_X, top: WALKA_PIENIADZE_Y }}
+                >
+                  {PODPISY.doswiadczenie}: {nagroda.doswiadczenie.toLocaleString('pl-PL')}
+                </div>
+              )}
+
+              {/*
+                Grzyby i pieniadze skladaja sie od PRAWEJ do lewej, obie
+                grupy konczac sie na `POS_FIGHT_REWARDGOLD_X = 1000`.
+                Grzyby stoja wierszem wyzej (`POS_FIGHT_REWARDMUSH_Y`).
+              */}
+              {nagroda.grzyby > 0 && (
+                <div
+                  className="walka-nagroda kwota"
+                  style={{ right: SZEROKOSC_EKRANU_GRY - WALKA_NAGRODY_PRAWA, top: WALKA_GRZYBY_Y }}
+                >
+                  {nagroda.grzyby}
+                  <img src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
+                </div>
+              )}
+
+              {nagroda.zloto > 0 && (
+                <div
+                  className="walka-nagroda kwota"
+                  style={{
+                    right: SZEROKOSC_EKRANU_GRY - WALKA_NAGRODY_PRAWA,
+                    top: WALKA_PIENIADZE_Y,
+                  }}
+                >
+                  {/* Zloto to sto srebra; oba czlony pokazuja sie tylko, gdy sa. */}
+                  {Math.floor(nagroda.zloto / 100) > 0 && (
+                    <>
+                      {Math.floor(nagroda.zloto / 100).toLocaleString('pl-PL')}
+                      <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
+                    </>
+                  )}
+                  {nagroda.zloto % 100 > 0 && (
+                    <>
+                      {nagroda.zloto % 100}
+                      <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {plecakBylPelny && (
+            <div
+              className="walka-nagroda ostrzezenie"
+              style={{
+                left: WALKA_SRODEK_X - WALKA_SZEROKOSC_PODSUMOWANIA / 2,
+                top: WALKA_GRZYBY_Y,
+                width: WALKA_SZEROKOSC_PODSUMOWANIA,
+              }}
+            >
+              Nagroda przepadła — plecak był pełny.
+            </div>
+          )}
 
           {/*
             Awans stoi PONIZEJ ramki z podsumowaniem, wlasnym elementem
