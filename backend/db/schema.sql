@@ -133,6 +133,9 @@ CREATE TABLE user_data (
     dungeon_time        bigint      NOT NULL DEFAULT 0,
     arena_time          bigint      NOT NULL DEFAULT 0,
     beers               integer     NOT NULL DEFAULT 0,
+    -- Dodatek do dziennego limitu piw. Podstawa (10) jest w kodzie;
+    -- tu siedzi to, co dokladaja konto VIP i inne dodatki.
+    beers_bonus         integer     NOT NULL DEFAULT 0,
     quest_reroll_time   bigint      NOT NULL DEFAULT 0,
     shop_reroll_time    bigint      NOT NULL DEFAULT 0,
 

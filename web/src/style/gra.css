@@ -285,8 +285,12 @@ button.zasoby .linia,
   white-space: nowrap;
 }
 
-/* Tu wartosc idzie do prawej krawedzi, a nie do stalej kolumny 137 px. */
-.zasoby-dokladnie .wiersz > span:nth-child(2) { position: static; }
+/*
+ * Tu wartosc idzie do prawej krawedzi, a nie do stalej kolumny 137 px.
+ * Z `.podpowiedz` w selektorze, bo regula ogolna stoi PONIZEJ i przy
+ * rownej szczegolowosci wygrywalaby kolejnoscia.
+ */
+.podpowiedz.zasoby-dokladnie .wiersz > span:nth-child(2) { position: static; }
 
 .zasoby img { width: 24px; height: 20px; }
 .zasoby img.grzyb { width: 25px; height: 24px; }
@@ -834,7 +838,7 @@ button.postac-cecha.klikalna:hover { filter: brightness(1.2); }
   gap: 12px;
 }
 
-.rozbicie-cechy .wiersz > span:nth-child(2) { position: static; }
+.podpowiedz.rozbicie-cechy .wiersz > span:nth-child(2) { position: static; }
 .rozbicie-cechy .zPrzedmiotow { color: var(--blekit); }
 .rozbicie-cechy .zMikstur { color: var(--liczba-duza); }
 .rozbicie-cechy .razem { color: var(--pergamin); }
@@ -1519,6 +1523,9 @@ button.postac-wierzchowiec-obraz img {
   font-size: var(--pismo-cechy);
   line-height: 1.4;
 }
+
+/* Dokladne kwoty pod rozpisaniem premii — w wierszu stoja skrocone. */
+.walka-premia-podpowiedz .dokladnie { color: var(--pergamin); }
 
 
 .walka-nagroda.ostrzezenie { color: var(--zly); text-align: center; }

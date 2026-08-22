@@ -257,11 +257,20 @@ export const MIEJSCA_MIKSTUR: Ramka[] = [0, 1, 2].map((i) =>
 export const PIERWSZE_MIEJSCE_MIKSTURY = 300;
 
 /*
- * Klaser Dokladnosci — `IMG_CHAR_ALBUM` w punkcie (280 + 500 + 350,
- * 100 + 20). Oryginalna ikonka `icon_foliant.png` nie doszla do naszej
- * paczki zasobow, wiec stoi tam obrazek samego przedmiotu z `itm/13-1`.
+ * Klaser Dokladnosci — SWIADOME ODSTEPSTWO (tabela w CLAUDE.md).
+ *
+ * Oryginal stawia `IMG_CHAR_ALBUM` w prawym GORNYM rogu ekranu postaci
+ * (280 + 500 + 350, 100 + 20), z dala od czegokolwiek, co klasera
+ * dotyczy. Wlasciciel gry poprosil, zeby ikonka stala przy przycisku
+ * „Klaser": ten stoi w (550, 615) i ma 50 px wysokosci (POMIAR w przegladarce,
+ * `.postac-klaser-guzik` w `style/gra.css`), wiec ikonka 48x48 staje 10 px
+ * na lewo od niego (550 - 48 - 10 = 492) i o 1 px nizej (615 + (50 - 48) / 2),
+ * czyli srodkiem w srodku przycisku.
+ *
+ * Oryginalna ikonka `icon_foliant.png` nie doszla do naszej paczki
+ * zasobow, wiec stoi tam obrazek samego przedmiotu z `itm/13-1`.
  */
-export const KLASER = ramka(280 + 500 + 350, 100 + 20, 48, 48);
+export const KLASER = ramka(280 + 492, 100 + 616, 48, 48);
 export const OBRAZ_KLASERA = '/res/sfgame/itm/13-1/itm13-1-1.png';
 /** Ile pozycji miesci klaser — `contentMax` w kliencie. */
 export const POZYCJI_W_KLASERZE = 1700;

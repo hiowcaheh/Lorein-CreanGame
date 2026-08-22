@@ -33,8 +33,8 @@ import {
   plikPrzedmiotu,
   plikZakladki,
   policzDzialy,
-  pozycjaNaStronie,
-  przewin,
+  stronDzialu,
+  ulozonyDzial,
   type Pozycja,
 } from '../gra/klaser';
 import {
@@ -127,6 +127,13 @@ export function Klaser({ stan }: { stan: StanKlasera }) {
 
   const bity = odkodujKlaser(stan.dane);
   const wDzialach = policzDzialy(bity);
+
+  /*
+   * Dzial ulozony od najnowszych zdobyczy — SWIADOME ODSTEPSTWO,
+   * patrz `ulozonyDzial()` i tabela w CLAUDE.md.
+   */
+  const ulozone = ulozonyDzial(dzial, bity, stan.daty);
+  const stron = stronDzialu(dzial);
   const zebrane = Math.min(
     bity.reduce((suma, b) => suma + (b ? 1 : 0), 0),
     stan.wszystkich,
@@ -177,7 +184,8 @@ export function Klaser({ stan }: { stan: StanKlasera }) {
   function przejdz(oIle: number) {
     zagraj(KLIK);
     setWybrana(null);
-    setStrona((s) => przewin(dzial, s + oIle));
+    // Klient zawija strony na obu koncach — tak samo tutaj.
+    setStrona((s) => (s + oIle + stron) % stron);
   }
 
   function wybierzDzial(nowy: number) {
@@ -226,7 +234,7 @@ export function Klaser({ stan }: { stan: StanKlasera }) {
           key={i}
           numer={i}
           gniazdo={gniazdo}
-          pozycja={pozycjaNaStronie(dzial, strona, i)}
+          pozycja={ulozone[strona * 4 + i] ?? { rodzaj: 'pusta' }}
           bity={bity}
           daty={stan.daty}
           onWybor={setWybrana}

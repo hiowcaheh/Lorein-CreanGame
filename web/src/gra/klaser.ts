@@ -267,3 +267,92 @@ export function plikPrzedmiotu(typ: number, obrazek: number, barwa: number, klas
   const zBarwa = typ < 10 ? `${b + 1}-` : '';
   return `/res/sfgame/itm/${typ}-1/${podstawa}-${zBarwa}1.png`;
 }
+
+/**
+ * Kolejnosc „od najnowszych" — SWIADOME ODSTEPSTWO (tabela w CLAUDE.md).
+ *
+ * Oryginal rozklada klaser na sztywno: strona i gniazdo wynikaja wprost
+ * z numeru bitu (`ShowAlbumContent()`), wiec pierwsza strona to zawsze
+ * te same przedmioty. Wlasciciel gry poprosil, zeby najswiezsze zdobycze
+ * staly na poczatku dzialu, a najstarsze na koncu.
+ *
+ * Sam UKLAD strony zostaje bez zmian: cztery gniazda, te same rozmiary
+ * i te same napisy. Zmienia sie wylacznie to, KTORA pozycja gdzie stoi.
+ *
+ * Pozycje jeszcze niezdobyte ida na koniec, w kolejnosci z oryginalu —
+ * inaczej klaser stalby sie nie do przejrzenia.
+ */
+export function pozycjeDzialu(dzial: number): Pozycja[] {
+  const wszystkie: Pozycja[] = [];
+  const ostatnia = OSTATNIA_STRONA[dzial] ?? 0;
+
+  for (let strona = 0; strona <= ostatnia; strona++) {
+    for (let i = 0; i < 4; i++) {
+      const pozycja = pozycjaNaStronie(dzial, strona, i);
+      if (pozycja.rodzaj !== 'pusta') wszystkie.push(pozycja);
+    }
+  }
+  return wszystkie;
+}
+
+/** Ile bitow zajmuje pozycja: wzor piec, reszta jeden. */
+function bitowPozycji(pozycja: Pozycja): number {
+  return pozycja.rodzaj === 'wzor' ? 5 : 1;
+}
+
+/**
+ * Najswiezsza data w pozycji. Wzor ma piec bitow i piec dat — liczy sie
+ * najpozniejsza z nich. Pozycja bez ani jednej daty dostaje zero.
+ */
+export function czasPozycji(pozycja: Pozycja, daty: Record<number, number>): number {
+  if (pozycja.rodzaj === 'pusta') return 0;
+
+  let najnowsza = 0;
+  for (let b = 0; b < bitowPozycji(pozycja); b++) {
+    najnowsza = Math.max(najnowsza, daty[pozycja.bit + b] ?? 0);
+  }
+  return najnowsza;
+}
+
+/** Czy gracz ma w klaserze cokolwiek z tej pozycji. */
+export function zdobytaPozycja(pozycja: Pozycja, bity: readonly boolean[]): boolean {
+  if (pozycja.rodzaj === 'pusta') return false;
+
+  for (let b = 0; b < bitowPozycji(pozycja); b++) {
+    if (bity[pozycja.bit + b] === true) return true;
+  }
+  return false;
+}
+
+/**
+ * Dzial ulozony od najnowszych zdobyczy do najstarszych, a na koncu to,
+ * czego gracz jeszcze nie ma.
+ *
+ * Pozycje zdobyte PRZED wprowadzeniem dat maja czas zerowy i stoja za
+ * datowanymi, ale przed niezdobytymi — daty im juz nie przybedzie,
+ * a schowanie ich na sam koniec zgubiloby je miedzy nieznanymi.
+ */
+export function ulozonyDzial(
+  dzial: number,
+  bity: readonly boolean[],
+  daty: Record<number, number>,
+): Pozycja[] {
+  return pozycjeDzialu(dzial)
+    .map((pozycja, kolejnosc) => ({
+      pozycja,
+      kolejnosc,
+      zdobyta: zdobytaPozycja(pozycja, bity),
+      czas: czasPozycji(pozycja, daty),
+    }))
+    .sort((a, b) => {
+      if (a.zdobyta !== b.zdobyta) return a.zdobyta ? -1 : 1;
+      if (a.czas !== b.czas) return b.czas - a.czas;
+      return a.kolejnosc - b.kolejnosc;
+    })
+    .map((w) => w.pozycja);
+}
+
+/** Ile stron ma ulozony dzial — po cztery pozycje na rozkladowke. */
+export function stronDzialu(dzial: number): number {
+  return Math.max(1, Math.ceil(pozycjeDzialu(dzial).length / 4));
+}

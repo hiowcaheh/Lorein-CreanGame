@@ -7,9 +7,13 @@ import {
   dzialBitu,
   odkodujKlaser,
   plikPrzedmiotu,
+  czasPozycji,
   policzDzialy,
   pozycjaNaStronie,
+  pozycjeDzialu,
   przewin,
+  stronDzialu,
+  ulozonyDzial,
 } from '../src/gra/klaser';
 import { nazwaWKlaserze } from '../src/gra/przedmioty';
 
@@ -147,5 +151,60 @@ describe('Klaser Dokladnosci', () => {
       expect(epik.nazwa).not.toBe('');
       expect(epik.nazwa).not.toContain('|');
     });
+  });
+});
+
+describe('kolejnosc od najnowszych (odstepstwo)', () => {
+  it('kazda pozycja dzialu wchodzi do ulozenia dokladnie raz', () => {
+    for (let dzial = 0; dzial < 5; dzial++) {
+      const wszystkie = pozycjeDzialu(dzial);
+      const ulozone = ulozonyDzial(dzial, [], {});
+      expect(ulozone).toHaveLength(wszystkie.length);
+      expect(new Set(ulozone.map((p) => JSON.stringify(p))).size).toBe(
+        new Set(wszystkie.map((p) => JSON.stringify(p))).size,
+      );
+    }
+  });
+
+  it('bez ani jednej zdobyczy kolejnosc jest ta sama, co w oryginale', () => {
+    expect(ulozonyDzial(0, [], {})).toEqual(pozycjeDzialu(0));
+  });
+
+  it('zdobyte stoja przed niezdobytymi, a nowsze przed starszymi', () => {
+    // Dzial potworow: bit N to potwor N. Zdobywamy trzeciego i pierwszego.
+    const bity = Array.from({ length: 300 }, () => false);
+    bity[0] = true;
+    bity[2] = true;
+
+    const ulozone = ulozonyDzial(0, bity, { 0: 1000, 2: 2000 });
+
+    expect(ulozone[0]).toEqual({ rodzaj: 'potwor', bit: 2 });
+    expect(ulozone[1]).toEqual({ rodzaj: 'potwor', bit: 0 });
+    expect(ulozone[2]).toEqual({ rodzaj: 'potwor', bit: 1 });
+  });
+
+  it('zdobycz bez daty stoi za datowana, ale przed niezdobyta', () => {
+    const bity = Array.from({ length: 300 }, () => false);
+    bity[5] = true;
+    bity[7] = true;
+
+    // Piatka bez daty (wpis sprzed wprowadzenia kolumny), siodemka z data.
+    const ulozone = ulozonyDzial(0, bity, { 7: 1000 });
+
+    expect(ulozone[0]).toEqual({ rodzaj: 'potwor', bit: 7 });
+    expect(ulozone[1]).toEqual({ rodzaj: 'potwor', bit: 5 });
+    expect(ulozone[2]!.rodzaj).toBe('potwor');
+    expect((ulozone[2] as { bit: number }).bit).toBe(0);
+  });
+
+  it('wzor bierze NAJNOWSZA ze swoich pieciu dat', () => {
+    const wzor = { rodzaj: 'wzor', bit: 300, typ: 8, obrazek: 1, klasa: 0 } as const;
+    expect(czasPozycji(wzor, { 300: 10, 303: 99, 304: 50 })).toBe(99);
+  });
+
+  it('liczba stron wychodzi z liczby pozycji, po cztery na rozkladowke', () => {
+    for (let dzial = 0; dzial < 5; dzial++) {
+      expect(stronDzialu(dzial)).toBe(Math.ceil(pozycjeDzialu(dzial).length / 4));
+    }
   });
 });

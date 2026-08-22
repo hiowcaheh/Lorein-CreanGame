@@ -51,12 +51,22 @@ export const PROG_ZA_ZDROWY = 4800;
 /**
  * Ile piw dziennie.
  *
- * Oryginal odrzuca zamowienie przy `beers >= 11`, wiec jedenaste piwo
- * jeszcze wchodzi, a dwunaste juz nie. Klient pokazuje przy tym licznik
- * „x/10" — rozjazd jest w samym oryginale i przepisujemy zachowanie
- * serwera, bo to ono decyduje.
+ * SWIADOME ODSTEPSTWO (tabela w CLAUDE.md). Oryginal odrzuca zamowienie
+ * przy `beers >= 11`, wiec jedenaste piwo jeszcze wchodzi, a dwunaste
+ * juz nie — przy liczniku „x/10" na kliencie. Wlasciciel gry zdecydowal,
+ * ze podstawa ma byc rowne DZIESIEC, a limit ma byc RUCHOMY dla kazdego
+ * gracza osobno: konto VIP dołoży piec, inne dodatki po jednym. Dodatek
+ * siedzi w kolumnie `beers_bonus` i tylko sie do podstawy dodaje.
  */
-export const PIW_NA_DOBE = 11;
+export const PIW_NA_DOBE_PODSTAWA = 10;
+
+/** Kolumna z dodatkiem do limitu piw — dokladana w razie potrzeby. */
+export const KOLUMNA_DODATKU_PIW = 'integer NOT NULL DEFAULT 0';
+
+/** Ile piw moze dzis wypic TEN gracz. */
+export function limitPiw(dodatek: number): number {
+  return PIW_NA_DOBE_PODSTAWA + Math.max(0, Math.trunc(dodatek));
+}
 
 /** Ile kosztuje piwo i przyspieszenie wyprawy. */
 export const GRZYBOW_ZA_PIWO = 1;

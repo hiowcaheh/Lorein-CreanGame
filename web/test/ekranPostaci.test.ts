@@ -94,3 +94,22 @@ describe('puste miejsca na bron i tarcze', () => {
     expect(pustaTarcza(3)).toBeNull();
   });
 });
+
+describe('miejsce tarczy u maga i zwiadowcy (odstepstwo)', () => {
+  const POCISK = '/res/sfgame/itm/1-2/shot2-1-1.png';
+
+  it('wojownik ma tam swoja tarcze, niezaleznie od broni', () => {
+    expect(pustaTarcza(1, POCISK)).toBe('slot10.png');
+    expect(pustaTarcza(1, null)).toBe('slot10.png');
+  });
+
+  it('mag i zwiadowca maja tam pocisk swojej broni', () => {
+    expect(pustaTarcza(2, POCISK)).toBe(POCISK);
+    expect(pustaTarcza(3, POCISK)).toBe(POCISK);
+  });
+
+  it('bez broni miejsce zostaje puste', () => {
+    expect(pustaTarcza(2, null)).toBeNull();
+    expect(pustaTarcza(3)).toBeNull();
+  });
+});

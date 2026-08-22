@@ -21,7 +21,8 @@ import {
   GRZYBOW_ZA_PIWO,
   GRZYBOW_ZA_PRZYSPIESZENIE,
   PELNA_WYTRZYMALOSC,
-  PIW_NA_DOBE,
+  KOLUMNA_DODATKU_PIW,
+  limitPiw,
   PROG_ZA_ZDROWY,
   WYTRZYMALOSC_Z_PIWA,
   awansuj,
@@ -703,7 +704,7 @@ async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<strin
     wytrzymalosc: liczba(wiersz['thirst']),
     wytrzymaloscMaks: PELNA_WYTRZYMALOSC,
     piwa: liczba(wiersz['beers']),
-    piwaMaks: PIW_NA_DOBE,
+    piwaMaks: limitPiw(liczba(wiersz['beers_bonus'])),
     /** Powyzej tego progu karczmarz nie naleje. */
     progZaZdrowy: PROG_ZA_ZDROWY,
     grzyby: liczba(wiersz['mushroom']),
@@ -899,7 +900,13 @@ karczma.post('/karczma/piwo', async (c) => {
 
   const { sql, wiersz } = dane;
 
-  if (liczba(wiersz['beers']) >= PIW_NA_DOBE) {
+  /*
+   * Limit jest RUCHOMY — podstawa plus dodatek gracza (`beers_bonus`).
+   * Kolumny moze jeszcze nie byc na dzialajacej bazie; wtedy dodatek
+   * jest zerem i zostaje sama podstawa.
+   */
+  await dolozKolumne(sql, 'user_data', 'beers_bonus', KOLUMNA_DODATKU_PIW);
+  if (liczba(wiersz['beers']) >= limitPiw(liczba(wiersz['beers_bonus']))) {
     return c.json({ blad: 'Na dziś dość — karczmarz już nie naleje.' }, 409);
   }
   if (liczba(wiersz['mushroom']) < GRZYBOW_ZA_PIWO) {

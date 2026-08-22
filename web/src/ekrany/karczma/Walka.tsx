@@ -93,7 +93,7 @@ import {
   type Ramka,
 } from '../../gra/karczmaUklad';
 import type { CechyWalki, Gracz, Rozliczenie } from '../../gra/typy';
-import { liczba } from '../../gra/liczby';
+import { liczba, skrocona } from '../../gra/liczby';
 
 /*
  * Zegar animacji ciosu.
@@ -481,9 +481,9 @@ export function Walka({
               */}
               {nagroda.doswiadczenie > 0 && (
                 <div
-                  className={`walka-nagroda doswiadczenie${premiaLacznie > 0 ? ' zPremia' : ''}`}
+                  className="walka-nagroda doswiadczenie zPremia"
                   style={{ left: WALKA_DOSWIADCZENIE_X, top: WALKA_PIENIADZE_Y }}
-                  onClick={() => premiaLacznie > 0 && setPokazanaPremia((czy) => !czy)}
+                  onClick={() => setPokazanaPremia((czy) => !czy)}
                 >
                   {/*
                     Podpis skrocony do „EXP" — SWIADOME ODSTEPSTWO, patrz
@@ -492,7 +492,7 @@ export function Walka({
                   */}
                   {PODPISY.doswiadczenieKrotko}:{' '}
                   {premiaLacznie > 0 && <ZnaczekPremii />}
-                  {liczba(nagroda.doswiadczenie)}
+                  {skrocona(nagroda.doswiadczenie)}
                 </div>
               )}
 
@@ -513,18 +513,18 @@ export function Walka({
 
               {nagroda.zloto > 0 && (
                 <div
-                  className={`walka-nagroda kwota${premiaLacznie > 0 ? ' zPremia' : ''}`}
+                  className="walka-nagroda kwota zPremia"
                   style={{
                     right: SZEROKOSC_EKRANU_GRY - WALKA_NAGRODY_PRAWA,
                     top: WALKA_PIENIADZE_Y,
                   }}
-                  onClick={() => premiaLacznie > 0 && setPokazanaPremia((czy) => !czy)}
+                  onClick={() => setPokazanaPremia((czy) => !czy)}
                 >
                   {premiaLacznie > 0 && <ZnaczekPremii />}
                   {/* Zloto to sto srebra; oba czlony pokazuja sie tylko, gdy sa. */}
                   {Math.floor(nagroda.zloto / 100) > 0 && (
                     <>
-                      {liczba(Math.floor(nagroda.zloto / 100))}
+                      {skrocona(Math.floor(nagroda.zloto / 100))}
                       <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
                     </>
                   )}
@@ -543,7 +543,7 @@ export function Walka({
             Rozpisanie premii — ta sama tresc, co w oknie wyboru zadania.
             Stoi NAD wierszem z nagroda, zeby nie zaslonic przycisku „OK".
           */}
-          {pokazanaPremia && premiaLacznie > 0 && (
+          {pokazanaPremia && nagroda && (
             <div
               className="podpowiedz walka-premia-podpowiedz"
               style={{
@@ -553,12 +553,22 @@ export function Walka({
               }}
               role="dialog"
             >
-              <div>{PODPISY.wTym}:</div>
+              {skladnikiPremii.length > 0 && <div>{PODPISY.wTym}:</div>}
               {skladnikiPremii.map((p) => (
                 <div className={p.klasa} key={p.klasa}>
                   {p.podpis}: +{p.ile}%
                 </div>
               ))}
+              {/*
+                Dokladne kwoty — w wierszu nagrody stoja SKROCONE („18kk"),
+                zeby nie weszly na ikone zdobyczy.
+              */}
+              <div className="dokladnie">
+                {PODPISY.doswiadczenieKrotko}: {liczba(nagroda?.doswiadczenie ?? 0)}
+              </div>
+              <div className="dokladnie">
+                Złoto: {liczba(Math.floor((nagroda?.zloto ?? 0) / 100))}
+              </div>
             </div>
           )}
 

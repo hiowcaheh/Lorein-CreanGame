@@ -352,6 +352,14 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
       const sklep = Math.max(0, rng.rand(0, 2) - 1);
       const zdobycz = wylosujPrzedmiot(naJakiPoziom, liczba(wiersz['class']) || 1, {
         sklep,
+        /*
+         * Bez tego z lochu wypadal KOLEJNY Klaser Dokladnosci graczowi,
+         * ktory juz go ma. `losujRodzajGabinetu()` puszcza rodzaj 13
+         * wylacznie przy `album == -1`, a tutaj nie dostawal o tym znac.
+         * Klucze i odlamki lustra do lochu i tak nie dochodza: rodzaj 11
+         * rodzi sie tylko z wyprawy (`$option === "tavern"`).
+         */
+        maAlbum: maKlaser,
         losuj: (od, doo) => rng.rand(od, doo),
       });
 
