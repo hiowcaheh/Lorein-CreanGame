@@ -93,17 +93,17 @@ export const config = {
   /**
    * Panel testowy u grzybiarza: awans, zloto, grzyby, reset piw i poziomu.
    *
-   * To CHEATY — kazdy, kto ma konto, moze ich uzyc, wiec domyslnie sa
-   * wylaczone. Wlacza sie je swiadomie:
+   * To CHEATY — moze ich uzyc kazdy, kto ma konto, takze na wdrozeniu.
+   * Dopoki gra jest w budowie, stoja WLACZONE, bo sluza do przechodzenia
+   * przez ekrany bez rozgrywania kilkudziesieciu wypraw.
    *
-   *     LOREIN_PANEL_TESTOWY=1
+   * Zdejmuje sie je jedna zmienna:
    *
-   * Lokalnie (`npm run dev`) wlaczaja sie same, zeby nie trzeba bylo
-   * pamietac o zmiennej przy kazdym uruchomieniu.
+   *     LOREIN_PANEL_TESTOWY=0
+   *
+   * i to trzeba zrobic, zanim do gry wejda obcy gracze.
    */
   get panelTestowy(): boolean {
-    const ustawiony = optional('LOREIN_PANEL_TESTOWY', '');
-    if (ustawiony !== '') return ustawiony === '1' || ustawiony === 'true';
-    return !this.serverless;
+    return optional('LOREIN_PANEL_TESTOWY', '1') !== '0';
   },
 };
