@@ -35,7 +35,10 @@ export interface Gracz {
   odpornosc: number;
   ciosKrytyczny: number;
   pancerz: number;
+  /** Wierzchowiec, ktory DZIALA — po wygasnieciu najmu wraca zero. */
   wierzchowiec: number;
+  /** Do kiedy najem, czas uniksowy. Zero, gdy wierzchowca nie ma. */
+  wierzchowiecDo: number;
 
   ekwipunek: Przedmiot[];
 

@@ -154,7 +154,20 @@ export const IKONA_KLASY = ramka(795, 120, 40, 40);
 export const TLO_CZCI = ramka(843, 118, 328, 38);
 export const HONOR = ramka(853, 126, 310, 24);
 export const OPIS = ramka(798, 176, 428, 224);
-export const WIERZCHOWIEC = ramka(805, 429, 269, 130);
+/*
+ * Panel wierzchowca — cztery wiersze od (805, 429), szerokie na
+ * `REL_CHAR_MOUNT_IMG_X - 5` = 269 px:
+ *
+ *   +0    nazwa            LBL_CHAR_MOUNT_NAME
+ *   +25   opis             LBL_CHAR_MOUNT_DESCR   (lamany, REL_CHAR_MOUNT_LINE_Y)
+ *   +100  zysk             LBL_CHAR_MOUNT_GAIN    (LINE_Y * 4)
+ *   +125  okres wynajmu    LBL_CHAR_MOUNT_RUNTIME (LINE_Y * 5)
+ */
+const ODSTEP_WIERSZA_WIERZCHOWCA = 25;
+export const WIERZCHOWIEC_NAZWA = ramka(805, 429, 269, 24);
+export const WIERZCHOWIEC_OPIS = ramka(805, 429 + ODSTEP_WIERSZA_WIERZCHOWCA, 269, 72);
+export const WIERZCHOWIEC_ZYSK = ramka(805, 429 + ODSTEP_WIERSZA_WIERZCHOWCA * 4, 269, 24);
+export const WIERZCHOWIEC_OKRES = ramka(805, 429 + ODSTEP_WIERSZA_WIERZCHOWCA * 5, 269, 24);
 export const PORTRET_WIERZCHOWCA = ramka(1079, 429, 150, 150);
 export const IKONA_PANCERZA = ramka(795, 595, 40, 40);
 export const PANCERZ = ramka(840, 602, 300, 26);

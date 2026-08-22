@@ -19,6 +19,7 @@ import { Miasto } from './ekrany/Miasto';
 import { Opcje } from './ekrany/Opcje';
 import { GABINET, ZBROJOWNIA } from './gra/sklepUklad';
 import { Sklep } from './ekrany/Sklep';
+import { Stajnia, type StanStajni } from './ekrany/Stajnia';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, StanKarczmy, StanSklepu } from './gra/typy';
@@ -52,7 +53,7 @@ const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'opcje'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'stajnia', 'opcje'];
 
 /** Zakladki, ktore wypelniaja cala rame wlasnym obrazem. */
 const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia'];
@@ -68,6 +69,7 @@ export function App() {
   const [blad, setBlad] = useState<string | null>(null);
   const [karczma, setKarczma] = useState<StanKarczmy | null>(null);
   const [sklep, setSklep] = useState<StanSklepu | null>(null);
+  const [stajnia, setStajnia] = useState<StanStajni | null>(null);
   const odliczanie = useOdliczanieWyprawy(karczma);
 
   /** Zapisany token moze byc juz niewazny — sprawdzamy go przy starcie. */
@@ -159,6 +161,29 @@ export function App() {
   }
 
   /*
+   * Stajnia. Ceny, dlugosc najmu i to, czy wolno wziac wierzchowca,
+   * licza sie na serwerze — klient dostaje gotowe cztery boksy.
+   */
+  const wczytajStajnie = useCallback(() => {
+    void zapytaj<StanStajni & { gracz?: Gracz }>('/stajnia')
+      .then((s) => {
+        setStajnia(s);
+        if (s.gracz) setGracz(s.gracz);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Stajnia jest zamknięta.'));
+  }, []);
+
+  function wynajmijWierzchowca(wierzchowiec: number) {
+    setBlad(null);
+    void zapytaj<StanStajni & { gracz?: Gracz }>('/stajnia/kup', { wierzchowiec })
+      .then((s) => {
+        setStajnia(s);
+        if (s.gracz) setGracz(s.gracz);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się wynająć.'));
+  }
+
+  /*
    * Karczma. Kazda akcja odsyla PELNY stan, wiec klient niczego nie liczy
    * sam — ani tego, czy wyprawa juz sie skonczyla, ani nagrod.
    */
@@ -213,6 +238,7 @@ export function App() {
   useEffect(() => {
     if (zakladka === 'zbrojownia' && gracz) wczytajSklep(0);
     if (zakladka === 'magia' && gracz) wczytajSklep(1);
+    if (zakladka === 'stajnia' && gracz) wczytajStajnie();
   }, [zakladka, gracz, wczytajSklep]);
 
   function wyloguj() {
@@ -355,6 +381,9 @@ export function App() {
             onWymien={() => akcjaSklepu(`/sklep/${sklep.numer}/wymien`)}
           />
         )}
+        {zakladka === 'stajnia' && stajnia && (
+          <Stajnia stan={stajnia} gracz={gracz} onWynajmij={wynajmijWierzchowca} />
+        )}
         {zakladka === 'bohater' && (
           <Bohater
             gracz={gracz}
@@ -362,6 +391,7 @@ export function App() {
             onPrzenies={przeniesPrzedmiot}
             onWypij={wypijMiksture}
             onUsunMiksture={usunMiksture}
+            onDoStajni={() => setZakladka('stajnia')}
           />
         )}
         {zakladka === 'karczma' && karczma && (

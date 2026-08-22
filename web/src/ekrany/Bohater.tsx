@@ -10,6 +10,15 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { PasekDoswiadczenia } from '../gra/PasekDoswiadczenia';
+import {
+  OKRES_NAJMU,
+  WIERZCHOWIEC,
+  nazwaWierzchowca,
+  opisWierzchowca,
+  portretWierzchowca,
+  pozostalyCzas,
+  zyskZWierzchowca,
+} from '../gra/stajnia';
 import { Portret } from '../gra/Portret';
 import { NAZWY_KLAS, NAZWY_RAS } from '../gra/portret';
 import { PIERWSZY_SLOT_PLECAKA, nazwaPrzedmiotu, slotDlaRodzaju } from '../gra/przedmioty';
@@ -48,14 +57,21 @@ import {
   TLO_LEWE,
   TLO_PRAWE,
   WIERSZ_CECHY_Y,
-  WIERZCHOWIEC,
+  WIERZCHOWIEC_NAZWA,
+  WIERZCHOWIEC_OKRES,
+  WIERZCHOWIEC_OPIS,
+  WIERZCHOWIEC_ZYSK,
   wierszePochodnych,
   pustaBron,
   type Ramka,
 } from '../gra/ekranPostaci';
 import type { Gracz, Mikstura, Przedmiot } from '../gra/typy';
 
-const NAZWY_WIERZCHOWCOW = ['brak', 'Osioł', 'Koń', 'Tygrys', 'Smok'];
+/**
+ * O ile kazdy wierzchowiec skraca wyprawe — `mountMultiplier()`.
+ * Sluzy tu tylko do napisu „Czas wedrowki - 30%".
+ */
+const SKROCENIE_WYPRAWY: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50 };
 
 /**
  * Podpowiedz przy pustym opisie — pozycja 116 oryginalnego pliku
@@ -97,6 +113,7 @@ export function Bohater({
   onPrzenies,
   onWypij,
   onUsunMiksture,
+  onDoStajni,
 }: {
   gracz: Gracz;
   onZapiszOpis: (opis: string) => void;
@@ -106,7 +123,20 @@ export function Bohater({
   onWypij: (slot: number) => void;
   /** Odwolanie dzialania mikstury z miejsca 1..3. */
   onUsunMiksture: (miejsce: number) => void;
+  /** Przejscie do stajni — klikniecie portretu wierzchowca. */
+  onDoStajni: () => void;
 }) {
+  /*
+   * Czas do odliczania najmu wierzchowca. Odswiezamy co pol minuty —
+   * oryginal chodzil co pol sekundy, ale tam napis pokazywal sekundy
+   * dopiero w ostatniej dobie i tak samo jest tutaj.
+   */
+  const [teraz, setTeraz] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const zegar = setInterval(() => setTeraz(Math.floor(Date.now() / 1000)), 30_000);
+    return () => clearInterval(zegar);
+  }, []);
+
   const [pokazany, setPokazany] = useState<Przedmiot | null>(null);
   const [pokazanaMikstura, setPokazanaMikstura] = useState<number | null>(null);
   const ekran = useRef<HTMLDivElement>(null);
@@ -316,17 +346,38 @@ export function Bohater({
 
       <Opis wartosc={gracz.opis} onZapisz={onZapiszOpis} />
 
-      <div className="postac-wierzchowiec" style={styl(WIERZCHOWIEC)}>
-        Wierzchowiec: ({NAZWY_WIERZCHOWCOW[gracz.wierzchowiec] ?? 'brak'})
+      {/*
+        Panel wierzchowca — cztery wiersze z `LBL_CHAR_MOUNT_*`. Nazwa
+        i opis zaleza od RASY: ork, mroczny elf, goblin i demon maja
+        wlasna czworke zwierzat.
+      */}
+      <div className="postac-wierzchowiec" style={styl(WIERZCHOWIEC_NAZWA)}>
+        {WIERZCHOWIEC} {nazwaWierzchowca(gracz.wierzchowiec, gracz.rasa)}
       </div>
 
       {gracz.wierzchowiec > 0 && (
-        <img
-          className="postac-wierzchowiec-obraz"
-          style={styl(PORTRET_WIERZCHOWCA)}
-          src={`/res/sfgame/scr/char/mount_portrait_${gracz.wierzchowiec}.jpg`}
-          alt=""
-        />
+        <>
+          <div className="postac-wierzchowiec opis" style={styl(WIERZCHOWIEC_OPIS)}>
+            {opisWierzchowca(gracz.wierzchowiec, gracz.rasa)}
+          </div>
+          <div className="postac-wierzchowiec" style={styl(WIERZCHOWIEC_ZYSK)}>
+            {zyskZWierzchowca(SKROCENIE_WYPRAWY[gracz.wierzchowiec] ?? 0)}
+          </div>
+          <div className="postac-wierzchowiec" style={styl(WIERZCHOWIEC_OKRES)}>
+            {OKRES_NAJMU} {pozostalyCzas(gracz.wierzchowiecDo, teraz)}
+          </div>
+
+          {/* Klikniecie portretu prowadzi do stajni — `RequestStableScreen`. */}
+          <button
+            type="button"
+            className="postac-wierzchowiec-obraz"
+            style={styl(PORTRET_WIERZCHOWCA)}
+            title={nazwaWierzchowca(gracz.wierzchowiec, gracz.rasa)}
+            onClick={onDoStajni}
+          >
+            <img src={portretWierzchowca(gracz.wierzchowiec, gracz.rasa)} alt="" />
+          </button>
+        </>
       )}
 
       <img className="postac-ikona-pancerza" style={styl(IKONA_PANCERZA)} src={IKONA_TARCZY} alt="" />

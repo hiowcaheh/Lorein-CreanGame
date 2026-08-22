@@ -18,7 +18,7 @@ import {
   type MiejsceMikstury,
 } from '../game/mikstury.js';
 import { LEVELS } from '../protocol/gamedata.js';
-import { intval } from '../compat/php.js';
+import { intval, time } from '../compat/php.js';
 import type { Sql } from '../db/client.js';
 
 export interface Gracz {
@@ -81,7 +81,13 @@ export interface Gracz {
   odpornosc: number;
   ciosKrytyczny: number;
   pancerz: number;
+  /**
+   * Wierzchowiec, ktory DZIALA. Po uplywie najmu wraca zero — oryginal
+   * robi to samo: `if ($time < $db_data['mount_dur']) $ret[$SF_MOUNT] += ...`.
+   */
   wierzchowiec: number;
+  /** Do kiedy najem, czas uniksowy. Zero, gdy wierzchowca nie ma. */
+  wierzchowiecDo: number;
 
   ekwipunek: Przedmiot[];
 
@@ -347,11 +353,24 @@ export function zbudujGracza(
 
     ...policzWartosci(klasa, cechy, poziom, ekwipunek),
 
-    wierzchowiec: intval(wiersz['mount'] ?? 0),
+    ...wierzchowiecGracza(wiersz),
     ekwipunek,
     mikstury: mikstury.map(opiszMiksture),
     osiagniecia: [0, 0, 0, 0, 0, 0, 0, 0],
   };
+}
+
+/**
+ * Wierzchowiec i termin najmu.
+ *
+ * `loadDefaultData` doklada wierzchowca do odpowiedzi TYLKO wtedy, gdy
+ * najem jeszcze trwa. Bez tego sprawdzenia ekran postaci pokazywalby
+ * konia, ktorego juz dawno nie ma, a wyprawy i tak szlyby pieszo.
+ */
+function wierzchowiecGracza(wiersz: Record<string, unknown>) {
+  const najemDo = intval(wiersz['mount_dur'] ?? 0);
+  const czynny = time() < najemDo ? intval(wiersz['mount'] ?? 0) : 0;
+  return { wierzchowiec: czynny, wierzchowiecDo: czynny > 0 ? najemDo : 0 };
 }
 
 /**
