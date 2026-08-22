@@ -48,6 +48,13 @@
   --obwodka-jasna: #6b5426;
   --dobry: #7bb661;
   --zly: #c85a4a;
+  /*
+   * Blekit cytatu z przedmiotu epickiego i podpowiedzi mikstury.
+   * `CLR_EPICITEMQUOTE` z oryginalu to 0x8888FF; ten odcien jest
+   * jasniejszy i to na nim stoi caly ekran postaci (patrz tabela
+   * odstepstw w CLAUDE.md).
+   */
+  --blekit: #9ecbff;
 
   /* FontFormat_Default = sizeMod + 20, przy osadzonej Komice sizeMod = 0. */
   --pismo: 20px;
@@ -920,7 +927,7 @@ button.postac-wierzchowiec-obraz img {
 /* Cytat przedmiotu epickiego — w oryginale ma wlasny, jasniejszy format. */
 .podpowiedz .cytat {
   padding: 0 5px;
-  color: #9ecbff;
+  color: var(--blekit);
   font-style: italic;
 }
 
@@ -1716,14 +1723,29 @@ button.postac-wierzchowiec-obraz img {
 .karczma-premia:disabled { cursor: default; }
 
 /*
- * Znaczek premii — ikona „+" z oryginalu (`btnClassPlus`, 33x33).
- * W wierszu nagrody stoi zmniejszona, zeby nie przerosla pisma.
+ * Znaczek premii — strzalka w gore z oryginalu (`btnClassArrowUp`, 33x33).
+ * W wierszu nagrody stoi zmniejszona, zeby nie przerosla pisma, i lekko
+ * podskakuje, zeby dalo sie ja zauwazyc.
  */
-.karczma-czas-wyprawy img,
 .karczma-premia img {
   width: 20px;
   height: 20px;
 }
+
+.karczma-premia .skacze { animation: podskok 1.6s ease-in-out infinite; }
+
+@keyframes podskok {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .karczma-premia .skacze { animation: none; }
+}
+
+/* Kolory premii — po nich widac, skad sie wziela. */
+.karczma-premia-podpowiedz .premia-klaser { color: var(--blekit); }
+.karczma-premia-podpowiedz .premia-rzadkie { color: var(--zly); }
 
 /*
  * Wyglada jak kazda inna podpowiedz: czarne tlo 0,8 i obwodka CLR_SFORANGE.
@@ -1915,6 +1937,30 @@ button.postac-pancerz {
 }
 
 .grzybiarz-uwaga .podglad { margin-top: 4px; color: var(--przygaszony); }
+
+/*
+ * PANEL TESTOWY — nasz, nie z oryginalu. Ta sama przydymiona plansza,
+ * co pólka z paczkami, zeby nie wygladal jak doklejony z innej gry.
+ */
+.grzybiarz-testy {
+  background: rgba(5, 7, 11, 0.72);
+  border: 1px solid var(--obwodka);
+  border-radius: var(--promien);
+}
+
+.grzybiarz-testy > * { position: absolute; }
+
+.grzybiarz-testy .tytul {
+  left: 0;
+  top: 4px;
+  width: 100%;
+  text-align: center;
+  font-size: var(--pismo-cechy);
+  color: var(--przygaszony);
+  text-shadow: 0 1px 2px #000;
+}
+
+.grzybiarz-testy .przycisk { font-size: 17px; }
 
 /* Klaser Dokladnosci — ikona przy prawej polowie ekranu postaci. */
 .postac-klaser {

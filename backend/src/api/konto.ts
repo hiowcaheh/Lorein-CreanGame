@@ -18,6 +18,7 @@ import {
   type PrzedmiotKlasera,
 } from '../game/album.js';
 import { intval, time } from '../compat/php.js';
+import { maKolumne } from '../db/kolumny.js';
 import {
   OSTATNI_SLOT_PLECAKA,
   PIERWSZY_SLOT_PLECAKA,
@@ -375,13 +376,20 @@ konto.post('/ekwipunek', async (c) => {
       time(),
     );
 
-    await sql`
-      UPDATE user_data SET
-        album = ${klaser.ile},
-        album_data = ${klaser.dane},
-        album_dates = ${zapiszDaty(klaser.daty)}
-      WHERE user_id = ${wlasciciel}
-    `;
+    if (await maKolumne(sql, 'user_data', 'album_dates')) {
+      await sql`
+        UPDATE user_data SET
+          album = ${klaser.ile},
+          album_data = ${klaser.dane},
+          album_dates = ${zapiszDaty(klaser.daty)}
+        WHERE user_id = ${wlasciciel}
+      `;
+    } else {
+      await sql`
+        UPDATE user_data SET album = ${klaser.ile}, album_data = ${klaser.dane}
+        WHERE user_id = ${wlasciciel}
+      `;
+    }
     await sql`DELETE FROM items WHERE id = ${wZrodle.id}`;
 
     const [poOtwarciu] = await sql<Record<string, unknown>[]>`

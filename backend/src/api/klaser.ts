@@ -29,7 +29,6 @@ export const klaser = new Hono();
 interface WierszKlasera extends Record<string, unknown> {
   album: number | null;
   album_data: string | null;
-  album_dates: string | null;
 }
 
 export interface StanKlaseraApi {
@@ -51,8 +50,13 @@ klaser.get('/klaser', async (c) => {
   if (!token) return c.json({ blad: 'Brak sesji.' }, 401);
 
   const sql = getSql();
+  /*
+   * `SELECT *`, a nie lista kolumn: `album_dates` doklada dopiero
+   * migracja i dopoki jej nie puszczono, wymienienie jej po nazwie
+   * wywalaloby cale zapytanie.
+   */
   const [wiersz] = await sql<WierszKlasera[]>`
-    SELECT album, album_data, album_dates FROM user_data WHERE ssid = ${token} LIMIT 1
+    SELECT * FROM user_data WHERE ssid = ${token} LIMIT 1
   `;
   if (!wiersz) return c.json({ blad: 'Brak sesji.' }, 401);
 
@@ -61,7 +65,7 @@ klaser.get('/klaser', async (c) => {
     dane: ile === BEZ_KLASERA ? PUSTY_KLASER : (wiersz.album_data || PUSTY_KLASER),
     ile,
     wszystkich: POZYCJI_W_KLASERZE,
-    daty: ile === BEZ_KLASERA ? {} : odczytajDaty(wiersz.album_dates),
+    daty: ile === BEZ_KLASERA ? {} : odczytajDaty(wiersz['album_dates']),
   };
   return c.json(odpowiedz);
 });

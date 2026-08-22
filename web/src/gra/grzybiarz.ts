@@ -70,6 +70,31 @@ export const MARGINES = 16;
 export const WYSOKOSC_PACZKI = 64;
 export const ODSTEP_PACZEK = 8;
 
+/*
+ * PANEL TESTOWY — nasz, do przechodzenia przez ekrany bez rozgrywania
+ * kilkudziesieciu wypraw. Stoi po lewej, pod reka grzybiarza: ramie
+ * konczy sie na y = 484, a tlo ma 700 px wysokosci.
+ */
+export const PANEL_TESTOWY = { lewo: 20, gora: 490, szerokosc: 460, wysokosc: 196 };
+export const PRZYCISK_TESTOWY = { szerokosc: 218, wysokosc: 34 };
+export const ODSTEP_TESTOWYCH = { x: 8, y: 6 };
+
+export interface SztuczkaTestowa {
+  klucz: string;
+  napis: string;
+}
+
+/** Kolejnosc taka, jak w prosbie: awanse, zloto, grzyby, resety. */
+export const SZTUCZKI: SztuczkaTestowa[] = [
+  { klucz: 'awans-1', napis: '+1 poziom' },
+  { klucz: 'awans-10', napis: '+10 poziomów' },
+  { klucz: 'zloto-1000', napis: '+1000 złota' },
+  { klucz: 'zloto-10000', napis: '+10 000 złota' },
+  { klucz: 'grzyby-1000', napis: '+1000 grzybów' },
+  { klucz: 'piwa-zeruj', napis: 'Wyzeruj piwa' },
+  { klucz: 'poziom-1', napis: 'Poziom 1 (reset)' },
+];
+
 export function cenaSlownie(grosze: number): string {
   return `${(grosze / 100).toFixed(2).replace('.', ',')} zł`;
 }

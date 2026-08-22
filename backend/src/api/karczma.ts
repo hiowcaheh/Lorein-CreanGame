@@ -44,6 +44,7 @@ import {
 import { wczytajGracza, zbudujPrzedmiot, type Przedmiot as PrzedmiotEkranu } from './gracz.js';
 import { barwaPrzedmiotu, plikIkony, plikPocisku, typAnimacjiBroni } from '../game/grafikaPrzedmiotow.js';
 import { tokenZNaglowka } from './konto.js';
+import { maKolumne } from '../db/kolumny.js';
 import {
   BEZ_KLASERA,
   PUSTY_KLASER,
@@ -409,13 +410,20 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
 
   // Zapis klasera idzie osobno i tylko wtedy, gdy cos przybylo.
   if (maKlaser && stanKlasera.ile > klaserPrzed) {
-    await sql`
-      UPDATE user_data SET
-        album_data = ${stanKlasera.dane},
-        album = ${stanKlasera.ile},
-        album_dates = ${zapiszDaty(stanKlasera.daty)}
-      WHERE user_id = ${wiersz.user_id}
-    `;
+    if (await maKolumne(sql, 'user_data', 'album_dates')) {
+      await sql`
+        UPDATE user_data SET
+          album_data = ${stanKlasera.dane},
+          album = ${stanKlasera.ile},
+          album_dates = ${zapiszDaty(stanKlasera.daty)}
+        WHERE user_id = ${wiersz.user_id}
+      `;
+    } else {
+      await sql`
+        UPDATE user_data SET album_data = ${stanKlasera.dane}, album = ${stanKlasera.ile}
+        WHERE user_id = ${wiersz.user_id}
+      `;
+    }
   }
 
   // Nowy komplet zadan po kazdej wyprawie — jak w oryginale.

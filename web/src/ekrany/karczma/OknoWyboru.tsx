@@ -49,9 +49,9 @@ const SKROCENIE: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50 };
  * Oryginal nie oznacza jej niczym — po prostu podwiesza podpowiedz
  * (`EnablePopup(LBL_QO_REWARDEXP, ...)`), a na dotyku nie ma czego
  * najezdzac. Wlasciciel gry poprosil o widoczny znak; bierzemy na to
- * ikone „+" z oryginalu (`btnClassPlus`, ta sama, co przy cechach).
+ * strzalke w gore z oryginalu (`btnClassArrowUp`).
  */
-const ZNACZEK_PREMII = '/res/ui/plus.png';
+const ZNACZEK_PREMII = '/res/ui/strzalka-gora.png';
 
 export function OknoWyboru({
   stan,
@@ -178,7 +178,9 @@ export function OknoWyboru({
           onClick={() => setPokazanaPremia((czy) => !czy)}
         >
           {PODPISY.doswiadczenie}: {wybrane.doswiadczenie.toLocaleString('pl-PL')}
-          {premiaLacznie > 0 && <img src={ZNACZEK_PREMII} alt="z premią" />}
+          {premiaLacznie > 0 && (
+            <img className="skacze" src={ZNACZEK_PREMII} alt="z premią" />
+          )}
         </button>,
         /*
           Czas trwania. Klikniecie pokazuje, ile wyprawa zajelaby PIESZO
@@ -192,7 +194,6 @@ export function OknoWyboru({
           onClick={() => setPokazanyCzas((czy) => !czy)}
         >
           {PODPISY.czasTrwania}: {czas(wybrane.sekundy)}
-          {stan.wierzchowiec > 0 && <img src={ZNACZEK_PREMII} alt="skrócony" />}
         </button>,
       ].map((tresc, i) => (
         <div
@@ -228,13 +229,18 @@ export function OknoWyboru({
           }}
         >
           <div>{PODPISY.wTym}:</div>
+          {/*
+            Kazda premia ma wlasny kolor — po nim widac, skad sie wziela,
+            bez czytania nazwy. Kolekcjonerska jest blekitna; nastepne
+            (gildia, wieza) dostana swoje.
+          */}
           {wybrane.premie.klaser > 0 && (
-            <div>
+            <div className="premia-klaser">
               {PODPISY.premiaKolekcjonera}: +{wybrane.premie.klaser}%
             </div>
           )}
           {wybrane.premie.rzadkie > 0 && (
-            <div>Rzadkie zadanie: +{wybrane.premie.rzadkie}%</div>
+            <div className="premia-rzadkie">Rzadkie zadanie: +{wybrane.premie.rzadkie}%</div>
           )}
         </div>
       )}

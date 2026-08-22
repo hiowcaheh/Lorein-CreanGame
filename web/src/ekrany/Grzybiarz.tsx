@@ -15,16 +15,31 @@ import {
   MARGINES,
   ODSTEP_KLATEK_MS,
   ODSTEP_PACZEK,
+  ODSTEP_TESTOWYCH,
   PACZKI,
+  PANEL_TESTOWY,
   PLANSZA,
+  PRZYCISK_TESTOWY,
   RAMIE,
+  SZTUCZKI,
   TLO,
   WYSOKOSC_PACZKI,
   cenaSlownie,
   plikRamienia,
 } from '../gra/grzybiarz';
+import { BladApi, zapytaj } from '../gra/api';
+import type { Gracz } from '../gra/typy';
 
-export function Grzybiarz({ grzyby }: { grzyby: number }) {
+export function Grzybiarz({
+  grzyby,
+  onGracz,
+  onBlad,
+}: {
+  grzyby: number;
+  /** Panel testowy zmienia stan postaci — ekran musi go odswiezyc. */
+  onGracz: (gracz: Gracz) => void;
+  onBlad: (tresc: string) => void;
+}) {
   /** Reka grzybiarza rusza sie jak reka stajennego — losowa klatka co chwile. */
   const [klatka, setKlatka] = useState(0);
   useEffect(() => {
@@ -36,6 +51,28 @@ export function Grzybiarz({ grzyby }: { grzyby: number }) {
   }, []);
 
   const [wybrana, setWybrana] = useState<number | null>(null);
+
+  /*
+   * Panel testowy pokazuje sie tylko wtedy, gdy serwer go ma wlaczony
+   * (`LOREIN_PANEL_TESTOWY`). Bez tego pytania przyciski wisialyby na
+   * ekranie i po klikniecu dostawaly odmowe.
+   */
+  const [panel, setPanel] = useState(false);
+  const [pracuje, setPracuje] = useState('');
+
+  useEffect(() => {
+    void zapytaj<{ wlaczony: boolean }>('/testy')
+      .then((o) => setPanel(o.wlaczony))
+      .catch(() => setPanel(false));
+  }, []);
+
+  function sztuczka(klucz: string) {
+    setPracuje(klucz);
+    void zapytaj<{ gracz: Gracz }>(`/testy/${klucz}`, {})
+      .then(({ gracz }) => onGracz(gracz))
+      .catch((e) => onBlad(e instanceof BladApi ? e.message : 'Nie udało się.'))
+      .finally(() => setPracuje(''));
+  }
 
   return (
     <div className="grzybiarz">
@@ -110,6 +147,42 @@ export function Grzybiarz({ grzyby }: { grzyby: number }) {
           : `Paczka ${PACZKI[wybrana]!.grzyby} grzybów za ${cenaSlownie(PACZKI[wybrana]!.cena)}.`}
         <div className="podglad">To podgląd wyglądu — płatności nie są podłączone.</div>
       </div>
+
+      {/*
+        PANEL TESTOWY — nie ma go w oryginale i nie jest czescia gry.
+        Sluzy do przechodzenia przez ekrany bez rozgrywania
+        kilkudziesieciu wypraw. Serwer wlacza go osobno.
+      */}
+      {panel && (
+        <div
+          className="grzybiarz-testy"
+          style={{
+            left: PANEL_TESTOWY.lewo,
+            top: PANEL_TESTOWY.gora,
+            width: PANEL_TESTOWY.szerokosc,
+            height: PANEL_TESTOWY.wysokosc,
+          }}
+        >
+          <div className="tytul">Panel testowy</div>
+          {SZTUCZKI.map((s, i) => (
+            <button
+              key={s.klucz}
+              type="button"
+              className="przycisk"
+              disabled={pracuje !== ''}
+              style={{
+                left: (i % 2) * (PRZYCISK_TESTOWY.szerokosc + ODSTEP_TESTOWYCH.x),
+                top: 30 + Math.floor(i / 2) * (PRZYCISK_TESTOWY.wysokosc + ODSTEP_TESTOWYCH.y),
+                width: PRZYCISK_TESTOWY.szerokosc,
+                minHeight: PRZYCISK_TESTOWY.wysokosc,
+              }}
+              onClick={() => sztuczka(s.klucz)}
+            >
+              {s.napis}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

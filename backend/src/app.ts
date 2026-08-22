@@ -28,6 +28,7 @@ import { mikstury } from './api/mikstury.js';
 import { stajnia } from './api/stajnia.js';
 import { cechy } from './api/cechy.js';
 import { klaser } from './api/klaser.js';
+import { testy } from './api/testy.js';
 import type { GameRequest } from './protocol/request.js';
 import type { Sql } from './db/client.js';
 
@@ -128,6 +129,7 @@ app.route('/api', mikstury);
 app.route('/api', stajnia);
 app.route('/api', cechy);
 app.route('/api', klaser);
+app.route('/api', testy);
 
 /**
  * Najprostszy mozliwy dowod zycia — bez bazy, bez zadnej pracy.

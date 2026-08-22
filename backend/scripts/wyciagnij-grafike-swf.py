@@ -150,6 +150,11 @@ NAZWANE = {
     110: 'strzalka-prawo',
     112: 'strzalka-prawo-najazd',
     114: 'strzalka-prawo-wcisnieta',
+    # `btnClassArrowUp` (obiekt 123) — w karczmie oznacza nagrode podbita
+    # premia. Te same trzy stany, ta sama jasnosc srodka.
+    117: 'strzalka-gora',
+    119: 'strzalka-gora-najazd',
+    121: 'strzalka-gora-wcisnieta',
     39: 'suwak',              # 279x24 — `DragonSlider`
     41: 'suwak-uchwyt',       # 14x22
     85: 'suwak-znacznik',     # 10x19 — `SliderTick`

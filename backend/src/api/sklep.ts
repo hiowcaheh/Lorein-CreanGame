@@ -35,6 +35,7 @@ import { wylosujPrzedmiot } from '../game/generatorPrzedmiotow.js';
 import { czyEpicki } from '../game/grafikaPrzedmiotow.js';
 import { wczytajGracza, zbudujPrzedmiot } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
+import { maKolumne } from '../db/kolumny.js';
 import {
   BEZ_KLASERA,
   PUSTY_KLASER,
@@ -356,13 +357,20 @@ sklep.post('/sklep/:numer/kup', async (c) => {
       time(),
     );
     if (stan.ile > przed) {
-      await sql`
-        UPDATE user_data SET
-          album_data = ${stan.dane},
-          album = ${stan.ile},
-          album_dates = ${zapiszDaty(stan.daty)}
-        WHERE user_id = ${wiersz.user_id}
-      `;
+      if (await maKolumne(sql, 'user_data', 'album_dates')) {
+        await sql`
+          UPDATE user_data SET
+            album_data = ${stan.dane},
+            album = ${stan.ile},
+            album_dates = ${zapiszDaty(stan.daty)}
+          WHERE user_id = ${wiersz.user_id}
+        `;
+      } else {
+        await sql`
+          UPDATE user_data SET album_data = ${stan.dane}, album = ${stan.ile}
+          WHERE user_id = ${wiersz.user_id}
+        `;
+      }
     }
   }
 

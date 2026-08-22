@@ -89,4 +89,21 @@ export const config = {
   get legacyBaseUrl(): string {
     return optional('SF_LEGACY_URL', '');
   },
+
+  /**
+   * Panel testowy u grzybiarza: awans, zloto, grzyby, reset piw i poziomu.
+   *
+   * To CHEATY — kazdy, kto ma konto, moze ich uzyc, wiec domyslnie sa
+   * wylaczone. Wlacza sie je swiadomie:
+   *
+   *     LOREIN_PANEL_TESTOWY=1
+   *
+   * Lokalnie (`npm run dev`) wlaczaja sie same, zeby nie trzeba bylo
+   * pamietac o zmiennej przy kazdym uruchomieniu.
+   */
+  get panelTestowy(): boolean {
+    const ustawiony = optional('LOREIN_PANEL_TESTOWY', '');
+    if (ustawiony !== '') return ustawiony === '1' || ustawiony === 'true';
+    return !this.serverless;
+  },
 };

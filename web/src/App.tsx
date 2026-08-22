@@ -412,7 +412,9 @@ export function App() {
             onPrzenies={przeniesPrzedmiot}
           />
         )}
-        {zakladka === 'grzybiarz' && <Grzybiarz grzyby={gracz.grzyby} />}
+        {zakladka === 'grzybiarz' && (
+          <Grzybiarz grzyby={gracz.grzyby} onGracz={setGracz} onBlad={setBlad} />
+        )}
         {zakladka === 'stajnia' && stajnia && (
           <Stajnia stan={stajnia} gracz={gracz} onWynajmij={wynajmijWierzchowca} />
         )}
