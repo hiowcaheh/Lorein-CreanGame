@@ -104,12 +104,20 @@ NAZWANE = {
     # Rozroznienie po jasnosci srodka: 204 ma 35, 207 (najazd) 60,
     # 210 (nieczynny) 17; w drugiej trojce 142 ma 36, 145 rozjasnia
     # ramke, a 148 przygasza wypelnienie do 22.
+    #
+    # NAZWY PLIKOW W `res/` SA NA ZAWSZE.
+    #
+    # Wdrozenie oddaje `/res/*` z naglowkiem `max-age=31536000, immutable`
+    # (patrz `backend/vercel.json`), wiec przegladarka NIGDY nie sprawdzi,
+    # czy plik sie zmienil. Podmieniona zawartosc pod ta sama nazwa nie
+    # dojdzie do nikogo, kto raz otworzyl gre — dlatego kazda poprawka
+    # grafiki musi dostac NOWA nazwe.
     204: 'guzik-menu',            # 180x50 — przycisk panelu bocznego
     207: 'guzik-menu-najazd',
     210: 'guzik-menu-wylaczony',
-    142: 'guzik',                 # 174x45 — zwykly przycisk dialogowy
-    145: 'guzik-najazd',
-    148: 'guzik-wylaczony',
+    142: 'guzik-zwykly',          # 174x45 — zwykly przycisk dialogowy
+    145: 'guzik-zwykly-najazd',
+    148: 'guzik-zwykly-wylaczony',
     153: 'guzik-waski',           # 140x45 — wezszy wariant, dwa stany
     156: 'guzik-waski-wylaczony',
     88: 'pasek',              # 255x49   — szeroki pas z kamiennymi koncami
@@ -131,6 +139,11 @@ NAZWANE = {
     256: 'plus-najazd',
     258: 'plus-wcisniety',
     183: 'tarcza-ikona',      # ikona pancerza przy prawej polowie ekranu
+    # Suwak z ekranu Warty (`DefineSlider`): tor ze smoczymi glowami
+    # na koncach, zlota strzalka jako uchwyt i niebieski znacznik podzialki.
+    39: 'suwak',              # 279x24 — `DragonSlider`
+    41: 'suwak-uchwyt',       # 14x22
+    85: 'suwak-znacznik',     # 10x19 — `SliderTick`
 }
 
 

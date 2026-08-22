@@ -7,7 +7,7 @@
  */
 
 import { bonusyZPrzedmiotow } from '../game/ekwipunek.js';
-import { cenaPunktow } from '../game/cechy.js';
+import { cenaPunktow, dokupionePunkty } from '../game/cechy.js';
 import { barwaPrzedmiotu, plikIkony } from '../game/grafikaPrzedmiotow.js';
 import {
   RODZAJ_MIKSTURY,
@@ -74,6 +74,13 @@ export interface Gracz {
    * z cech WLASNYCH postaci — bez przedmiotow i bez mikstur.
    */
   cenyCech: number[];
+
+  /**
+   * Ile punktow kazdej cechy gracz JUZ DOKUPIL ponad wartosc startowa.
+   * Z tego ekran liczy ceny kolejnych zakupow — tak samo, jak klient
+   * Flash liczyl je z `SG_ATTR_STAERKE_GEKAUFT`.
+   */
+  cechyDokupione: number[];
 
   zycie: number;
 
@@ -373,6 +380,9 @@ export function zbudujGracza(
     bonusy,
     cenyCech: [1, 2, 3, 4, 5].map((cecha) =>
       cenaPunktow(klasa, rasa, cecha, cechyWlasne[cecha - 1] ?? 0),
+    ),
+    cechyDokupione: [1, 2, 3, 4, 5].map((cecha) =>
+      dokupionePunkty(klasa, rasa, cecha, cechyWlasne[cecha - 1] ?? 0),
     ),
 
     zycie:

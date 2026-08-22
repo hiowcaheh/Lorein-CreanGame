@@ -5,6 +5,7 @@ import {
   cenaPunktow,
   cennikPunktow,
   dokupionePunkty,
+  ileStacNaZakupy,
   kolumnaCechy,
   sprawdzZakupCechy,
 } from '../src/game/cechy.js';
@@ -84,7 +85,32 @@ describe('kupowanie cech', () => {
     const baza = { klasa: WOJOWNIK, rasa: CZLOWIEK, wartosc: 17, srebro: 1000 };
 
     it('podnosi cechę o trzy i zabiera cene', () => {
-      expect(sprawdzZakupCechy(1, baza)).toEqual({ wartosc: 20, srebro: 975, cena: 25 });
+      expect(sprawdzZakupCechy(1, baza)).toEqual({
+        wartosc: 20,
+        srebro: 975,
+        cena: 25,
+        zakupow: 1,
+      });
+    });
+
+    it('hurtem liczy kolejne, coraz drozsze ceny', () => {
+      // Trzy zakupy pod rzad: 25 + 40 + 55 = 120 srebra i dziewiec punktow.
+      expect(sprawdzZakupCechy(1, baza, 3)).toEqual({
+        wartosc: 26,
+        srebro: 880,
+        cena: 120,
+        zakupow: 3,
+      });
+    });
+
+    it('hurtem bierze tyle, na ile starczy', () => {
+      // Za 70 srebra wychodza dwa zakupy (25 + 40), na trzeci brakuje.
+      expect(sprawdzZakupCechy(1, { ...baza, srebro: 70 }, 5)).toEqual({
+        wartosc: 23,
+        srebro: 5,
+        cena: 65,
+        zakupow: 2,
+      });
     });
 
     it('odmawia przy braku srebra', () => {
@@ -98,6 +124,15 @@ describe('kupowanie cech', () => {
         expect(sprawdzZakupCechy(zla, baza)).toBe('nie-ma-takiej-cechy');
       }
     });
+  });
+
+  it('liczy, ile zakupow starczy za dane srebro', () => {
+    // Ceny 25, 40, 55, 70... — za 120 srebra wychodza trzy.
+    expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 120)).toEqual({ ile: 3, koszt: 120 });
+    expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 119)).toEqual({ ile: 2, koszt: 65 });
+    expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 24)).toEqual({ ile: 0, koszt: 0 });
+    // Gorna granica przycina wynik, nawet gdy srebra jest duzo.
+    expect(ileStacNaZakupy(WOJOWNIK, CZLOWIEK, 1, 17, 10 ** 9, 2)).toMatchObject({ ile: 2 });
   });
 
   it('zna kolumny z `getStatName()`', () => {

@@ -50,15 +50,21 @@ cechy.post('/cecha/kup', async (c) => {
   if (!dane) return c.json({ blad: 'Brak sesji.' }, 401);
 
   const { sql, wiersz } = dane;
-  const zapytanie = (await c.req.json().catch(() => ({}))) as { cecha?: unknown };
+  const zapytanie = (await c.req.json().catch(() => ({}))) as { cecha?: unknown; ile?: unknown };
   const cecha = Number(zapytanie.cecha);
+  // Brak `ile` znaczy jeden zakup — tyle, ile daje jedno klikniecie „+".
+  const ile = zapytanie.ile === undefined ? 1 : Number(zapytanie.ile);
 
-  const wynik = sprawdzZakupCechy(cecha, {
-    klasa: liczba(wiersz['class']) || 1,
-    rasa: liczba(wiersz['race']) || 1,
-    wartosc: wartoscCechy(wiersz, cecha),
-    srebro: liczba(wiersz['silver']),
-  });
+  const wynik = sprawdzZakupCechy(
+    cecha,
+    {
+      klasa: liczba(wiersz['class']) || 1,
+      rasa: liczba(wiersz['race']) || 1,
+      wartosc: wartoscCechy(wiersz, cecha),
+      srebro: liczba(wiersz['silver']),
+    },
+    ile,
+  );
 
   if (typeof wynik === 'string') {
     return c.json({ blad: POWODY[wynik] ?? 'Nie da się.' }, 409);
@@ -90,8 +96,9 @@ cechy.post('/cecha/kup', async (c) => {
 
   return c.json({
     gracz: await wczytajGracza(sql, swiezy ?? wiersz),
-    /** Ile punktow doszlo — zawsze trzy, ale niech ekran nie zgaduje. */
-    przyrost: PUNKTOW_ZA_ZAKUP,
+    /** Ile punktow doszlo razem. */
+    przyrost: PUNKTOW_ZA_ZAKUP * wynik.zakupow,
+    zakupow: wynik.zakupow,
     cena: wynik.cena,
   });
 });

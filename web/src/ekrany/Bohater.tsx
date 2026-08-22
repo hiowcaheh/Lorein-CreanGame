@@ -7,10 +7,11 @@
  * oryginalu, bo cala scena jest skalowana jednym `transform`.
  */
 
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { PasekDoswiadczenia } from '../gra/PasekDoswiadczenia';
 import { PUNKTOW_ZA_ZAKUP, cenaPokazywana, opisCeny } from '../gra/cechy';
+import { OknoCechy } from './OknoCechy';
 import {
   OKRES_NAJMU,
   WIERZCHOWIEC,
@@ -68,6 +69,21 @@ import {
   type Ramka,
 } from '../gra/ekranPostaci';
 import type { Gracz, Mikstura, Przedmiot } from '../gra/typy';
+
+/**
+ * Gorna granica oslony pancerza — `DamageReductionMax` w kliencie
+ * i `GORNY_PANCERZ` w silniku walki: wojownik 50, mag 10, lowca 25.
+ */
+const GORNY_PANCERZ: Record<number, number> = { 1: 50, 2: 10, 3: 25 };
+
+/**
+ * O ile procent pancerz zmniejsza cios przeciwnika na WLASNYM poziomie
+ * gracza — `int(SG_ARMOR / SG_LEVEL)`, przyciete do granicy klasy.
+ */
+function oslonaPancerza(gracz: { pancerz: number; poziom: number; klasa: number }): number {
+  const oslona = Math.trunc(gracz.pancerz / Math.max(1, gracz.poziom));
+  return Math.min(oslona, GORNY_PANCERZ[gracz.klasa] ?? 50);
+}
 
 /**
  * O ile kazdy wierzchowiec skraca wyprawe — `mountMultiplier()`.
@@ -128,8 +144,8 @@ export function Bohater({
   onUsunMiksture: (miejsce: number) => void;
   /** Przejscie do stajni — klikniecie portretu wierzchowca. */
   onDoStajni: () => void;
-  /** Dokupienie trzech punktow cechy 1..5. */
-  onKupCeche: (cecha: number) => void;
+  /** Dokupienie `ile` razy po trzy punkty cechy 1..5. */
+  onKupCeche: (cecha: number, ile: number) => void;
 }) {
   /*
    * Czas do odliczania najmu wierzchowca. Odswiezamy co pol minuty —
@@ -239,41 +255,15 @@ export function Bohater({
   });
 
   /*
-   * Kursor nad ktoryms „+" zamienia PODPISY wartosci pochodnych na CENY
-   * punktow — `BoostBtnOver` przelacza wiazki `BNC_CHAR_SECONDPROP`
-   * i `BNC_CHAR_PREISE`. Same wartosci (kolumna szosta) zostaja.
+   * Klikniecie „+" otwiera okno z suwakiem — patrz `OknoCechy`.
+   * Oryginal kupowal wprost z ekranu, a cene pokazywal na czas najazdu
+   * myszka; na telefonie nie ma czego najezdzac, wiec zamiast tego
+   * wychodzi okno. Ceny w kolumnie obok zostaja i dalej przelaczaja sie
+   * z podpisami wartosci pochodnych.
    */
+  const [otwartaCecha, setOtwartaCecha] = useState<number | null>(null);
+  const [pokazPancerz, setPokazPancerz] = useState(false);
   const [pokazCeny, setPokazCeny] = useState(false);
-
-  /*
-   * Przytrzymany „+" kupuje dalej — `BoostBtnRepeatTimer`. Pierwsze
-   * powtorzenie po sekundzie, dwa nastepne co pol sekundy, potem co
-   * cwierc. Zwykle klikniecie kupuje raz, tak jak `BoostAttribute`.
-   */
-  const powtarzanie = useRef<{ zegar: ReturnType<typeof setTimeout>; ile: number } | null>(null);
-
-  const przerwijPowtarzanie = useCallback(() => {
-    if (powtarzanie.current) clearTimeout(powtarzanie.current.zegar);
-    powtarzanie.current = null;
-  }, []);
-
-  useEffect(() => przerwijPowtarzanie, [przerwijPowtarzanie]);
-
-  function zacznijPowtarzanie(cecha: number) {
-    przerwijPowtarzanie();
-
-    const nastepne = () => {
-      const stan = powtarzanie.current;
-      if (!stan) return;
-      stan.ile += 1;
-      onKupCeche(cecha);
-      // `case 1: delay = 500; case 3: delay = 250;`
-      const odstep = stan.ile >= 3 ? 250 : 500;
-      stan.zegar = setTimeout(nastepne, odstep);
-    };
-
-    powtarzanie.current = { zegar: setTimeout(nastepne, 1000), ile: 0 };
-  }
 
   /*
    * Prawa kolumna zalezy od KLASY — sklada ja `wierszePochodnych`,
@@ -376,16 +366,10 @@ export function Bohater({
             aria-label={`Dokup ${PUNKTOW_ZA_ZAKUP} punkty: ${cecha.nazwa}`}
             disabled={!cecha.stac}
             onPointerEnter={() => setPokazCeny(true)}
-            onPointerLeave={() => {
-              setPokazCeny(false);
-              przerwijPowtarzanie();
-            }}
+            onPointerLeave={() => setPokazCeny(false)}
             onFocus={() => setPokazCeny(true)}
             onBlur={() => setPokazCeny(false)}
-            onPointerDown={() => cecha.stac && zacznijPowtarzanie(i + 1)}
-            onPointerUp={przerwijPowtarzanie}
-            onPointerCancel={przerwijPowtarzanie}
-            onClick={() => onKupCeche(i + 1)}
+            onClick={() => setOtwartaCecha(i + 1)}
           />
 
           {/*
@@ -474,10 +458,56 @@ export function Bohater({
         </>
       )}
 
-      <img className="postac-ikona-pancerza" style={styl(IKONA_PANCERZA)} src={IKONA_TARCZY} alt="" />
-      <div className="postac-pancerz" style={styl(PANCERZ)}>
+      {/*
+        Pancerz. Klikniecie pokazuje podpowiedz, ktora oryginal wiesza na
+        ikonie i na napisie (`EnablePopup(LBL_CHAR_RUESTUNG, ...)`):
+
+            Pancerz
+            Obrazenia dla przeciwnika na poziomie N: -X% (maks. -Y%)
+            = (Pancerz / Poziom przeciwnika) zaokraglone
+
+        Gorna granica zalezy od KLASY: wojownik 50, lowca 25, mag 10 —
+        te same liczby, ktorymi liczy sie oslone w walce.
+      */}
+      <button
+        type="button"
+        className="postac-pancerz-ikona"
+        style={styl(IKONA_PANCERZA)}
+        aria-label="Pancerz"
+        onClick={() => setPokazPancerz((czy) => !czy)}
+      >
+        <img src={IKONA_TARCZY} alt="" />
+      </button>
+      <button
+        type="button"
+        className="postac-pancerz"
+        style={styl(PANCERZ)}
+        onClick={() => setPokazPancerz((czy) => !czy)}
+      >
         Pancerz: {gracz.pancerz}
-      </div>
+      </button>
+
+      {pokazPancerz && (
+        <div
+          className="podpowiedz postac-podpowiedz-pancerza"
+          style={{
+            left: parseFloat(IKONA_PANCERZA.lewo),
+            top: parseFloat(IKONA_PANCERZA.gora) - 118,
+            width: 420,
+          }}
+          role="dialog"
+          aria-label="Pancerz"
+        >
+          <div className="nazwa">Pancerz</div>
+          <div className="wiersz">
+            <span>
+              Obrażenia dla przeciwnika na poziomie {gracz.poziom}: −{oslonaPancerza(gracz)}% (maks.
+              −{GORNY_PANCERZ[gracz.klasa] ?? 50}%)
+            </span>
+          </div>
+          <div className="cytat">= (Pancerz / Poziom przeciwnika) zaokrąglone</div>
+        </div>
+      )}
 
       {/*
         Osiem odznak, kazda w pieciu stopniach (`ach-{numer}-{stopien}.png`).
@@ -521,6 +551,15 @@ export function Bohater({
           przedmiot={pokazany}
           miejsce={srodekMiejsca(pokazany)}
           onZamknij={() => setPokazany(null)}
+        />
+      )}
+
+      {otwartaCecha !== null && (
+        <OknoCechy
+          gracz={gracz}
+          cecha={otwartaCecha}
+          onKup={(cecha, ile) => onKupCeche(cecha, ile)}
+          onZamknij={() => setOtwartaCecha(null)}
         />
       )}
 

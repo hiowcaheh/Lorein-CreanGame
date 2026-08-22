@@ -20,6 +20,7 @@ import { Opcje } from './ekrany/Opcje';
 import { GABINET, ZBROJOWNIA } from './gra/sklepUklad';
 import { Sklep } from './ekrany/Sklep';
 import { Stajnia, type StanStajni } from './ekrany/Stajnia';
+import { Grzybiarz } from './ekrany/Grzybiarz';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, StanKarczmy, StanSklepu } from './gra/typy';
@@ -53,7 +54,7 @@ const MENU: { klucz: Zakladka; nazwa: string; grupa: string }[] = [
 ];
 
 /** Zakladki, ktore juz cos pokazuja. Reszta czeka na swoja kolej. */
-const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'stajnia', 'opcje'];
+const GOTOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia', 'stajnia', 'grzybiarz', 'opcje'];
 
 /** Zakladki, ktore wypelniaja cala rame wlasnym obrazem. */
 const PELNOEKRANOWE: Zakladka[] = ['miasto', 'bohater', 'karczma', 'zbrojownia', 'magia'];
@@ -166,9 +167,9 @@ export function App() {
    * Cene i sprawdzenie kasy robi serwer — klient wysyla sam numer
    * cechy, tak jak `SendAction(ACT_BUY_ATTRIB, numer)` w oryginale.
    */
-  function kupCeche(cecha: number) {
+  function kupCeche(cecha: number, ile = 1) {
     setBlad(null);
-    void zapytaj<{ gracz: Gracz }>('/cecha/kup', { cecha })
+    void zapytaj<{ gracz: Gracz }>('/cecha/kup', { cecha, ile })
       .then(({ gracz: g }) => setGracz(g))
       .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się dokupić punktów.'));
   }
@@ -395,6 +396,7 @@ export function App() {
             onPrzenies={przeniesPrzedmiot}
           />
         )}
+        {zakladka === 'grzybiarz' && <Grzybiarz grzyby={gracz.grzyby} />}
         {zakladka === 'stajnia' && stajnia && (
           <Stajnia stan={stajnia} gracz={gracz} onWynajmij={wynajmijWierzchowca} />
         )}

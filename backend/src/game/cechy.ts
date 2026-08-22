@@ -131,25 +131,75 @@ export interface WynikZakupu {
   wartosc: number;
   /** Ile srebra zostanie. */
   srebro: number;
-  /** Ile kosztowal ten zakup. */
+  /** Ile kosztowaly wszystkie zakupy razem. */
   cena: number;
+  /** Ile zakupow naprawde doszlo do skutku. */
+  zakupow: number;
 }
 
-/** Czy da sie dokupic punkty i co z tego wyjdzie. */
+/**
+ * Czy da sie dokupic punkty i co z tego wyjdzie.
+ *
+ * `ile` to liczba ZAKUPOW, nie punktow — jeden zakup daje trzy punkty
+ * i kosztuje kolejna cene z cennika. Odmowa przychodzi tylko wtedy, gdy
+ * nie starcza nawet na pierwszy.
+ */
 export function sprawdzZakupCechy(
   cecha: number,
   stan: { klasa: number; rasa: number; wartosc: number; srebro: number },
+  ile = 1,
 ): OdmowaZakupu | WynikZakupu {
   if (!Number.isInteger(cecha) || cecha < 1 || cecha > LICZBA_CECH) return 'nie-ma-takiej-cechy';
+  if (!Number.isInteger(ile) || ile < 1) return 'nie-ma-takiej-cechy';
 
-  const cena = cenaPunktow(stan.klasa, stan.rasa, cecha, stan.wartosc);
-  if (stan.srebro < cena) return 'za-drogo';
+  const { ile: zakupow, koszt } = ileStacNaZakupy(
+    stan.klasa,
+    stan.rasa,
+    cecha,
+    stan.wartosc,
+    stan.srebro,
+    ile,
+  );
+
+  if (zakupow === 0) return 'za-drogo';
 
   return {
-    wartosc: stan.wartosc + PUNKTOW_ZA_ZAKUP,
-    srebro: stan.srebro - cena,
-    cena,
+    wartosc: stan.wartosc + PUNKTOW_ZA_ZAKUP * zakupow,
+    srebro: stan.srebro - koszt,
+    cena: koszt,
+    zakupow,
   };
+}
+
+/**
+ * Ile RAZY z rzedu da sie dokupic punkty za posiadane srebro.
+ *
+ * Oryginal nie zna zakupu hurtem — tam klika sie „+" tyle razy, ile
+ * trzeba, i kazde klikniecie kosztuje wiecej. Zbiorczy zakup liczy
+ * dokladnie to samo: kolejne ceny z cennika, jedna po drugiej.
+ */
+export function ileStacNaZakupy(
+  klasa: number,
+  rasa: number,
+  cecha: number,
+  wartosc: number,
+  srebro: number,
+  gornaGranica = 999,
+): { ile: number; koszt: number } {
+  const cennik = cennikPunktow();
+  let dokupione = dokupionePunkty(klasa, rasa, cecha, wartosc);
+  let koszt = 0;
+  let ile = 0;
+
+  while (ile < gornaGranica) {
+    const cena = dokupione > DLUGOSC_TABLICY ? NAJWYZSZA_CENA : (cennik[dokupione] ?? NAJWYZSZA_CENA);
+    if (koszt + cena > srebro) break;
+    koszt += cena;
+    ile += 1;
+    dokupione += PUNKTOW_ZA_ZAKUP;
+  }
+
+  return { ile, koszt };
 }
 
 /** Nazwa kolumny w `user_data` — `getStatName()`. */

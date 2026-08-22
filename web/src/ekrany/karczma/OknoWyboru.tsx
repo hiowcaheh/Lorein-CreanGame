@@ -188,8 +188,8 @@ export function OknoWyboru({
              * (740x440) ani nie zaslonic przyciskow. Dwa wiersze pisma
              * po 26 px plus margines — tyle, ile ma `.podpowiedz`.
              */
-            top: OKNO_NAGRODY.gora - OKNO.gora + 3 * ODSTEP_NAGROD - 76,
-            width: 260,
+            top: OKNO_NAGRODY.gora - OKNO.gora + 3 * ODSTEP_NAGROD - 84,
+            width: 300,
           }}
         >
           <div>

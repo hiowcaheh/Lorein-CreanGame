@@ -36,6 +36,9 @@ export interface Gracz {
    */
   cenyCech: number[];
 
+  /** Ile punktow kazdej cechy gracz juz dokupil ponad wartosc startowa. */
+  cechyDokupione: number[];
+
   /** Polowa sily — pierwszy wiersz prawej kolumny. */
   obrona: number;
   unik: number;
