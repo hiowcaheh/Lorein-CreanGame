@@ -134,7 +134,14 @@ img { max-width: 100%; }
   top: 0;
   width: 1280px;
   height: 100px;
-  background: url('/res/ui/baner.png') 0 0 / 1280px 100px no-repeat;
+  /*
+   * Pas z NASZYM tytulem. Logo jest w oryginale namalowane wprost na
+   * pasie, wiec podmiana to nalozenie nowego na stare — robi to
+   * `backend/scripts/wklej-logo-na-baner.py`. Plik ma inna nazwe niz
+   * `baner.png`, bo `/res/*` idzie z `immutable` i podmieniona
+   * zawartosc pod stara nazwa nie doszlaby do nikogo.
+   */
+  background: url('/res/ui/baner-lorein.png') 0 0 / 1280px 100px no-repeat;
 }
 
 /* Napisy po bokach pasa — ItemShop z lewej, wyjscie z prawej. */
