@@ -188,7 +188,15 @@ export function Lochy({
                   width: KAFEL.szerokosc,
                   height: KAFEL.wysokosc,
                 }}
-                disabled={zamkniety && !swiezy}
+                /*
+                  Przejscionego lochu nie da sie juz otworzyc — nie ma tam
+                  czego robic. SWIADOME ODSTEPSTWO, patrz CLAUDE.md:
+                  oryginal na pierwszej planszy otwiera go i tylko wygasza
+                  przycisk walki (`CNT_MAINQUEST_GREY`), a na drugiej
+                  klikniecie DOWOLNEGO kafla i tak pokazuje loch biezacy
+                  (`if (countDone == 9) ShowMainQuestScreen(9, ...)`).
+                */
+                disabled={(zamkniety && !swiezy) || przeszedl}
                 title={[
                   nazwa?.nazwa,
                   nazwa?.motto,
@@ -205,7 +213,7 @@ export function Lochy({
                   .filter(Boolean)
                   .join('\n')}
                 onClick={() => {
-                  if (zamkniety && !swiezy) return;
+                  if ((zamkniety && !swiezy) || przeszedl) return;
                   zagraj(KLIK);
                   setWybrany(loch.numer);
                 }}
