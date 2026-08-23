@@ -16,6 +16,7 @@ import { config } from '../config.js';
 import { LEVELS } from '../protocol/gamedata.js';
 import { loadDefaultStats } from '../game/stats.js';
 import { KAWALKOW as KAWALKOW_LUSTRA } from '../game/lustro.js';
+import { PIERWSZY_POZIOM, kolumnaLochu } from '../game/lochy.js';
 import { wczytajGracza } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
 
@@ -23,6 +24,13 @@ export const testy = new Hono();
 
 /** Ile srebra to jedno zloto — tak samo, jak w pasku u gory. */
 const SREBRA_W_ZLOCIE = 100;
+
+/**
+ * Ile lochow otwiera przycisk. Dziewiec — tyle ma kafli plansza lochow;
+ * dziesiaty i dalsze to Wieza i Portal, ktore chodza wlasnymi zasadami
+ * (patrz DO-ZROBIENIA.md).
+ */
+const LOCHOW_DO_OTWARCIA = 9;
 
 /** Lustro bez ostatniego kawalka — dwanascie jedynek i zero. */
 const BEZ_OSTATNIEGO_KAWALKA = '1'.repeat(KAWALKOW_LUSTRA - 1) + '0';
@@ -33,13 +41,13 @@ const NAJWYZSZY_POZIOM = LEVELS.length - 1;
 export type Sztuczka =
   | 'awans-1'
   | 'awans-10'
-  | 'zloto-1000'
-  | 'zloto-10000'
   | 'zloto-10000000'
+  | 'zloto-100000000'
   | 'grzyby-1000'
   | 'piwa-zeruj'
   | 'poziom-1'
-  | 'lustro-prawie';
+  | 'lustro-prawie'
+  | 'lochy-otworz';
 
 interface WierszGracza extends Record<string, unknown> {
   user_id: number;
@@ -73,11 +81,9 @@ testy.post('/testy/:sztuczka', async (c) => {
       break;
     }
 
-    case 'zloto-1000':
-    case 'zloto-10000':
-    case 'zloto-10000000': {
-      const zloto =
-        sztuczka === 'zloto-10000000' ? 10000000 : sztuczka === 'zloto-10000' ? 10000 : 1000;
+    case 'zloto-10000000':
+    case 'zloto-100000000': {
+      const zloto = sztuczka === 'zloto-100000000' ? 100_000_000 : 10_000_000;
       await sql`
         UPDATE user_data SET silver = silver + ${zloto * SREBRA_W_ZLOCIE}
         WHERE user_id = ${wiersz.user_id}
@@ -92,6 +98,25 @@ testy.post('/testy/:sztuczka', async (c) => {
     case 'piwa-zeruj':
       await sql`UPDATE user_data SET beers = 0 WHERE user_id = ${wiersz.user_id}`;
       break;
+
+    case 'lochy-otworz': {
+      /*
+       * Otwiera wszystkie dziewiec lochow naraz — bez zbierania kluczy.
+       * `GREATEST` zamiast zwyklego przypisania, zeby NIE COFNAC postepu
+       * w lochu, ktory gracz juz zaczal: stan `2` to pierwszy poziom,
+       * a wyzsze liczby znacza, ile pieter ma juz za soba.
+       */
+      for (let loch = 1; loch <= LOCHOW_DO_OTWARCIA; loch++) {
+        const kolumna = kolumnaLochu(loch);
+        if (!kolumna) continue;
+        await sql`
+          UPDATE user_data
+          SET ${sql(kolumna)} = GREATEST(${sql(kolumna)}, ${PIERWSZY_POZIOM})
+          WHERE user_id = ${wiersz.user_id}
+        `;
+      }
+      break;
+    }
 
     case 'lustro-prawie': {
       /*

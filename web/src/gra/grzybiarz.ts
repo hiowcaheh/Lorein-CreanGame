@@ -113,13 +113,13 @@ export interface SztuczkaTestowa {
 export const SZTUCZKI: SztuczkaTestowa[] = [
   { klucz: 'awans-1', napis: '+1 poziom' },
   { klucz: 'awans-10', napis: '+10 poziomów' },
-  { klucz: 'zloto-1000', napis: '+1000 złota' },
-  { klucz: 'zloto-10000', napis: '+10 000 złota' },
   { klucz: 'zloto-10000000', napis: '+10 mln złota' },
+  { klucz: 'zloto-100000000', napis: '+100 mln złota' },
   { klucz: 'grzyby-1000', napis: '+1000 grzybów' },
   { klucz: 'piwa-zeruj', napis: 'Wyzeruj piwa' },
   { klucz: 'poziom-1', napis: 'Poziom 1 (reset)' },
   { klucz: 'lustro-prawie', napis: 'Lustro 12/13' },
+  { klucz: 'lochy-otworz', napis: 'Otwórz lochy 1-9' },
 ];
 
 export function cenaSlownie(grosze: number): string {
