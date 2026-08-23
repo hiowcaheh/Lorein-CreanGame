@@ -8,6 +8,11 @@
 
 import { useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../../gra/PodpowiedzPrzedmiotu';
+import {
+  OknoNagrody,
+  wysokoscOknaNagrody,
+  type RodzajNagrody,
+} from '../../gra/OknoNagrody';
 import { KRAINY, PODPISY } from '../../gra/karczma-teksty';
 import { nazwaWierzchowca, zyskZWierzchowca } from '../../gra/stajnia';
 import {
@@ -69,7 +74,12 @@ export function OknoWyboru({
 }) {
   const [wybrane, setWybrane] = useState<Zadanie | null>(stan.zadania[0] ?? null);
   const [pokazanyPrzedmiot, setPokazanyPrzedmiot] = useState(false);
-  const [pokazanaPremia, setPokazanaPremia] = useState(false);
+  /*
+   * Ktora nagroda ma otwarte rozpisanie. Doswiadczenie i pieniadze maja
+   * OSOBNE okienka — to samo, co na ekranie po walce.
+   */
+  const [otwartaNagroda, setOtwartaNagroda] = useState<RodzajNagrody | null>(null);
+  const przelacz = (co: RodzajNagrody) => setOtwartaNagroda((s) => (s === co ? null : co));
   const [pokazanyCzas, setPokazanyCzas] = useState(false);
   if (!wybrane) return null;
 
@@ -160,24 +170,22 @@ export function OknoWyboru({
       */}
       {[
         <>{PODPISY.wynagrodzenie}</>,
-        <>
+        /*
+          Pieniadze. Na ekranie stoi samo ZLOTO — srebro (koncowka ponizej
+          stu) schodzi do okienka, tak samo jak po walce. SWIADOME
+          ODSTEPSTWO, patrz tabela w CLAUDE.md.
+        */
+        <button type="button" className="karczma-premia" onClick={() => przelacz('zloto')}>
           {liczba(Math.floor(wybrane.zloto / 100))}
           <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
-          {String(wybrane.zloto % 100).padStart(2, '0')}
-          <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
-        </>,
+        </button>,
         /*
           Doswiadczenie. Liczba jest juz Z PREMIAMI — tak samo podaje ja
           `req.php` (`round(quest_exp * ($ebonus + $albumbonus + $rqbonus))`).
           Klikniecie rozpisuje, ile z tego dokłada klaser i rzadkie
           zadanie — to samo mowi podpowiedz w oryginale.
         */
-        <button
-          type="button"
-          className="karczma-premia"
-          disabled={premiaLacznie === 0}
-          onClick={() => setPokazanaPremia((czy) => !czy)}
-        >
+        <button type="button" className="karczma-premia" onClick={() => przelacz('exp')}>
           {PODPISY.doswiadczenie}: {liczba(wybrane.doswiadczenie)}
           {premiaLacznie > 0 && (
             <img className="skacze" src={ZNACZEK_PREMII} alt="z premią" />
@@ -211,39 +219,31 @@ export function OknoWyboru({
       ))}
 
       {/*
-        Z czego sklada sie premia do doswiadczenia — to samo, co mowi
-        podpowiedz w oryginale:
+        Rozpisanie nagrody. Doswiadczenie ma premie (klaser, rzadkie
+        zadanie) — tak samo, jak mowi o nich podpowiedz w oryginale:
 
             txt[TXT_EXPBONUS_PREFIX] + " " + SG_EXP_BONUS + "% " + txt[TXT_EXPBONUS_SUFFIX]
               + " + " + round((SG_ALBUM - 10000) / contentMax * 100) + "% " + txt[TXT_COLLECTION + 1]
 
-        Stoi NAD wierszem z doswiadczeniem, tak samo jak podpowiedz
-        czasu — inaczej zaslonilaby przyciski.
+        Pieniedzy przy wyprawie zadna premia nie dotyczy (`finishQuest`
+        podbija samo doswiadczenie), wiec ich okienko podaje tylko zloto
+        i srebro. Oba staja NAD swoim wierszem, zeby nie zaslonic przyciskow.
       */}
-      {pokazanaPremia && premiaLacznie > 0 && (
-        <div
-          className="podpowiedz karczma-premia-podpowiedz"
-          style={{
-            left: OKNO_NAGRODY.lewo - OKNO.lewo,
-            top: OKNO_NAGRODY.gora - OKNO.gora + 2 * ODSTEP_NAGROD - 84,
-            width: 300,
-          }}
-        >
-          <div>{PODPISY.wTym}:</div>
-          {/*
-            Kazda premia ma wlasny kolor — po nim widac, skad sie wziela,
-            bez czytania nazwy. Kolekcjonerska jest blekitna; nastepne
-            (gildia, wieza) dostana swoje.
-          */}
-          {wybrane.premie.klaser > 0 && (
-            <div className="premia-klaser">
-              {PODPISY.premiaKolekcjonera}: +{wybrane.premie.klaser}%
-            </div>
-          )}
-          {wybrane.premie.rzadkie > 0 && (
-            <div className="premia-rzadkie">Rzadkie zadanie: +{wybrane.premie.rzadkie}%</div>
-          )}
-        </div>
+      {otwartaNagroda && (
+        <OknoNagrody
+          rodzaj={otwartaNagroda}
+          wartosc={otwartaNagroda === 'exp' ? wybrane.doswiadczenie : wybrane.zloto}
+          premie={otwartaNagroda === 'exp' ? wybrane.premie : undefined}
+          lewo={OKNO_NAGRODY.lewo - OKNO.lewo}
+          gora={
+            OKNO_NAGRODY.gora -
+            OKNO.gora +
+            (otwartaNagroda === 'exp' ? 2 : 1) * ODSTEP_NAGROD -
+            wysokoscOknaNagrody(otwartaNagroda, otwartaNagroda === 'exp' ? wybrane.premie : undefined) -
+            8
+          }
+          onZamknij={() => setOtwartaNagroda(null)}
+        />
       )}
 
       {/*

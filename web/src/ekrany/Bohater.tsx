@@ -127,6 +127,9 @@ function styl(r: Ramka): React.CSSProperties {
   return { left: r.lewo, top: r.gora, width: r.szerokosc, height: r.wysokosc };
 }
 
+/** Naglowek i dwa wiersze podpowiedzi klasera — 16 px zapasu na obwodke. */
+const WYSOKOSC_PODPOWIEDZI_KLASERA = 16 + 3 * 26;
+
 /** Wiersz cech: POS_CHAR_PROP_Y + i * REL_CHAR_PROP_Y, minus poczatek ekranu. */
 function wiersz(i: number): number {
   return WIERSZ_CECHY_Y - 100 + i * ODSTEP_WIERSZA;
@@ -608,7 +611,16 @@ export function Bohater({
       {pokazKlaser && (
         <div
           className="podpowiedz postac-podpowiedz-klasera"
-          style={{ left: parseFloat(KLASER.lewo) - 240, top: parseFloat(KLASER.gora) + 54, width: 300 }}
+          /*
+            NAD ikonka, wysrodkowana na niej. Pod spodem sie nie miesci:
+            ikonka konczy sie na 664, a ekran gry ma 700 px wysokosci —
+            okienko wychodzilo poza dol i nie dalo sie go przeczytac.
+          */
+          style={{
+            left: parseFloat(KLASER.lewo) + parseFloat(KLASER.szerokosc) / 2 - 150,
+            top: parseFloat(KLASER.gora) - WYSOKOSC_PODPOWIEDZI_KLASERA - 8,
+            width: 300,
+          }}
           role="dialog"
           aria-label="Klaser Dokładności"
         >

@@ -27,7 +27,7 @@ import { Walka } from './ekrany/karczma/Walka';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, Rozliczenie, StanKarczmy, StanSklepu } from './gra/typy';
-import { klasaWielkosci, liczba, skrocona } from './gra/liczby';
+import { klasaWielkosci, liczba } from './gra/liczby';
 
 type Zakladka =
   | 'miasto'
@@ -681,6 +681,16 @@ function Rama({
 function Zasoby({ srebro, grzyby }: { srebro: number; grzyby: number }) {
   const [dokladnie, setDokladnie] = useState(false);
   const zloto = Math.floor(srebro / 100);
+  const reszta = srebro % 100;
+
+  /*
+   * Srebro (koncowka ponizej stu) stoi na pasku TYLKO wtedy, gdy nie ma
+   * ani jednego zlota — SWIADOME ODSTEPSTWO, patrz tabela w CLAUDE.md.
+   * Przy zlocie liczonym w milionach koncowka nic nie wnosila, a zjadala
+   * miejsce, przez ktore cala kwota wychodzila poza ramke panelu.
+   * Dokladne liczby sa pod klikniecem.
+   */
+  const zeSrebrem = zloto === 0;
 
   return (
     <div className="zasoby">
@@ -690,14 +700,18 @@ function Zasoby({ srebro, grzyby }: { srebro: number; grzyby: number }) {
         title="Złoto i srebro — kliknij, żeby zobaczyć dokładną kwotę"
         onClick={() => setDokladnie((czy) => !czy)}
       >
-        <span className={klasaWielkosci(zloto)}>{skrocona(zloto)}</span>
+        <span className={klasaWielkosci(zloto)}>{liczba(zloto)}</span>
         <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
-        <span>{String(srebro % 100).padStart(2, '0')}</span>
-        <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+        {zeSrebrem && (
+          <>
+            <span>{String(reszta).padStart(2, '0')}</span>
+            <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+          </>
+        )}
       </button>
 
       <div className="linia" title="Grzyby">
-        <span className={klasaWielkosci(grzyby)}>{skrocona(grzyby)}</span>
+        <span className={klasaWielkosci(grzyby)}>{liczba(grzyby)}</span>
         <img className="grzyb" src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
       </div>
 
@@ -709,7 +723,7 @@ function Zasoby({ srebro, grzyby }: { srebro: number; grzyby: number }) {
           </div>
           <div className="wiersz">
             <span>Srebro</span>
-            <span>{String(srebro % 100).padStart(2, '0')}</span>
+            <span>{String(reszta).padStart(2, '0')}</span>
           </div>
           <div className="wiersz">
             <span>Grzyby</span>

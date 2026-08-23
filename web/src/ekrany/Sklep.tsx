@@ -590,8 +590,13 @@ function PytanieOWymiane({
           W sklepie {epiki.length > 1 ? 'są przedmioty epickie' : 'jest przedmiot epicki'} do
           kupienia:
         </div>
+        {/*
+          Nazwa epika w jego wlasnym kolorze — tym samym, co cytat
+          przedmiotu epickiego w podpowiedzi (`--blekit-cytat`), pogrubiona
+          i wysrodkowana, zeby od razu bylo widac, o co chodzi.
+        */}
         {epiki.map((e) => (
-          <div className="cytat" key={e.slot}>
+          <div className="nazwa-epika" key={e.slot}>
             „{nazwaPrzedmiotu(e)}"
           </div>
         ))}
@@ -609,7 +614,9 @@ function PytanieOWymiane({
         }}
         onClick={onOdswiez}
       >
+        {/* Odswiezenie kosztuje grzybka — niech to widac na przycisku. */}
         Odśwież
+        <img className="koszt-grzybka" src="/res/sfgame/if/icon_pilz.png" alt="grzyb" />
       </button>
       <button
         type="button"

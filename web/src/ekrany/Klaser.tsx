@@ -90,6 +90,8 @@ function dataOdblokowania(daty: StanKlasera['daty'], bit: number): string {
 
 /** Co pokazac w okienku po klikniecu w ikone. */
 export interface WybranaPozycja {
+  /** Co dokladnie klikniete — po tym poznaje sie, ktory guzik ma ramke. */
+  klucz: string;
   nazwa: string;
   /** Czy gracz ma juz te pozycje w klaserze. */
   zebrana: boolean;
@@ -237,6 +239,7 @@ export function Klaser({ stan }: { stan: StanKlasera }) {
           pozycja={ulozone[strona * 4 + i] ?? { rodzaj: 'pusta' }}
           bity={bity}
           daty={stan.daty}
+          wybranyKlucz={wybrana?.klucz ?? null}
           onWybor={setWybrana}
         />
       ))}
@@ -318,6 +321,7 @@ function Gniazdo({
   pozycja,
   bity,
   daty,
+  wybranyKlucz,
   onWybor,
 }: {
   /** 0..3 — potrzebny licznikowi, ktory patrzy na PIERWSZE gniazdo. */
@@ -326,6 +330,8 @@ function Gniazdo({
   pozycja: Pozycja;
   bity: readonly boolean[];
   daty: StanKlasera['daty'];
+  /** Klucz ikony z otwartym okienkiem — ta jedna dostaje ramke. */
+  wybranyKlucz: string | null;
   onWybor: (co: WybranaPozycja) => void;
 }) {
   if (pozycja.rodzaj === 'pusta') return null;
@@ -366,6 +372,8 @@ function Gniazdo({
           nazwa={naglowek}
           zebrana={znaleziony}
           data={dataOdblokowania(daty, pozycja.bit)}
+          klucz={String(pozycja.bit)}
+          wybrany={wybranyKlucz === String(pozycja.bit)}
           onWybor={onWybor}
         />
       </>
@@ -401,6 +409,8 @@ function Gniazdo({
               nazwa={naglowek}
               zebrana
               data={dataOdblokowania(daty, pozycja.bit)}
+              klucz={String(pozycja.bit)}
+              wybrany={wybranyKlucz === String(pozycja.bit)}
               onWybor={onWybor}
             />
           </>
@@ -445,6 +455,8 @@ function Gniazdo({
                 nazwa={`${naglowek} (barwa ${b + 1} z 5)`}
                 zebrana={ma}
                 data={dataOdblokowania(daty, pozycja.bit + b)}
+                klucz={String(pozycja.bit + b)}
+                wybrany={wybranyKlucz === String(pozycja.bit + b)}
                 onWybor={onWybor}
               />
             </Fragment>
@@ -456,6 +468,8 @@ function Gniazdo({
 
 /** Przezroczysty guzik na ikonie — otwiera okienko z data odblokowania. */
 function GuzikPozycji({
+  klucz,
+  wybrany,
   lewo,
   gora,
   bok,
@@ -464,6 +478,9 @@ function GuzikPozycji({
   data,
   onWybor,
 }: {
+  /** Numer bitu tej ikony — jednoznaczny w calym klaserze. */
+  klucz: string;
+  wybrany: boolean;
   lewo: number;
   gora: number;
   bok: number;
@@ -475,12 +492,13 @@ function GuzikPozycji({
   return (
     <button
       type="button"
-      className="klaser-guzik"
+      className={wybrany ? 'klaser-guzik wybrany' : 'klaser-guzik'}
       style={{ left: lewo, top: gora, width: bok, height: bok }}
       aria-label={nazwa}
+      aria-pressed={wybrany}
       onClick={() => {
         zagraj(KLIK);
-        onWybor({ nazwa, zebrana, data, x: lewo + bok / 2, gora, dol: gora + bok });
+        onWybor({ klucz, nazwa, zebrana, data, x: lewo + bok / 2, gora, dol: gora + bok });
       }}
     />
   );

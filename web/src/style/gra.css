@@ -250,14 +250,16 @@ img { max-width: 100%; }
 .zasoby .linia:nth-child(2) { top: 45px; }
 
 /* Wiersz ze zlotem jest przyciskiem — pokazuje dokladna kwote. */
-button.zasoby .linia,
 .zasoby button.linia {
+  appearance: none;
   padding: 0;
   border: none;
   background: none;
   font: inherit;
   cursor: pointer;
 }
+
+.zasoby button.linia:hover { filter: brightness(1.15); }
 
 /*
  * Kolory rzedow wielkosci — od miliona zielony, od dziesieciu milionow
@@ -327,7 +329,14 @@ button.zasoby .linia,
   margin-bottom: -6px;
 }
 
-.menu button {
+/*
+ * Kamienne przyciski menu — TYLKO te z listy.
+ *
+ * Bez `ul` w selektorze regula lapala takze przycisk z kwota zlota
+ * u gory panelu i podkladala mu kamien pod napis: przy najechaniu
+ * wygladalo to, jakby cos bylo wcisniete.
+ */
+.menu ul button {
   appearance: none;
   position: relative;
   display: flex;
@@ -356,12 +365,12 @@ button.zasoby .linia,
   cursor: pointer;
 }
 
-.menu button:hover:not(:disabled),
-.menu button[aria-current='true'] {
+.menu ul button:hover:not(:disabled),
+.menu ul button[aria-current='true'] {
   background-image: url('/res/ui/guzik-menu-najazd.png');
 }
 
-.menu button:active:not(:disabled) { transform: translateY(1px); }
+.menu ul button:active:not(:disabled) { transform: translateY(1px); }
 
 /*
  * Zakladka jeszcze nie przeniesiona.
@@ -370,7 +379,7 @@ button.zasoby .linia,
  * przyciskow jest jednakowych, zlotych, i tak ma wygladac menu. Roznice
  * robi tylko lekkie przygaszenie napisu.
  */
-.menu button:disabled { cursor: default; }
+.menu ul button:disabled { cursor: default; }
 
 /*
  * Glowa smoka stoi tuz za prawa krawedzia przycisku (REL_DRAGON_X = 180,
@@ -1489,43 +1498,60 @@ button.postac-wierzchowiec-obraz img {
 
 /*
  * Znaczek premii przy nagrodzie po walce. Stoi WEWNATRZ grupy z liczba,
- * wiec nie ma jak wejsc na sasiednie napisy. Musi byc bardziej
- * szczegolowy niz `.walka-nagroda.kwota img`, ktore narzuca 24x20.
- */
-/*
- * Musi byc bardziej szczegolowy niz `.walka-nagroda.kwota img`, ktore
- * narzuca 24x20 — inaczej strzalka przy zlocie rosla do rozmiaru monety.
+ * wiec nie ma jak wejsc na sasiednie napisy. Selektor musi byc bardziej
+ * szczegolowy niz `.walka-nagroda.kwota img`, ktore narzuca 24x20 —
+ * inaczej strzalka przy zlocie rosnie do rozmiaru monety.
+ *
+ * Odstep 12 px z prawej: przy 6 px strzalka kleila sie do liczby i przez
+ * chwile wygladala jak jej pierwsza cyfra.
  */
 .walka-nagroda img.walka-premia,
 .walka-nagroda.kwota img.walka-premia {
   width: 18px;
   height: 18px;
-  margin: 0 6px 0 0;
+  margin: 0 12px 0 0;
   vertical-align: -3px;
 }
 
-.walka-nagroda.doswiadczenie img.walka-premia { margin: 0 0 0 6px; }
-
 /*
- * Nagroda z premia da sie kliknac — wychodzi wtedy rozpisanie, ta sama
- * tresc, co w oknie wyboru zadania. Reszta wiersza zostaje przezroczysta
- * dla myszy, zeby nie lapala klikniec w tlo walki.
+ * Nagroda da sie kliknac — wychodzi wtedy jej wlasne rozpisanie.
+ * Reszta wiersza zostaje przezroczysta dla myszy, zeby nie lapala
+ * klikniec w tlo walki.
  */
 .walka-nagroda.zPremia {
   pointer-events: auto;
   cursor: pointer;
 }
 
-.walka-premia-podpowiedz {
+/*
+ * Rozpisanie jednej nagrody — doswiadczenia albo pieniedzy.
+ * Wartosc idzie do PRAWEJ krawedzi, a nie do stalej kolumny 137 px,
+ * wiec ogolna regula `.podpowiedz .wiersz > span` musi tu ustapic
+ * (stad `.podpowiedz` w selektorze — sama klasa mialaby rowna
+ * szczegolowosc i przegralaby kolejnoscia).
+ */
+.okno-nagrody {
   position: absolute;
   z-index: 12;
   padding: 8px 10px;
   font-size: var(--pismo-cechy);
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
-/* Dokladne kwoty pod rozpisaniem premii — w wierszu stoja skrocone. */
-.walka-premia-podpowiedz .dokladnie { color: var(--pergamin); }
+.okno-nagrody .wiersz {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.podpowiedz.okno-nagrody .wiersz > span:nth-child(2) { position: static; }
+
+/* Pusty wiersz oddzielajacy premie od sumy — sama wysokosc. */
+.okno-nagrody .wiersz.odstep { height: 8px; }
+
+.okno-nagrody .razem { color: var(--pergamin); }
+.okno-nagrody img { width: 24px; height: 20px; margin-left: 6px; vertical-align: -4px; }
 
 
 .walka-nagroda.ostrzezenie { color: var(--zly); text-align: center; }
@@ -1968,6 +1994,26 @@ button.postac-wierzchowiec-obraz img {
   line-height: 1.35;
 }
 
+/* Nazwa epika w oknie „Nowy towar" — jego wlasny kolor, gruba i na srodku. */
+.okno-tekst .nazwa-epika {
+  margin: 6px 0;
+  color: var(--blekit-cytat);
+  font-weight: bold;
+  text-align: center;
+}
+
+/*
+ * Ikonka grzybka na przycisku okna — ten sam rozmiar, co przy kwotach
+ * w podpowiedziach. `.przycisk` jest kolumna flex, wiec ikonka musi
+ * wejsc w jeden wiersz z napisem.
+ */
+.przycisk .koszt-grzybka {
+  width: 25px;
+  height: 24px;
+  margin-left: 8px;
+  vertical-align: -5px;
+}
+
 .okno-koszt {
   display: flex;
   align-items: center;
@@ -2232,17 +2278,31 @@ button.postac-pancerz {
  * Przezroczysty guzik na kazdej ikonie. Oryginal wiesza tam
  * `EnablePopup(CNT_ALBUM_WEAPON_n + i)` BEZ tresci, wiec nic nie pokazuje;
  * u nas otwiera okienko z nazwa i data odblokowania (odstepstwo).
+ *
+ * Obwodka jest ZAWSZE, tylko przezroczysta — inaczej pojawienie sie
+ * ramki przy wyborze przesuwaloby ikone o grubosc obwodki.
  */
 .klaser-guzik {
   padding: 0;
-  border: 0;
+  border: 2px solid transparent;
   background: transparent;
   border-radius: 4px;
   cursor: pointer;
   z-index: 3;
 }
 
-.klaser-guzik:hover { background: rgba(240, 192, 66, .18); }
+.klaser-guzik:hover { border-color: rgba(240, 192, 66, .5); }
+
+/*
+ * Wybrana ikona dostaje RAMKE, nie samo tlo: po zoltej poswiacie nie
+ * bylo widac, ktora dokladnie pozycje sie klikneło, a barwy jednego
+ * wzoru stoja blisko siebie.
+ */
+.klaser-guzik.wybrany {
+  border-color: var(--zloto);
+  background: rgba(240, 192, 66, .12);
+  box-shadow: 0 0 6px rgba(240, 192, 66, .6);
+}
 
 /* Okienko z data — zwykla podpowiedz, przyklejona srodkiem do ikony. */
 .klaser-okienko {

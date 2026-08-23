@@ -17,7 +17,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PODPISY, POTWORY, WYNIKI_WALKI } from '../../gra/karczma-teksty';
-import { lacznaPremia, wierszePremii } from '../../gra/premie';
+import { lacznaPremia } from '../../gra/premie';
+import {
+  OknoNagrody,
+  SZEROKOSC_OKNA_NAGRODY,
+  wysokoscOknaNagrody,
+  type RodzajNagrody,
+} from '../../gra/OknoNagrody';
 import { PodpowiedzPrzedmiotu } from '../../gra/PodpowiedzPrzedmiotu';
 import {
   FANFARY,
@@ -93,7 +99,7 @@ import {
   type Ramka,
 } from '../../gra/karczmaUklad';
 import type { CechyWalki, Gracz, Rozliczenie } from '../../gra/typy';
-import { liczba, skrocona } from '../../gra/liczby';
+import { liczba } from '../../gra/liczby';
 
 /*
  * Zegar animacji ciosu.
@@ -183,9 +189,15 @@ export function Walka({
    * podbita w oknie wyboru i tam stoi znaczek; po walce w lochu nagroda
    * powstaje dopiero teraz, wiec znaczek nalezy sie tutaj.
    */
-  const skladnikiPremii = wierszePremii(rozliczenie.premie);
   const premiaLacznie = lacznaPremia(rozliczenie.premie);
-  const [pokazanaPremia, setPokazanaPremia] = useState(false);
+
+  /*
+   * Ktora nagroda ma otwarte rozpisanie. Doswiadczenie i pieniadze maja
+   * OSOBNE okienka — klikniecie w jedno nie mowi nic o drugim.
+   */
+  const [otwartaNagroda, setOtwartaNagroda] = useState<RodzajNagrody | null>(null);
+
+  const przelacz = (co: RodzajNagrody) => setOtwartaNagroda((s) => (s === co ? null : co));
 
   /*
    * `odgrywany` to numer ciosu, ktory wlasnie leci; `zaliczonych` — ile
@@ -483,7 +495,7 @@ export function Walka({
                 <div
                   className="walka-nagroda doswiadczenie zPremia"
                   style={{ left: WALKA_DOSWIADCZENIE_X, top: WALKA_PIENIADZE_Y }}
-                  onClick={() => setPokazanaPremia((czy) => !czy)}
+                  onClick={() => przelacz('exp')}
                 >
                   {/*
                     Podpis skrocony do „EXP" — SWIADOME ODSTEPSTWO, patrz
@@ -492,7 +504,7 @@ export function Walka({
                   */}
                   {PODPISY.doswiadczenieKrotko}:{' '}
                   {premiaLacznie > 0 && <ZnaczekPremii />}
-                  {skrocona(nagroda.doswiadczenie)}
+                  {liczba(nagroda.doswiadczenie)}
                 </div>
               )}
 
@@ -518,58 +530,43 @@ export function Walka({
                     right: SZEROKOSC_EKRANU_GRY - WALKA_NAGRODY_PRAWA,
                     top: WALKA_PIENIADZE_Y,
                   }}
-                  onClick={() => setPokazanaPremia((czy) => !czy)}
+                  onClick={() => przelacz('zloto')}
                 >
                   {premiaLacznie > 0 && <ZnaczekPremii />}
-                  {/* Zloto to sto srebra; oba czlony pokazuja sie tylko, gdy sa. */}
-                  {Math.floor(nagroda.zloto / 100) > 0 && (
-                    <>
-                      {skrocona(Math.floor(nagroda.zloto / 100))}
-                      <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
-                    </>
-                  )}
-                  {nagroda.zloto % 100 > 0 && (
-                    <>
-                      {nagroda.zloto % 100}
-                      <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
-                    </>
-                  )}
+                  {/*
+                    Samo ZLOTO. Srebro (koncowka ponizej stu) schodzi do
+                    okienka — SWIADOME ODSTEPSTWO, patrz tabela w CLAUDE.md.
+                    Nie mowi nic wartego miejsca, ktore zjadalo, a przy
+                    dlugiej kwocie wchodzilo na ikone zdobyczy.
+                  */}
+                  {liczba(Math.floor(nagroda.zloto / 100))}
+                  <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
                 </div>
               )}
             </>
           )}
 
           {/*
-            Rozpisanie premii — ta sama tresc, co w oknie wyboru zadania.
-            Stoi NAD wierszem z nagroda, zeby nie zaslonic przycisku „OK".
+            Rozpisanie nagrody. Doswiadczenie i pieniadze maja OSOBNE
+            okienka; kazde staje NAD swoim wierszem, zeby nie zaslonic
+            przycisku „OK". Zloto premie ma tylko w lochu — przy wyprawie
+            podbite jest samo doswiadczenie (`finishQuest` w `req.php`).
           */}
-          {pokazanaPremia && nagroda && (
-            <div
-              className="podpowiedz walka-premia-podpowiedz"
-              style={{
-                left: WALKA_DOSWIADCZENIE_X,
-                top: WALKA_PIENIADZE_Y - 76,
-                width: 300,
-              }}
-              role="dialog"
-            >
-              {skladnikiPremii.length > 0 && <div>{PODPISY.wTym}:</div>}
-              {skladnikiPremii.map((p) => (
-                <div className={p.klasa} key={p.klasa}>
-                  {p.podpis}: +{p.ile}%
-                </div>
-              ))}
-              {/*
-                Dokladne kwoty — w wierszu nagrody stoja SKROCONE („18kk"),
-                zeby nie weszly na ikone zdobyczy.
-              */}
-              <div className="dokladnie">
-                {PODPISY.doswiadczenieKrotko}: {liczba(nagroda?.doswiadczenie ?? 0)}
-              </div>
-              <div className="dokladnie">
-                Złoto: {liczba(Math.floor((nagroda?.zloto ?? 0) / 100))}
-              </div>
-            </div>
+          {otwartaNagroda && nagroda && (
+            <OknoNagrody
+              rodzaj={otwartaNagroda}
+              wartosc={otwartaNagroda === 'exp' ? nagroda.doswiadczenie : nagroda.zloto}
+              premie={rozliczenie.premie}
+              lewo={
+                otwartaNagroda === 'exp'
+                  ? WALKA_DOSWIADCZENIE_X
+                  : WALKA_NAGRODY_PRAWA - SZEROKOSC_OKNA_NAGRODY
+              }
+              gora={
+                WALKA_PIENIADZE_Y - wysokoscOknaNagrody(otwartaNagroda, rozliczenie.premie) - 8
+              }
+              onZamknij={() => setOtwartaNagroda(null)}
+            />
           )}
 
           {plecakBylPelny && (
