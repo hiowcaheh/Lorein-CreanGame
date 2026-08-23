@@ -116,6 +116,7 @@ export const SZTUCZKI: SztuczkaTestowa[] = [
   { klucz: 'zloto-10000000', napis: '+10 mln złota' },
   { klucz: 'zloto-100000000', napis: '+100 mln złota' },
   { klucz: 'grzyby-1000', napis: '+1000 grzybów' },
+  { klucz: 'cechy-1000', napis: '+1000 do cech' },
   { klucz: 'piwa-zeruj', napis: 'Wyzeruj piwa' },
   { klucz: 'poziom-1', napis: 'Poziom 1 (reset)' },
   { klucz: 'lustro-prawie', napis: 'Lustro 12/13' },

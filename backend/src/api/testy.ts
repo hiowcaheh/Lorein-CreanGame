@@ -25,6 +25,9 @@ export const testy = new Hono();
 /** Ile srebra to jedno zloto — tak samo, jak w pasku u gory. */
 const SREBRA_W_ZLOCIE = 100;
 
+/** O ile jedno klikniecie podnosi KAZDA z pieciu cech. */
+const CECH_ZA_KLIKNIECIE = 1000;
+
 /**
  * Ile lochow otwiera przycisk. Dziewiec — tyle ma kafli plansza lochow;
  * dziesiaty i dalsze to Wieza i Portal, ktore chodza wlasnymi zasadami
@@ -44,6 +47,7 @@ export type Sztuczka =
   | 'zloto-10000000'
   | 'zloto-100000000'
   | 'grzyby-1000'
+  | 'cechy-1000'
   | 'piwa-zeruj'
   | 'poziom-1'
   | 'lustro-prawie'
@@ -90,6 +94,23 @@ testy.post('/testy/:sztuczka', async (c) => {
       `;
       break;
     }
+
+    case 'cechy-1000':
+      /*
+       * Wszystkie piec cech naraz. Kolumny sa te same, ktore czyta
+       * `wczytajGracza()`; dokladka z przedmiotow i mikstur liczy sie
+       * osobno, wiec jej tu nie ruszamy.
+       */
+      await sql`
+        UPDATE user_data SET
+          attr_str  = attr_str  + ${CECH_ZA_KLIKNIECIE},
+          attr_agi  = attr_agi  + ${CECH_ZA_KLIKNIECIE},
+          attr_int  = attr_int  + ${CECH_ZA_KLIKNIECIE},
+          attr_wit  = attr_wit  + ${CECH_ZA_KLIKNIECIE},
+          attr_luck = attr_luck + ${CECH_ZA_KLIKNIECIE}
+        WHERE user_id = ${wiersz.user_id}
+      `;
+      break;
 
     case 'grzyby-1000':
       await sql`UPDATE user_data SET mushroom = mushroom + 1000 WHERE user_id = ${wiersz.user_id}`;
