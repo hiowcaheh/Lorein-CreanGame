@@ -249,9 +249,49 @@ export function doswiadczenieZWyprawy(
   { premia = 0, instruktor = 0, lochyGildii = 0, album = 0 } = {},
 ): number {
   const bonusBudynkow = 1 + (instruktor + lochyGildii) / 50;
-  const bonusAlbumu = album > 0 ? Math.round((album / 1700) * 100) / 100 : 0;
+  const bonusAlbumu = album > 0 ? premiaAlbumu(album) : 0;
   const bonusPremii = premia / 100;
   return Math.trunc(bazowe * (bonusBudynkow + bonusAlbumu + bonusPremii));
+}
+
+/** `round($album / 1700, 2)` — udzial klasera, jako ulamek. */
+function premiaAlbumu(album: number): number {
+  return Math.round((album / 1700) * 100) / 100;
+}
+
+/**
+ * Zloto z wyprawy.
+ *
+ * ODSTEPSTWO (tabela w CLAUDE.md). Oryginal liczy zloto CALKIEM inaczej
+ * niz doswiadczenie i klaser go NIE dotyczy:
+ *
+ *     $gbonus = 1 + (treasure + dung) / 50;          // skarbiec gildii
+ *     $towerbonus = (tower_level - 1) / 100;         // wieza
+ *     $gold = quest_gold * ($gbonus + $towerbonus);
+ *
+ * czyli zloto ma swoj wlasny zestaw premii — komnate skarbow w gildii
+ * i wieze — a `$albumbonus` wchodzi wylacznie do doswiadczenia. Ani
+ * gildii, ani wiezy jeszcze nie ma, wiec te dwie premie sa zerami.
+ *
+ * Wlasciciel gry zdecydowal, ze klaser ma podbijac takze zloto — tak
+ * samo, jak juz robi to w lochu. Kolejnosc dzialan i zaokraglenia
+ * oryginalu zostaja: mnozenie, potem zaokraglenie setek powyzej
+ * dziesieciu tysiecy i sufit miliarda.
+ */
+export function zlotoZWyprawy(
+  bazowe: number,
+  { skarbiec = 0, lochyGildii = 0, wieza = 1, album = 0 } = {},
+): number {
+  const bonusBudynkow = 1 + (skarbiec + lochyGildii) / 50;
+  const bonusWiezy = (wieza - 1) / 100;
+  const bonusAlbumu = album > 0 ? premiaAlbumu(album) : 0;
+
+  let zloto = bazowe * (bonusBudynkow + bonusWiezy + bonusAlbumu);
+
+  // `if ($gold > 10000) $gold = round($gold, -2);`
+  if (zloto > 10000) zloto = Math.round(zloto / 100) * 100;
+  // `if ($gold > 1000000000) $gold = 1000000000;`
+  return Math.min(Math.trunc(zloto), 1_000_000_000);
 }
 
 /**

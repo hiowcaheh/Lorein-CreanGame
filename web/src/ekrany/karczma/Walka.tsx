@@ -556,7 +556,16 @@ export function Walka({
             <OknoNagrody
               rodzaj={otwartaNagroda}
               wartosc={otwartaNagroda === 'exp' ? nagroda.doswiadczenie : nagroda.zloto}
-              premie={rozliczenie.premie}
+              /*
+                Zloto ma swoje premie: rzadkie zadanie go nie dotyczy.
+                Loch nie odsyla osobnej listy, bo tam premia jest jedna
+                i podbija obie nagrody — wtedy zloto dziedziczy `premie`.
+              */
+              premie={
+                otwartaNagroda === 'exp'
+                  ? rozliczenie.premie
+                  : (rozliczenie.premieZlota ?? rozliczenie.premie)
+              }
               lewo={
                 otwartaNagroda === 'exp'
                   ? WALKA_DOSWIADCZENIE_X

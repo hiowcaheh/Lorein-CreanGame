@@ -234,13 +234,16 @@ export function OknoWyboru({
         <OknoNagrody
           rodzaj={otwartaNagroda}
           wartosc={otwartaNagroda === 'exp' ? wybrane.doswiadczenie : wybrane.zloto}
-          premie={otwartaNagroda === 'exp' ? wybrane.premie : undefined}
+          premie={otwartaNagroda === 'exp' ? wybrane.premie : wybrane.premieZlota}
           lewo={OKNO_NAGRODY.lewo - OKNO.lewo}
           gora={
             OKNO_NAGRODY.gora -
             OKNO.gora +
             (otwartaNagroda === 'exp' ? 2 : 1) * ODSTEP_NAGROD -
-            wysokoscOknaNagrody(otwartaNagroda, otwartaNagroda === 'exp' ? wybrane.premie : undefined) -
+            wysokoscOknaNagrody(
+              otwartaNagroda,
+              otwartaNagroda === 'exp' ? wybrane.premie : wybrane.premieZlota,
+            ) -
             8
           }
           onZamknij={() => setOtwartaNagroda(null)}

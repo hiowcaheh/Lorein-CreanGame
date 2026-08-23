@@ -28,6 +28,7 @@ import {
   awansuj,
   czasWyprawy,
   doswiadczenieZWyprawy,
+  zlotoZWyprawy,
   najblizszaPolnoc,
   wolneMiejsceWPlecaku,
   wylosujZadania,
@@ -279,6 +280,8 @@ interface Rozliczenie {
    * `finishQuest()` podbija samo doswiadczenie.
    */
   premie?: { klaser: number; rzadkie: number };
+  /** Premie ZLOTA — rzadkie zadanie ich nie dotyczy. */
+  premieZlota?: { klaser: number };
   /** Przedmiot, ktory wpadl do plecaka — albo powod, dla ktorego nie wpadl. */
   /**
    * Zdobyty przedmiot — CALY, bo ekran walki pokazuje jego ikone
@@ -351,6 +354,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
   let zdobytyPrzedmiot: PrzedmiotEkranu | null = null;
   let plecakBylPelny = false;
   let zdobyteDoswiadczenie = 0;
+  let zdobyteZloto = 0;
 
   /*
    * Klaser. Po wygranej wyprawie oryginal wpisuje do niego POTWORA
@@ -397,7 +401,12 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
       album: klaserPrzed,
     });
 
-    srebro += zadanie.zloto;
+    /*
+     * Zloto z ta sama premia kolekcjonera, co liczba pokazana w oknie
+     * wyboru — inaczej gracz dostalby mniej, niz mu obiecano.
+     */
+    zdobyteZloto = zlotoZWyprawy(zadanie.zloto, { album: klaserPrzed });
+    srebro += zdobyteZloto;
     doswiadczenie += zdobyteDoswiadczenie;
     honor += HONOR_ZA_WYPRAWE;
 
@@ -508,7 +517,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
     awans: poziom > poziomPrzed ? poziom : null,
     nagroda: wygrana
       ? {
-          zloto: zadanie.zloto,
+          zloto: zdobyteZloto,
           doswiadczenie: zdobyteDoswiadczenie,
           honor: HONOR_ZA_WYPRAWE,
           grzyby: znalezioneGrzyby,
@@ -523,6 +532,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
       klaser: Math.round(premiaZKlasera(klaserPrzed) * 100),
       rzadkie: zadanie.premia,
     },
+    premieZlota: { klaser: Math.round(premiaZKlasera(klaserPrzed) * 100) },
     zdobytyPrzedmiot,
     plecakBylPelny,
     /*
@@ -742,12 +752,18 @@ async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<strin
         ...z,
         // Czas i koszt zaleza od wierzchowca, wiec licza sie tutaj.
         sekundy: czasWyprawy(z.dlugosc, koniowanie),
+        zloto: zlotoZWyprawy(z.zloto, { album: klaser === BEZ_KLASERA ? 0 : klaser }),
         doswiadczenie: doswiadczenieZWyprawy(z.doswiadczenie, {
           premia: z.premia,
           album: klaser === BEZ_KLASERA ? 0 : klaser,
         }),
         /** Skladniki premii do doswiadczenia, w procentach. */
         premie: { klaser: premiaKlasera, rzadkie: z.premia },
+        /*
+         * Premie ZLOTA. Rzadkie zadanie ich nie dotyczy — `$rqbonus`
+         * wchodzi w oryginale wylacznie do doswiadczenia.
+         */
+        premieZlota: { klaser: premiaKlasera },
         /*
          * Przedmiot czekajacy przy zadaniu. Oryginal pokazuje go w oknie
          * wyboru w calosci — z obrazkiem i wartosciami — bo gracz ma

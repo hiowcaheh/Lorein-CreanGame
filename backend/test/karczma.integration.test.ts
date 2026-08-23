@@ -8,6 +8,7 @@ import {
   awansuj,
   czasWyprawy,
   doswiadczenieZWyprawy,
+  zlotoZWyprawy,
   doswiadczenieZaZadanie,
   mnoznikWierzchowca,
   najblizszaPolnoc,
@@ -36,6 +37,49 @@ describe('zasady karczmy', () => {
     expect(doswiadczenieZWyprawy(1000, { premia: 145 })).toBe(2450);
     // Instruktor i lochy gildii dokladaja po jednej pieedziesiatej.
     expect(doswiadczenieZWyprawy(1000, { instruktor: 25, lochyGildii: 25 })).toBe(2000);
+  });
+
+  /*
+   * Zloto liczy sie w oryginale INNYM wzorem niz doswiadczenie:
+   *
+   *     $gold = quest_gold * ($gbonus + $towerbonus);
+   *     if ($gold > 10000)      $gold = round($gold, -2);
+   *     if ($gold > 1000000000) $gold = 1000000000;
+   *
+   * gdzie `$gbonus = 1 + (treasure + dung) / 50`. Klasera tam NIE MA —
+   * `$albumbonus` wchodzi wylacznie do doswiadczenia. Dolozenie go jest
+   * decyzja wlasciciela gry (tabela odstepstw w CLAUDE.md).
+   */
+  it('zloto bez zadnych premii zostaje takie, jakie bylo', () => {
+    expect(zlotoZWyprawy(1000)).toBe(1000);
+    expect(zlotoZWyprawy(9999)).toBe(9999);
+  });
+
+  it('skarbiec i lochy gildii dokladaja po jednej piecdziesiatej', () => {
+    expect(zlotoZWyprawy(1000, { skarbiec: 25, lochyGildii: 25 })).toBe(2000);
+  });
+
+  it('wieza liczy sie od pietra pierwszego, czyli po jednym procencie', () => {
+    expect(zlotoZWyprawy(1000, { wieza: 1 })).toBe(1000);
+    expect(zlotoZWyprawy(1000, { wieza: 11 })).toBe(1100);
+  });
+
+  it('klaser podbija zloto tak samo, jak doswiadczenie', () => {
+    // Pelny klaser to `round(1700 / 1700, 2)` = 1, czyli mnoznik dwa.
+    expect(zlotoZWyprawy(1000, { album: 1700 })).toBe(2000);
+    // Polowa klasera to 0,5 — `round(850 / 1700, 2)`.
+    expect(zlotoZWyprawy(1000, { album: 850 })).toBe(1500);
+  });
+
+  it('powyzej dziesieciu tysiecy kwota zaokragla sie do setek', () => {
+    // 12 345 * 1 = 12 345 -> `round($gold, -2)` = 12 300.
+    expect(zlotoZWyprawy(12345)).toBe(12300);
+    // Ponizej progu zaokraglenia nie ma.
+    expect(zlotoZWyprawy(10000)).toBe(10000);
+  });
+
+  it('miliard jest sufitem', () => {
+    expect(zlotoZWyprawy(2_000_000_000)).toBe(1_000_000_000);
   });
 
   it('odswiezenie wypada o najblizszej polnocy', () => {

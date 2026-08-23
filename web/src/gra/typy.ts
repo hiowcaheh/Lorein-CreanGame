@@ -146,6 +146,11 @@ export interface Zadanie {
   doswiadczenie: number;
   /** Z czego sklada sie premia do doswiadczenia, w procentach. */
   premie: { klaser: number; rzadkie: number };
+  /**
+   * Premie ZLOTA. Rzadkie zadanie ich nie dotyczy — w oryginale
+   * `$rqbonus` wchodzi wylacznie do doswiadczenia.
+   */
+  premieZlota: PremieNagrody;
   /** Numer krainy 1..21. */
   lokacja: number;
   /** Rodzaj wyprawy — z niego bierze sie jej tytul. */
@@ -225,6 +230,8 @@ export interface Rozliczenie {
    * powstaje dopiero po walce.
    */
   premie?: PremieNagrody;
+  /** Premie ZLOTA. Gdy ich nie ma, zloto dziedziczy premie z `premie`. */
+  premieZlota?: PremieNagrody;
   /**
    * Zdobyty przedmiot — caly, bo ekran walki pokazuje jego ikone
    * i podpowiedz ze statystykami, a nie sam napis.

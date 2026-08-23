@@ -15,17 +15,43 @@ import { liczba } from './liczby';
 
 export type RodzajNagrody = 'exp' | 'zloto';
 
-export const SZEROKOSC_OKNA_NAGRODY = 320;
+export const SZEROKOSC_OKNA_NAGRODY = 350;
 
 /** Ile wierszy zmiesci okienko — z tego wychodzi jego wysokosc. */
 export function wysokoscOknaNagrody(
-  rodzaj: RodzajNagrody,
+  _rodzaj: RodzajNagrody,
   premie: PremieNagrody | undefined,
 ): number {
   const skladniki = wierszePremii(premie);
-  // Naglowek + „Razem" zawsze; dalej podstawa i premie albo srebro.
-  const wierszy = rodzaj === 'exp' ? 2 + (skladniki.length > 0 ? 2 + skladniki.length : 0) : 3;
+  // Naglowek i „Razem" zawsze; przy premiach dochodzi podstawa, kazde
+  // zrodlo i pusty wiersz oddzielajacy.
+  const wierszy = 2 + (skladniki.length > 0 ? 2 + skladniki.length : 0);
   return 16 + wierszy * 26;
+}
+
+/**
+ * Jedna liczba w wierszu. Doswiadczenie to gole punkty; pieniadze ida
+ * w zlocie i srebrze, przy czym srebro pokazuje sie tylko wtedy, gdy
+ * jakies zostalo — tak samo, jak w pasku zasobow.
+ */
+function kwota(wartosc: number, rodzaj: RodzajNagrody) {
+  if (rodzaj === 'exp') return liczba(wartosc);
+
+  const zlote = Math.floor(wartosc / 100);
+  const srebrne = wartosc % 100;
+
+  return (
+    <>
+      {liczba(zlote)}
+      <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
+      {srebrne > 0 && (
+        <>
+          {srebrne}
+          <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
+        </>
+      )}
+    </>
+  );
 }
 
 export function OknoNagrody({
@@ -66,58 +92,35 @@ export function OknoNagrody({
       role="dialog"
       aria-label={rodzaj === 'exp' ? 'Doświadczenie' : 'Pieniądze'}
     >
-      {rodzaj === 'exp' ? (
+      <div className="nazwa">{rodzaj === 'exp' ? 'Doświadczenie' : 'Pieniądze'}</div>
+
+      {/*
+        Rozpisanie jest to samo dla obu nagrod: najpierw ile bylo GOLE,
+        potem co dolozylo kazde zrodlo, na koncu suma. Pieniadze roznia
+        sie tylko tym, ze kazda liczba idzie w zlocie i srebrze.
+      */}
+      {skladniki.length > 0 && (
         <>
-          <div className="nazwa">Doświadczenie</div>
-          {skladniki.length > 0 && (
-            <>
-              <div className="wiersz">
-                <span>Za samo zadanie</span>
-                <span>{liczba(podstawa)}</span>
-              </div>
-              {skladniki.map((p) => (
-                <div className={`wiersz ${p.klasa}`} key={p.klasa}>
-                  <span>
-                    {p.podpis} +{p.ile}%
-                  </span>
-                  <span>+{liczba(udzial(p.ile))}</span>
-                </div>
-              ))}
-              <div className="wiersz odstep" />
-            </>
-          )}
-          <div className="wiersz razem">
-            <span>Razem</span>
-            <span>{liczba(wartosc)}</span>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="nazwa">Pieniądze</div>
           <div className="wiersz">
-            <span>Złoto</span>
-            <span>
-              {liczba(Math.floor(wartosc / 100))}
-              <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
-            </span>
-          </div>
-          <div className="wiersz">
-            <span>Srebro</span>
-            <span>
-              {wartosc % 100}
-              <img src="/res/sfgame/if/icon_silber.png" alt="srebra" />
-            </span>
+            <span>{rodzaj === 'exp' ? 'Za samo zadanie' : 'Bez premii'}</span>
+            <span>{kwota(podstawa, rodzaj)}</span>
           </div>
           {skladniki.map((p) => (
             <div className={`wiersz ${p.klasa}`} key={p.klasa}>
               <span>
                 {p.podpis} +{p.ile}%
               </span>
-              <span>+{liczba(Math.floor(udzial(p.ile) / 100))}</span>
+              <span>+{kwota(udzial(p.ile), rodzaj)}</span>
             </div>
           ))}
+          <div className="wiersz odstep" />
         </>
       )}
+
+      <div className="wiersz razem">
+        <span>Razem</span>
+        <span>{kwota(wartosc, rodzaj)}</span>
+      </div>
     </div>
   );
 }
