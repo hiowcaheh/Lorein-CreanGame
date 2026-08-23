@@ -186,7 +186,8 @@ export function OknoWyboru({
           zadanie — to samo mowi podpowiedz w oryginale.
         */
         <button type="button" className="karczma-premia" onClick={() => przelacz('exp')}>
-          {PODPISY.doswiadczenie}: {liczba(wybrane.doswiadczenie)}
+          {/* „EXP", nie pelne slowo — SWIADOME ODSTEPSTWO, patrz CLAUDE.md. */}
+          {PODPISY.doswiadczenieKrotko}: {liczba(wybrane.doswiadczenie)}
           {premiaLacznie > 0 && (
             <img className="skacze" src={ZNACZEK_PREMII} alt="z premią" />
           )}

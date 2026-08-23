@@ -10,6 +10,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../gra/PodpowiedzPrzedmiotu';
 import { CECHY_PO_KOLEI, RozbicieCechy } from '../gra/RozbicieCechy';
+import { KAWALKOW_LUSTRA, useLustro } from '../gra/useLustro';
 import { PasekDoswiadczenia } from '../gra/PasekDoswiadczenia';
 import { PUNKTOW_ZA_ZAKUP, cenaPokazywana, opisCeny } from '../gra/cechy';
 import { OknoCechy } from './OknoCechy';
@@ -279,6 +280,9 @@ export function Bohater({
   const [pokazKlaser, setPokazKlaser] = useState(false);
   /** Ktory wiersz cechy ma otwarte rozbicie na czlony. */
   const [rozbitaCecha, setRozbitaCecha] = useState<number | null>(null);
+
+  /* Migotanie kawalkow lustra — `MirrorAniFn` z oryginalu. */
+  const lustro = useLustro(gracz.lustro.filter(Boolean).length, gracz.maLustro);
   const [pokazCeny, setPokazCeny] = useState(false);
 
   /*
@@ -560,18 +564,46 @@ export function Bohater({
         Kawalki Magicznego Lustra — `IMG_MIRROR_PIECE + i` w tym samym
         punkcie, co portret, przygaszone do 0,3. Widac tylko te, ktore
         gracz juz wprawil.
+
+        Po ZLOZENIU lustra kawalki znikaja: oryginal wysyla wtedy same
+        zera na bitach kawalkow i osobny znacznik (`$haveMirror`), a klient
+        je zdejmuje (`else this.Remove(this.IMG_MIRROR_PIECE + i)`).
+        Popekany portret zostawal u nas na zawsze — to byl blad.
+
+        Na pozegnanie kawalki blyskaja fala z `MirrorAniFn`. Oryginal ma
+        w tym miejscu dzwiek (`SND_MIRROR`, `sfx/tower/mirror.mp3`), ale
+        tego pliku nie ma w naszej paczce zasobow — patrz CLAUDE.md.
       */}
-      {gracz.lustro.map((jest, i) =>
-        jest ? (
+      {!gracz.maLustro &&
+        gracz.lustro.map((jest, i) =>
+          jest ? (
+            <img
+              key={i}
+              className="postac-lustro"
+              src={plikKawalkaLustra(i + 1)}
+              alt=""
+              style={{
+                ...styl(KAWALEK_LUSTRA),
+                opacity: lustro.przezroczystosci[i] ?? PRZEZROCZYSTOSC_LUSTRA,
+              }}
+            />
+          ) : null,
+        )}
+
+      {/* Blysk konczacy skladanie — wszystkie trzynascie naraz, potem znikaja. */}
+      {lustro.blysk &&
+        Array.from({ length: KAWALKOW_LUSTRA }, (_, i) => (
           <img
-            key={i}
+            key={`blysk${i}`}
             className="postac-lustro"
             src={plikKawalkaLustra(i + 1)}
             alt=""
-            style={{ ...styl(KAWALEK_LUSTRA), opacity: PRZEZROCZYSTOSC_LUSTRA }}
+            style={{
+              ...styl(KAWALEK_LUSTRA),
+              opacity: lustro.przezroczystosci[i] ?? PRZEZROCZYSTOSC_LUSTRA,
+            }}
           />
-        ) : null,
-      )}
+        ))}
 
       {/*
         Klaser Dokladnosci — `IMG_CHAR_ALBUM` pokazuje sie dopiero, gdy

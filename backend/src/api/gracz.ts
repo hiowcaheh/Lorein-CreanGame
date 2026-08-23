@@ -27,7 +27,7 @@ import {
 import { LEVELS } from '../protocol/gamedata.js';
 import { intval, time } from '../compat/php.js';
 import type { Sql } from '../db/client.js';
-import { kawalkiLustra } from '../game/lustro.js';
+import { kawalkiLustra, maPelneLustro } from '../game/lustro.js';
 
 export interface Gracz {
   id: number;
@@ -148,6 +148,22 @@ export interface Gracz {
    * Komplet pozwala wejsc na arene i do lochow w trakcie wyprawy.
    */
   lustro: boolean[];
+
+  /**
+   * Czy lustro jest juz ZLOZONE.
+   *
+   * Oryginal pakuje jedno i drugie do pola `gender`, ale rozdzielnie:
+   *
+   *     if ($magicMirror === '1111111111111') { $haveMirror = '1'; }
+   *     else { $gender = '1' . $magicMirror; $haveMirror = '0'; }
+   *
+   * czyli przy PELNYM lustrze wszystkie trzynascie bitow kawalkow jest
+   * zerami i idzie sam znacznik. Klient rysuje wiec kawalki, dopoki
+   * lustro sie sklada, a po zlozeniu je ZDEJMUJE:
+   *
+   *     if (MirrorPieces[i]) Add(IMG_MIRROR_PIECE + i); else Remove(...);
+   */
+  maLustro: boolean;
 
   /**
    * Osiem odznak, kazda w stopniu 0..4.
@@ -469,6 +485,7 @@ export function zbudujGracza(
     ekwipunek,
     klaser: intval(wiersz['album'] ?? BEZ_KLASERA),
     lustro: kawalkiLustra(wiersz['magic_mirror']),
+    maLustro: maPelneLustro(wiersz['magic_mirror']),
     mikstury: mikstury.map(opiszMiksture),
     osiagniecia: [0, 0, 0, 0, 0, 0, 0, 0],
   };

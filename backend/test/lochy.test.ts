@@ -163,5 +163,25 @@ describe('lochy', () => {
       expect(na9).toBeNull();
       expect(na10?.item_id).toBe(1);
     });
+
+    /*
+     * Miedzy piatym a szostym lochem oryginal robi DWUKROTNIE wieksza
+     * przerwe niz wszedzie indziej: 49, a potem od razu 69, zamiast 59.
+     * Gracz z piecioma otwartymi lochami stoi wiec bez nowego klucza
+     * przez dwadziescia poziomow i wyglada to na zepsuty drop.
+     * `'dungeon_5' => [49, 5], 'dungeon_6' => [69, 6]` w `req.php`.
+     */
+    it('szosty klucz czeka az do siedemdziesiatki, choc piaty leci od piecdziesiatki', () => {
+      const zamkniete = [6, 7, 8, 9];
+      const naPoziomie = (poziom: number) =>
+        wylosujPrzedmiot(poziom, 1, {
+          rodzaj: 11, sklep: 1, wyprawa: true, ...ZLOZONE_LUSTRO, zamknieteLochy: zamkniete,
+          losuj: () => 1,
+        });
+
+      expect(naPoziomie(62)).toBeNull();
+      expect(naPoziomie(69)).toBeNull();
+      expect(naPoziomie(70)?.item_id).toBe(6);
+    });
   });
 });

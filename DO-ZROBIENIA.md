@@ -64,7 +64,20 @@ Szukaj `DO PRZENIESIENIA`:
 - `backend/src/actions/account.ts` — przy zakladaniu konta oryginal losuje
   od razu nagrody czekajace przy zadaniach.
 
-## 5. Ekrany, ktorych jeszcze nie ma
+## 5. Brakujace dzwieki: caly katalog `sfx/tower/`
+
+Klient definiuje dwa dzwieki, ktorych nie ma w naszej paczce zasobow:
+
+    DefineSnd(SND_SHARD,  "sfx/tower/shard.mp3");
+    DefineSnd(SND_MIRROR, "sfx/tower/mirror.mp3");
+
+Pierwszy gra przy wprawieniu odlamka lustra, drugi w chwili ZLOZENIA go
+w calosc — i to on jest w oryginale jedynym znakiem, ze lustro gotowe.
+Zamiast niego stoi u nas blysk (patrz tabela odstepstw w CLAUDE.md).
+Katalog `sf555/res/sfgame/sfx/tower/` nie istnieje wcale, wiec obu
+plikow trzeba poszukac w oryginalnej paczce gry.
+
+## 6. Ekrany, ktorych jeszcze nie ma
 
 Arena, Poczta, Gildia, Sala Chwaly, pelne Opcje, gra w kubki
 (`Huetchenspieler`), Warta jako osobny ekran.

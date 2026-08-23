@@ -11,6 +11,7 @@
  * czego najezdzac, a gra ma dzialac na telefonie.
  */
 
+import { liczba } from './liczby';
 import {
   GRZYBY_ZA_SPRZEDAZ_EPIKA,
   cenaPrzedmiotu,
@@ -102,7 +103,7 @@ export function PodpowiedzPrzedmiotu({
       <div className="wiersz cena">
         {cena.zloto > 0 && (
           <>
-            {cena.zloto}
+            {liczba(cena.zloto)}
             <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
           </>
         )}

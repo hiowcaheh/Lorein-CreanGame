@@ -79,6 +79,13 @@ export interface Gracz {
    */
   lustro: boolean[];
 
+  /**
+   * Czy lustro jest ZLOZONE. Po zlozeniu kawalki znikaja z portretu —
+   * oryginal wysyla wtedy same zera na kawalkach i osobny znacznik
+   * (`$haveMirror`), a klient zdejmuje `IMG_MIRROR_PIECE`.
+   */
+  maLustro: boolean;
+
   /** Trzy miejsca na dzialajace mikstury; puste maja `rodzaj` rowny zeru. */
   mikstury: Mikstura[];
 
