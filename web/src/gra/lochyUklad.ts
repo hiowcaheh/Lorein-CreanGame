@@ -53,42 +53,67 @@ export const KAFLE = Array.from({ length: LOCHOW_NA_LISCIE }, (_, i) => ({
  *
  * Klient przelacza sie na nia, gdy gracz ma za soba dziewiec lochow:
  * `Add((countDone >= 9) ? BNC_SCREEN_HLMAINQUESTS : BNC_SCREEN_MAINQUESTS)`.
- * Zamiast dziewieciu kafli stoi tu szesc: cztery lochy (10-13) po bokach,
- * a w srodkowej kolumnie wieza nad portalem.
+ * Stoi tu szesc kafli: cztery lochy (10-13), wieza i portal.
  *
- *   lochy   (POS_MQS_BUTTON_X + REL_MQS_BUTTON_X * 2 * (i % 2),
- *            POS_MQS_BUTTON_Y + 100 + 200 * (i / 2))
- *   wieza   (POS_MQS_BUTTON_X + REL_MQS_BUTTON_X, POS_MQS_BUTTON_Y + REL_MQS_BUTTON_Y - 170)
- *   portal  (POS_MQS_BUTTON_X + REL_MQS_BUTTON_X, POS_MQS_BUTTON_Y + REL_MQS_BUTTON_Y - 5)
+ * PULAPKA: `DefineCnt` w konstruktorze NIE jest ostatnim slowem.
+ * `ShowMainQuestScreen()` przestawia potem kafle w czasie dzialania,
+ * i to na dwa sposoby, zaleznie od tego, czy serwer umie portal:
+ *
+ *     if (param_server_version_act >= SERVER_VERSION_PORTAL) { ... }
+ *     else { ...uklad 2x2, wieza na srodku, `Remove(CNT_HLMQS_BUTTON + 5)`... }
+ *
+ * Gałąź `else` to wersja BEZ portalu — tam portal w ogole znika z ekranu.
+ * My portal mamy, wiec obowiazuje gałąź pierwsza, przepisana nizej co do
+ * liczby. Wychodza z niej trzy kolumny, wszystkie konczace sie na ~715:
+ *
+ *     lewa   (380)  lochy 10, 11 i 12       y 180, 366, 550
+ *     srodek (660)  loch 13, pod nim portal y 180 i 360
+ *     prawa  (940)  wieza, rozciagnieta     y 180, `scaleY = 1.028`
  */
 export const LOCHOW_NA_DRUGIEJ = 4;
 export const UKONCZONYCH_NA_DRUGA_PLANSZE = 9;
 
-export const KAFLE_DRUGIEJ = Array.from({ length: LOCHOW_NA_DRUGIEJ }, (_, i) => ({
-  lewo: 380 + 280 * 2 * (i % 2) - POCZATEK_X,
-  gora: 170 + 100 + 200 * Math.floor(i / 2) - POCZATEK_Y,
-}));
+/** `POS_MQS_BUTTON_Y + REL_MQS_BUTTON_Y` — punkt odniesienia przestawiania. */
+const BAZA_DRUGIEJ = 170 + 195;
 
-/*
- * Wieza i portal maja WLASNE rozmiary, wieksze od zwyklego kafla —
- * to nie sa zwykle kafle, tylko dwa duze obrazy w srodkowej kolumnie.
- * Liczby zmierzone na plikach (`identify`): `button_tower.jpg` ma
- * 232x520, `button_portal.jpg` 234x356, przy zwyklym kaflu 234x165.
+/**
+ * Lochy 10-13. Trzy pierwsze w lewej kolumnie, czwarty na gorze srodkowej:
  *
- * Wieza zaczyna sie WYZEJ od lochow (195 zamiast 270) i siega az pod
- * dolna krawedz ekranu; portal stoi na niej, przykrywajac jej dolna
- * czesc — w oryginale rysuje sie po niej (jest w petli pozniej, jako
- * `i == 5`), a nad nim jeszcze klatki animacji.
+ *     i = 0   y = BAZA - 185
+ *     i = 1   y = BAZA + 1
+ *     i = 2   y = BAZA + 178 + 7
+ *     i = 3   x = POS_MQS_BUTTON_X + REL_MQS_BUTTON_X,  y = BAZA - 185
  */
+export const KAFLE_DRUGIEJ = [
+  { lewo: 380 - POCZATEK_X, gora: BAZA_DRUGIEJ - 185 - POCZATEK_Y },
+  { lewo: 380 - POCZATEK_X, gora: BAZA_DRUGIEJ + 1 - POCZATEK_Y },
+  { lewo: 380 - POCZATEK_X, gora: BAZA_DRUGIEJ + 178 + 7 - POCZATEK_Y },
+  { lewo: 380 + 280 - POCZATEK_X, gora: BAZA_DRUGIEJ - 185 - POCZATEK_Y },
+];
+
+/**
+ * Wieza — prawa kolumna, rozciagnieta w pionie `scaleY = 1.028`.
+ * Obrazek `button_tower.jpg` ma 232x520 (POMIAR na pliku), wiec na
+ * ekranie wychodzi 232x534.
+ */
+const SKALA_WIEZY = 1.028;
 export const KAFEL_WIEZY = {
-  lewo: 380 + 280 - POCZATEK_X,
-  gora: 170 + 195 - 170 - POCZATEK_Y,
+  lewo: 380 + 280 * 2 - POCZATEK_X,
+  gora: BAZA_DRUGIEJ - 185 - POCZATEK_Y,
   szerokosc: 232,
-  wysokosc: 520,
+  wysokosc: Math.round(520 * SKALA_WIEZY),
 };
+
+/**
+ * Portal — srodkowa kolumna, pod lochem 13. Jako jedyny nie jest
+ * przestawiany: zostaje tam, gdzie postawil go `DefineCnt`, czyli
+ * `POS_MQS_BUTTON_Y + REL_MQS_BUTTON_Y - 5`. Loch 13 konczy sie na 345,
+ * portal zaczyna na 360 — miedzy nimi zostaje 15 px przerwy.
+ * `button_portal.jpg` ma 234x356 (POMIAR na pliku).
+ */
 export const KAFEL_PORTALU = {
   lewo: 380 + 280 - POCZATEK_X,
-  gora: 170 + 195 - 5 - POCZATEK_Y,
+  gora: BAZA_DRUGIEJ - 5 - POCZATEK_Y,
   szerokosc: 234,
   wysokosc: 356,
 };

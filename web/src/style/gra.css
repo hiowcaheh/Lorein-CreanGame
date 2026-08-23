@@ -2384,7 +2384,18 @@ button.postac-pancerz {
 
 .lochy-kafel:disabled,
 .lochy-kafel.niegotowy { cursor: default; }
-.lochy-kafel > img { position: absolute; left: 0; top: 0; width: 234px; height: 165px; }
+/*
+ * Obrazek kafla wypelnia SWOJ kafel — wieza i portal maja wieksze niz
+ * zwykle lochy (232x534 i 234x356 wobec 234x165), wiec sztywne 234x165
+ * je sciskalo.
+ *
+ * Zaslony i znaczniki zostaja w swojej naturalnej wielkosci, przyklejone
+ * do gornej krawedzi: tak samo robi oryginal, bo `SetCnt` wklada obrazek
+ * do kontenera bez rozciagania. Nad wieza stoi wiec zwykla `unknown.png`
+ * (234x165) na jej szczycie, a `done_tower.png` ma juz swoje 232x520.
+ */
+.lochy-kafel > img.obraz { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.lochy-kafel > img.zaslona { position: absolute; left: 0; top: 0; }
 .lochy-kafel:not(:disabled):hover .obraz { filter: brightness(1.12); }
 
 /* Przydymiona plansza — `SHP_MAINQUEST`, czarny prostokat o alfie 0,6. */
