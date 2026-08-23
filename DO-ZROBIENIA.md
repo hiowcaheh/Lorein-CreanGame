@@ -31,8 +31,18 @@ zrobic sama wieze bez nich i dolozyc ich pozniej.
 
 ## 2. Portal do piekiel
 
-**Wymaga najpierw gildii** — dzienny limit i premie wisza na
-`guild_portal`, `g_act` i `g_monster` w `user_data`.
+W oryginale sa DWA rozne portale i latwo je pomylic:
+
+| Ktory | Gdzie sie wchodzi | Akcja | Warunek |
+| --- | --- | --- | --- |
+| Portal do piekiel (wlasny) | kafel na DRUGIEJ planszy lochow, `i == 5` | `ACT_PORTAL_FIGHT_SINGLE` | poziom co najmniej `PORTAL_FIGHT_LEVEL` = 99 |
+| Portal gildii (grupowy) | ekran gildii, `BTN_GILDE_CREST_GOTO_PORTAL` | `ACT_PORTAL_FIGHT` | `PORTAL_GROUP_LEVEL`, staz w gildii (`ERR_PORTAL_MEMBERSHIP_TOO_SHORT`) |
+
+Ten opis dotyczy pierwszego z nich — tego z planszy lochow. Kafel juz
+tam stoi i chodzi mu animacja; brakuje samego ekranu i walki.
+
+**Dzienny limit i premie wisza na gildii** — `guild_portal`, `g_act`
+i `g_monster` w `user_data`.
 
 | Czego trzeba | Gdzie to jest |
 | --- | --- |

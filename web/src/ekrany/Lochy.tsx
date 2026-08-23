@@ -276,8 +276,8 @@ function WiezaIPortal() {
         style={{
           left: KAFEL_WIEZY.lewo,
           top: KAFEL_WIEZY.gora,
-          width: KAFEL.szerokosc,
-          height: KAFEL.wysokosc,
+          width: KAFEL_WIEZY.szerokosc,
+          height: KAFEL_WIEZY.wysokosc,
         }}
         title={[wieza?.nazwa, wieza?.motto, 'Jeszcze nie ma tu czego zwiedzać.']
           .filter(Boolean)
@@ -292,8 +292,8 @@ function WiezaIPortal() {
         style={{
           left: KAFEL_PORTALU.lewo,
           top: KAFEL_PORTALU.gora,
-          width: KAFEL.szerokosc,
-          height: KAFEL.wysokosc,
+          width: KAFEL_PORTALU.szerokosc,
+          height: KAFEL_PORTALU.wysokosc,
         }}
         title={[portal?.nazwa, portal?.motto, 'Jeszcze nie ma tu czego zwiedzać.']
           .filter(Boolean)

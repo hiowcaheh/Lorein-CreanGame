@@ -69,8 +69,29 @@ export const KAFLE_DRUGIEJ = Array.from({ length: LOCHOW_NA_DRUGIEJ }, (_, i) =>
   gora: 170 + 100 + 200 * Math.floor(i / 2) - POCZATEK_Y,
 }));
 
-export const KAFEL_WIEZY = { lewo: 380 + 280 - POCZATEK_X, gora: 170 + 195 - 170 - POCZATEK_Y };
-export const KAFEL_PORTALU = { lewo: 380 + 280 - POCZATEK_X, gora: 170 + 195 - 5 - POCZATEK_Y };
+/*
+ * Wieza i portal maja WLASNE rozmiary, wieksze od zwyklego kafla —
+ * to nie sa zwykle kafle, tylko dwa duze obrazy w srodkowej kolumnie.
+ * Liczby zmierzone na plikach (`identify`): `button_tower.jpg` ma
+ * 232x520, `button_portal.jpg` 234x356, przy zwyklym kaflu 234x165.
+ *
+ * Wieza zaczyna sie WYZEJ od lochow (195 zamiast 270) i siega az pod
+ * dolna krawedz ekranu; portal stoi na niej, przykrywajac jej dolna
+ * czesc — w oryginale rysuje sie po niej (jest w petli pozniej, jako
+ * `i == 5`), a nad nim jeszcze klatki animacji.
+ */
+export const KAFEL_WIEZY = {
+  lewo: 380 + 280 - POCZATEK_X,
+  gora: 170 + 195 - 170 - POCZATEK_Y,
+  szerokosc: 232,
+  wysokosc: 520,
+};
+export const KAFEL_PORTALU = {
+  lewo: 380 + 280 - POCZATEK_X,
+  gora: 170 + 195 - 5 - POCZATEK_Y,
+  szerokosc: 234,
+  wysokosc: 356,
+};
 
 /** `scr/dungeons/button{60 + i}.jpg` dla i = 0..3, czyli lochy 10-13. */
 export function obrazDrugiejPlanszy(numer: number): string {

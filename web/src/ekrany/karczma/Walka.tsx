@@ -34,6 +34,12 @@ import {
   type UzycieBroni,
 } from '../../gra/dzwieki';
 import { Portret } from '../../gra/Portret';
+
+/**
+ * Numer obrazka, ktory znaczy „to kopia gracza, a nie potwor" —
+ * `NUMER_KOPII` z `backend/src/game/lochy.ts`.
+ */
+const NUMER_KOPII = -1;
 import {
   OBRAZ_PASKA_ZYCIA,
   OBRAZ_RAMKI_PORTRETU,
@@ -370,14 +376,32 @@ export function Walka({
         podpis={WALKA_NAZWA_POTWORA}
         ramkaStatow={WALKA_RAMKA_STATOW_POTWORA}
         kolumny={WALKA_KOLUMNY_POTWORA}
+        /*
+          Ostatni przeciwnik w lochu Twierdza Cieni to KOPIA GRACZA —
+          `getDungMonster()` nie ma dla niego zadnego wiersza i oryginal
+          sklada go z samego gracza. Nie ma wiec obrazka potwora
+          (`obrazek` rowna sie `NUMER_KOPII`); rysujemy tam ten sam
+          portret, co po lewej stronie.
+        */
         obraz={
-          <img
-            src={obrazPotwora(walka.potwor.obrazek)}
-            alt=""
-            onError={(e) => {
-              e.currentTarget.style.visibility = 'hidden';
-            }}
-          />
+          walka.potwor.obrazek === NUMER_KOPII ? (
+            <Portret
+              wyglad={{
+                rasa: gracz.rasa,
+                plec: gracz.plec,
+                klasa: gracz.klasa,
+                czesci: gracz.wyglad,
+              }}
+            />
+          ) : (
+            <img
+              src={obrazPotwora(walka.potwor.obrazek)}
+              alt=""
+              onError={(e) => {
+                e.currentTarget.style.visibility = 'hidden';
+              }}
+            />
+          )
         }
       />
 
