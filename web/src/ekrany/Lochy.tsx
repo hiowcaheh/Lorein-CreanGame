@@ -27,6 +27,7 @@ import {
   KROK_OTWIERANIA_MS,
   LOCHOW_NA_LISCIE,
   OBRAZ_PRZESZEDL,
+  OBRAZ_PRZESZEDL_WIEZA,
   OBRAZ_RAMKI,
   OBRAZ_ZAMKNIETY,
   PODPOWIEDZ,
@@ -39,6 +40,7 @@ import {
   RAMKA_PRZECIWNIKA,
   TEKST,
   TLO_LISTY,
+  TLO_WIEZY,
   TYTUL,
   TYTUL_LOCHU_Y,
   obrazLochu,
@@ -55,11 +57,17 @@ import {
   TYTUL_LISTY,
   TYTUL_LOCHU,
 } from '../gra/lochy-teksty';
+import {
+  NAZWY_PIETER,
+  OPIS_WIEZY,
+  TYTUL_WIEZY,
+  WEJSCIE_DO_WIEZY,
+} from '../gra/wieza-teksty';
 import { NAZWY_POTWOROW } from '../gra/klaser-teksty';
 import { obrazPotwora, czas } from '../gra/karczmaUklad';
 import { KLIK, zagraj } from '../gra/dzwieki';
 import { NapisZIkona } from '../gra/NapisZIkona';
-import type { Gracz } from '../gra/typy';
+import type { Gracz, StanWiezy } from '../gra/typy';
 
 export interface OpisLochu {
   numer: number;
@@ -76,6 +84,8 @@ export interface StanLochow {
   grzyby: number;
   wolneMiejsceWPlecaku: boolean;
   gracz?: Gracz;
+  /** Stan wiezy — dokłada go `GET /api/wieza`, patrz `App`. */
+  wieza?: StanWiezy;
 }
 
 /**
@@ -98,18 +108,48 @@ function zloz(wzor: string, pierwsze: string, drugie: string): string[] {
   return wzor.split('%1').join(pierwsze).split('%2').join(drugie).split('#');
 }
 
+/**
+ * Podpowiedz kafla wiezy — `TXT_TOWER_INFO`:
+ *
+ *     "Poziom: %1/100#Nastepny przeciwnik: %2#Premia zlota: %3%"
+ *
+ * z `%1` = pietro, `%2` = nazwa przeciwnika i `%3` = premia zlota
+ * w procentach. Premia to `tower_level - 1`, czyli liczba PRZEJSZTYCH
+ * pieter — tak samo liczy ja serwer:
+ *
+ *     $towerbonus = ((int)$db_data['tower_level'] - 1) / 100;
+ */
+function opisWiezy(wieza: StanWiezy): string[] {
+  const przeciwnik = NAZWY_PIETER[wieza.pietro - 1]?.nazwa ?? '';
+  return OPIS_WIEZY.split('%1')
+    .join(String(wieza.pietro))
+    .split('%2')
+    .join(przeciwnik)
+    .split('%3')
+    .join(String(wieza.pietro - 1))
+    .split('#');
+}
+
 export function Lochy({
   stan,
   gracz,
   onWalcz,
   onOdswiez,
+  onWalczWWiezy,
 }: {
   stan: StanLochow;
   gracz: Gracz;
   onWalcz: (numer: number) => void;
   onOdswiez: () => void;
+  /** Wejscie na pietro wiezy — `ACT_TOWER_TRY`. */
+  onWalczWWiezy: () => void;
 }) {
-  const [wybrany, setWybrany] = useState<number | null>(null);
+  /*
+   * Co jest otwarte: numer lochu albo wieza. Oryginal ma na to jeden
+   * ekran — `ShowMainQuestScreen(DungeonNr, Enemy)`, gdzie wieza to
+   * `DungeonNr == 100`.
+   */
+  const [wybrany, setWybrany] = useState<number | 'wieza' | null>(null);
 
   /*
    * Zanikanie zaslony nad swiezo otwartym lochem. Oryginal robi to
@@ -155,19 +195,27 @@ export function Lochy({
     [stan.lochy, drugaPlansza],
   );
 
-  const otwarty = wybrany === null ? null : (stan.lochy.find((l) => l.numer === wybrany) ?? null);
+  const wWiezy = wybrany === 'wieza' && stan.wieza !== undefined;
+  const otwarty =
+    typeof wybrany !== 'number' ? null : (stan.lochy.find((l) => l.numer === wybrany) ?? null);
 
   return (
     <div className="lochy">
-      <img className="lochy-tlo" src={otwarty ? tloLochu(otwarty.numer) : TLO_LISTY} alt="" />
+      <img
+        className="lochy-tlo"
+        src={wWiezy ? TLO_WIEZY : otwarty ? tloLochu(otwarty.numer) : TLO_LISTY}
+        alt=""
+      />
 
-      {otwarty === null ? (
+      {otwarty === null && !wWiezy ? (
         <>
           <div className="lochy-tytul" style={{ left: TYTUL.srodek, top: TYTUL.gora }}>
             {drugaPlansza ? TYTUL_DRUGIEJ_PLANSZY : TYTUL_LISTY}
           </div>
 
-          {drugaPlansza && <WiezaIPortal />}
+          {drugaPlansza && (
+            <WiezaIPortal wieza={stan.wieza ?? null} onWieza={() => setWybrany('wieza')} />
+          )}
 
           {naLiscie.map((loch, i) => {
             const kafel = (drugaPlansza ? KAFLE_DRUGIEJ[i] : KAFLE[i])!;
@@ -236,7 +284,16 @@ export function Lochy({
             );
           })}
         </>
-      ) : (
+      ) : wWiezy ? (
+        <EkranWiezy
+          wieza={stan.wieza!}
+          onWroc={() => {
+            setWybrany(null);
+            onOdswiez();
+          }}
+          onWalcz={onWalczWWiezy}
+        />
+      ) : otwarty ? (
         <EkranLochu
           loch={otwarty}
           stan={stan}
@@ -247,7 +304,7 @@ export function Lochy({
           }}
           onWalcz={() => onWalcz(otwarty.numer)}
         />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -256,14 +313,20 @@ export function Lochy({
 const KLUCZ_UZYTY_LUB_MNIEJ = 1;
 
 /**
- * Wieza i Portal do piekiel — srodkowa kolumna drugiej planszy.
+ * Wieza i Portal do piekiel.
  *
- * Kafle stoja tam, gdzie w oryginale, ale zadnego z tych ekranow jeszcze
- * nie ma (patrz tabela odstepstw w CLAUDE.md), wiec obie plytki sa
- * przykryte zaslona i nie daja sie klikac. Portal ma pod nia swoja
- * animacje — dwanascie klatek z `scr/dungeons/portal/`.
+ * Wieza dziala — sto pieter, `getTowerMonster()`. Portalu jeszcze nie ma
+ * (czeka na gildie, patrz DO-ZROBIENIA.md), wiec jego kafel zostaje pod
+ * zaslona i nie daje sie kliknac; pod nia chodzi jego animacja,
+ * dwanascie klatek z `scr/dungeons/portal/`.
  */
-function WiezaIPortal() {
+function WiezaIPortal({
+  wieza: stanWiezy,
+  onWieza,
+}: {
+  wieza: StanWiezy | null;
+  onWieza: () => void;
+}) {
   const [klatka, setKlatka] = useState(0);
 
   useEffect(() => {
@@ -279,21 +342,36 @@ function WiezaIPortal() {
 
   return (
     <>
-      <div
-        className="lochy-kafel niegotowy"
+      <button
+        type="button"
+        className="lochy-kafel"
         style={{
           left: KAFEL_WIEZY.lewo,
           top: KAFEL_WIEZY.gora,
           width: KAFEL_WIEZY.szerokosc,
           height: KAFEL_WIEZY.wysokosc,
         }}
-        title={[wieza?.nazwa, wieza?.motto, 'Jeszcze nie ma tu czego zwiedzać.']
+        disabled={stanWiezy?.ukonczona ?? true}
+        title={[
+          wieza?.nazwa,
+          wieza?.motto,
+          stanWiezy
+            ? stanWiezy.ukonczona
+              ? OCZYSZCZONY
+              : opisWiezy(stanWiezy).join('\n')
+            : null,
+        ]
           .filter(Boolean)
           .join('\n')}
+        onClick={() => {
+          if (stanWiezy?.ukonczona ?? true) return;
+          zagraj(KLIK);
+          onWieza();
+        }}
       >
         <img className="obraz" src={OBRAZ_WIEZY} alt={wieza?.nazwa ?? ''} />
-        <img className="zaslona" src={OBRAZ_ZAMKNIETY} alt="" />
-      </div>
+        {stanWiezy?.ukonczona && <img className="zaslona" src={OBRAZ_PRZESZEDL_WIEZA} alt="" />}
+      </button>
 
       <div
         className="lochy-kafel niegotowy"
@@ -311,6 +389,127 @@ function WiezaIPortal() {
         <img className="obraz" src={klatkaPortalu(klatka)} alt="" />
         <img className="zaslona" src={OBRAZ_PORTAL_ZAMKNIETY} alt="" />
       </div>
+    </>
+  );
+}
+
+/**
+ * Ekran jednego pietra wiezy.
+ *
+ * To NIE jest `ShowTowerScreen()` — tamten ekran to zarzadzanie
+ * pomocnikami (`BNC_SCREEN_TOWER`: trzy portrety kopii, ich ekwipunek
+ * i przyciski ulepszania), a pomocnikow u nas nie ma. Wejscie na pietro
+ * oryginal pokazuje na ekranie LOCHU:
+ *
+ *     case BTN_TOWER_TRY:
+ *         ShowMainQuestScreen(100, (399 + towerLevel));
+ *
+ * czyli ta sama plansza, ten sam tytul na `POS_SCREEN_TITLE_X`, ta sama
+ * ramka przeciwnika i ten sam przycisk — rozni sie tylko trzema
+ * rzeczami, ktore `ShowMainQuestScreen` bierze z galezi `DungeonNr == 100`:
+ *
+ *     DungeonLevel = String(towerLevel + 1);
+ *     text = txt[TXT_TOWER_LEVEL].split("%1").join(DungeonLevel) + " - "
+ *          + txt[TXT_TOWER_ENEMY_NAMES + Enemy - 399].split("|")[0];
+ *     questText = txt[TXT_TOWER_ENEMY_NAMES + towerLevel].split("|")[1];
+ *     Add(IMG_SCR_TOWER_BG);
+ */
+function EkranWiezy({
+  wieza,
+  onWroc,
+  onWalcz,
+}: {
+  wieza: StanWiezy;
+  onWroc: () => void;
+  onWalcz: () => void;
+}) {
+  const przeciwnik = NAZWY_PIETER[wieza.pietro - 1];
+  const zostalo = Math.max(0, wieza.przerwaDo - wieza.teraz);
+  const czekamy = zostalo > 0;
+
+  return (
+    <>
+      <div
+        className="lochy-plansza"
+        style={{
+          left: PLANSZA.lewo,
+          top: PLANSZA.gora,
+          width: PLANSZA.szerokosc,
+          height: PLANSZA.wysokosc,
+          opacity: PRZEZROCZYSTOSC_PLANSZY,
+        }}
+      />
+
+      <div className="lochy-tytul" style={{ left: TYTUL.srodek, top: TYTUL_LOCHU_Y }}>
+        {`${TYTUL_WIEZY.split('%1').join(String(wieza.pietro))} - ${przeciwnik?.nazwa ?? ''}`}
+      </div>
+
+      <div
+        className="lochy-tekst"
+        style={{ left: TEKST.lewo, top: TEKST.gora, width: TEKST.szerokosc }}
+      >
+        {(przeciwnik?.opis ?? '').split('#').map((wiersz, i) => (
+          <div key={i}>{wiersz}</div>
+        ))}
+      </div>
+
+      <img
+        className="lochy-ramka"
+        src={OBRAZ_RAMKI}
+        alt=""
+        style={{
+          left: RAMKA_PRZECIWNIKA.lewo,
+          top: RAMKA_PRZECIWNIKA.gora,
+          width: RAMKA_PRZECIWNIKA.rozmiar,
+          height: RAMKA_PRZECIWNIKA.rozmiar,
+        }}
+      />
+      <img
+        className="lochy-przeciwnik"
+        src={obrazPotwora(wieza.potwor)}
+        alt={przeciwnik?.nazwa ?? ''}
+        style={{
+          left: PRZECIWNIK.lewo,
+          top: PRZECIWNIK.gora,
+          width: PRZECIWNIK.rozmiar,
+          height: PRZECIWNIK.rozmiar,
+        }}
+      />
+
+      <button
+        type="button"
+        className="przycisk lochy-start"
+        style={{
+          left: PRZYCISK.prawo - PRZYCISK.szerokosc,
+          top: PRZYCISK.gora,
+          width: PRZYCISK.szerokosc,
+          minHeight: PRZYCISK.wysokosc,
+        }}
+        title={
+          czekamy
+            ? PODPOWIEDZ_GRZYBA.split('%1').join(czas(zostalo))
+            : !wieza.wolneMiejsceWPlecaku
+              ? 'Plecak jest pełny.'
+              : WEJSCIE_DO_WIEZY
+        }
+        onClick={onWalcz}
+      >
+        <NapisZIkona tekst={czekamy ? `${czas(zostalo)} (~P)` : 'OK'} />
+      </button>
+
+      <button
+        type="button"
+        className="przycisk lochy-wroc"
+        style={{
+          left: PODPOWIEDZ.lewo,
+          top: PRZYCISK.gora,
+          width: PRZYCISK.szerokosc,
+          minHeight: PRZYCISK.wysokosc,
+        }}
+        onClick={onWroc}
+      >
+        Wróć
+      </button>
     </>
   );
 }

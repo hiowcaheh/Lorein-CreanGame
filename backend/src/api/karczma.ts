@@ -49,6 +49,21 @@ import { tokenZNaglowka } from './konto.js';
 import { dolozKolumne } from '../db/kolumny.js';
 import { KOLUMNA_DAT } from '../game/album.js';
 import { zamknieteLochy } from '../game/lochy.js';
+import { KOLUMNA_PIETRA, PIERWSZE_PIETRO } from '../game/wieza.js';
+
+/**
+ * Premia zlota z wiezy, w procentach:
+ *
+ *     $towerbonus = ((int)$db_data['tower_level'] - 1) / 100;
+ *
+ * czyli jeden procent za kazde PRZEJSZTE pietro. Na pierwszym pietrze
+ * jest zerowa i wtedy klient nie ma czego pokazywac, wiec wcale jej nie
+ * wysylamy.
+ */
+function premieZlota(pietro: number): { wieza?: number } {
+  const wieza = pietro - PIERWSZE_PIETRO;
+  return wieza > 0 ? { wieza } : {};
+}
 import {
   BEZ_KLASERA,
   PUSTY_KLASER,
@@ -280,8 +295,16 @@ interface Rozliczenie {
    * `finishQuest()` podbija samo doswiadczenie.
    */
   premie?: { klaser: number; rzadkie: number };
-  /** Premie ZLOTA. Na razie zawsze puste — klaser podbija samo EXP. */
-  premieZlota?: { klaser?: number };
+  /**
+   * Premie ZLOTA, w procentach. Klasera tu NIE MA — oryginal liczy zloto
+   * osobnym wzorem, ktory go w ogole nie zna:
+   *
+   *     $gold = quest_gold * ($gbonus + $towerbonus)
+   *
+   * Na razie stoi tu sama wieza; skarbiec gildii i przejsciowe lochy
+   * dojda razem z gildia.
+   */
+  premieZlota?: { wieza?: number };
   /** Przedmiot, ktory wpadl do plecaka — albo powod, dla ktorego nie wpadl. */
   /**
    * Zdobyty przedmiot — CALY, bo ekran walki pokazuje jego ikone
@@ -300,6 +323,10 @@ interface Rozliczenie {
  */
 async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczenie | null> {
   if (liczba(wiersz['status']) !== NA_WYPRAWIE) return null;
+
+  /* Pietro wiezy podbija ZLOTO z wyprawy — patrz `premieZlota()`. */
+  await dolozKolumne(sql, 'user_data', 'tower_level', KOLUMNA_PIETRA);
+  const pietroWiezy = liczba(wiersz['tower_level']) || PIERWSZE_PIETRO;
 
   const numer = Math.min(3, Math.max(1, liczba(wiersz['status_extra']) || 1));
   const zadanie = zadaniaZWiersza(wiersz)[numer - 1]!;
@@ -402,7 +429,7 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
     });
 
     // Ta sama liczba, ktora stala w oknie wyboru zadania.
-    zdobyteZloto = zlotoZWyprawy(zadanie.zloto);
+    zdobyteZloto = zlotoZWyprawy(zadanie.zloto, { wieza: pietroWiezy });
     srebro += zdobyteZloto;
     doswiadczenie += zdobyteDoswiadczenie;
     honor += HONOR_ZA_WYPRAWE;
@@ -529,8 +556,12 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
       klaser: Math.round(premiaZKlasera(klaserPrzed) * 100),
       rzadkie: zadanie.premia,
     },
-    /** Zlota zadna premia nie dotyczy — patrz `zlotoZWyprawy()`. */
-    premieZlota: {},
+    /*
+     * Premie do ZLOTA. Klasera tu nie ma — `$gold = quest_gold *
+     * ($gbonus + $towerbonus)` w ogole go nie zna. Wieza doklada
+     * `(tower_level - 1) / 100`, czyli procent za kazde PRZEJSZTE pietro.
+     */
+    premieZlota: premieZlota(pietroWiezy),
     zdobytyPrzedmiot,
     plecakBylPelny,
     /*
@@ -701,6 +732,10 @@ export function opisWojownika(w: Wojownik, zycie: number, bron: number) {
 
 /** Wspolna odpowiedz opisujaca stan karczmy. */
 async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<string, unknown> = {}) {
+  /* Pietro wiezy podbija ZLOTO z wyprawy — patrz `premieZlota()`. */
+  await dolozKolumne(sql, 'user_data', 'tower_level', KOLUMNA_PIETRA);
+  const pietroWiezy = liczba(wiersz['tower_level']) || PIERWSZE_PIETRO;
+
   const zadania = await zadaniaGracza(sql, wiersz);
   const nagrody = await nagrodyZadan(sql, wiersz.user_id);
   const teraz = time();
@@ -750,7 +785,7 @@ async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<strin
         ...z,
         // Czas i koszt zaleza od wierzchowca, wiec licza sie tutaj.
         sekundy: czasWyprawy(z.dlugosc, koniowanie),
-        zloto: zlotoZWyprawy(z.zloto),
+        zloto: zlotoZWyprawy(z.zloto, { wieza: pietroWiezy }),
         doswiadczenie: doswiadczenieZWyprawy(z.doswiadczenie, {
           premia: z.premia,
           album: klaser === BEZ_KLASERA ? 0 : klaser,
@@ -758,11 +793,12 @@ async function stanKarczmy(sql: Sql, wiersz: WierszGracza, dodatki: Record<strin
         /** Skladniki premii do doswiadczenia, w procentach. */
         premie: { klaser: premiaKlasera, rzadkie: z.premia },
         /*
-         * Premie ZLOTA — na razie zadnych. Klaser i rzadkie zadanie
-         * podbijaja w oryginale wylacznie doswiadczenie; wlasne premie
-         * zlota (skarbiec gildii, wieza) czekaja na te budynki.
+         * Premie ZLOTA. Klaser i rzadkie zadanie podbijaja w oryginale
+         * wylacznie doswiadczenie; zloto ma wlasny zestaw, z ktorego
+         * dziala juz wieza. Skarbiec gildii i przejsciowe lochy czekaja
+         * na te budynki.
          */
-        premieZlota: {},
+        premieZlota: premieZlota(pietroWiezy),
         /*
          * Przedmiot czekajacy przy zadaniu. Oryginal pokazuje go w oknie
          * wyboru w calosci — z obrazkiem i wartosciami — bo gracz ma

@@ -44,6 +44,17 @@ import { dolozKolumne } from '../db/kolumny.js';
 import { KOLUMNA_DAT } from '../game/album.js';
 import { maPelneLustro } from '../game/lustro.js';
 import {
+  KOLUMNA_PIETRA,
+  LOKACJA_WIEZY,
+  PIERWSZE_PIETRO,
+  PIETER_WIEZY,
+  pietroZeStanu,
+  potworZWiezy,
+  poziomNagrody,
+  przeszedlWieze,
+  srebroZaPietro,
+} from '../game/wieza.js';
+import {
   opisWojownika,
   przedmiotyGracza,
   rysunekBroni,
@@ -176,8 +187,19 @@ lochy.get('/lochy', async (c) => {
     );
   }
 
+  /*
+   * Wieza idzie razem z lochami. Oryginal tez podaje ja od razu —
+   * `$ret[] = tower_level - 1` siedzi w tej samej odpowiedzi, co lochy,
+   * bo jej kafel stoi na drugiej planszy i musi zaraz pokazac pietro.
+   */
+  await dolozKolumne(dane.sql, 'user_data', 'tower_level', KOLUMNA_PIETRA);
+
   const stan = await stanLochow(dane.sql, dane.wiersz);
-  return c.json({ ...stan, gracz: await wczytajGracza(dane.sql, dane.wiersz) });
+  return c.json({
+    ...stan,
+    wieza: await stanWiezy(dane.sql, dane.wiersz),
+    gracz: await wczytajGracza(dane.sql, dane.wiersz),
+  });
 });
 
 /** Rozliczenie jednej walki w lochu — ten sam ksztalt, co przy wyprawie. */
@@ -480,6 +502,237 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
   };
 
   const stanPo = await stanLochow(sql, swiezy ?? wiersz);
+  return c.json({
+    ...stanPo,
+    rozliczenie,
+    gracz: await wczytajGracza(sql, swiezy ?? wiersz),
+  });
+});
+
+
+// ============================================================ WIEZA ==
+
+/*
+ * Wieza — sto pieter, port `$ACT_TOWER_TRY`.
+ *
+ * Siedzi w tym samym module, co lochy, bo dzieli z nimi wszystko poza
+ * tabela potworow: ten sam ekran wejsciowy, ta sama przerwa
+ * (`dungeon_time`), ta sama walka i ten sam sposob losowania nagrody.
+ *
+ * ODSTEPSTWO: oryginal przepuszcza przez potwora CZTERY rundy — trzej
+ * pomocnicy (`Copycat`), a dopiero potem gracz, przy czym zycie potwora
+ * przechodzi z rundy do rundy. Pomocnikow jeszcze nie ma czym ubrac
+ * (`tower_helper_items`), a bez ekwipunku ich bron ma zero obrazen, wiec
+ * potwor i tak doszedlby do gracza z pelnym zyciem. Zostaje wiec sama
+ * runda gracza — mechanicznie to samo, co w oryginale przy nagich
+ * pomocnikach. Patrz DO-ZROBIENIA.md.
+ */
+
+interface StanWiezy {
+  pietro: number;
+  pieterWszystkich: number;
+  /** Numer potwora z tego pietra — tak samo jak w lochu. */
+  potwor: number;
+  ukonczona: boolean;
+  przerwaDo: number;
+  teraz: number;
+  grzyby: number;
+  wolneMiejsceWPlecaku: boolean;
+}
+
+async function stanWiezy(sql: Sql, wiersz: WierszGracza): Promise<StanWiezy> {
+  const zajete = (
+    await sql<{ slot: number }[]>`
+      SELECT slot FROM items WHERE owner_id = ${wiersz.user_id} AND slot >= 10
+    `
+  ).map((w) => w.slot);
+
+  const stan = liczba(wiersz['tower_level']) || PIERWSZE_PIETRO;
+  const potwor = potworZWiezy(stan);
+
+  return {
+    pietro: pietroZeStanu(stan),
+    pieterWszystkich: PIETER_WIEZY,
+    potwor: potwor ? potwor.numer : -1,
+    ukonczona: przeszedlWieze(stan),
+    przerwaDo: liczba(wiersz['dungeon_time']),
+    teraz: time(),
+    grzyby: liczba(wiersz['mushroom']),
+    wolneMiejsceWPlecaku: wolneMiejsceWPlecaku(zajete) !== null,
+  };
+}
+
+lochy.get('/wieza', async (c) => {
+  const dane = await wczytaj(c);
+  if (!dane) return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
+
+  await dolozKolumne(dane.sql, 'user_data', 'tower_level', KOLUMNA_PIETRA);
+  return c.json(await stanWiezy(dane.sql, dane.wiersz));
+});
+
+lochy.post('/wieza/walcz', async (c) => {
+  const dane = await wczytaj(c);
+  if (!dane) return c.json({ blad: 'Sesja wygasła — zaloguj się ponownie.' }, 401);
+
+  const { sql, wiersz } = dane;
+
+  if (zajetyBezLustra(wiersz)) {
+    return c.json(
+      { blad: 'Jesteś zajęty. Dopiero komplet Magicznego Lustra pozwala wejść do wieży w trakcie wyprawy.' },
+      409,
+    );
+  }
+
+  await dolozKolumne(sql, 'user_data', 'tower_level', KOLUMNA_PIETRA);
+
+  const stan = liczba(wiersz['tower_level']) || PIERWSZE_PIETRO;
+  if (przeszedlWieze(stan)) return c.json({ blad: 'Wieżę masz już za sobą.' }, 409);
+
+  const opis = potworZWiezy(stan);
+  if (!opis) return c.json({ blad: 'Tego piętra nie ma.' }, 409);
+
+  // `if ($slotInfo[0] == false) { $ret = [$ERR_INVENTORY_FULL]; break; }`
+  const zajete = (
+    await sql<{ slot: number }[]>`
+      SELECT slot FROM items WHERE owner_id = ${wiersz.user_id} AND slot >= 10
+    `
+  ).map((w) => w.slot);
+  const miejsce = wolneMiejsceWPlecaku(zajete);
+  if (miejsce === null) return c.json({ blad: 'Plecak jest pełny.' }, 409);
+
+  // Przerwa wspolna z lochami — ta sama kolumna i te same zasady.
+  const teraz = time();
+  let koniecPrzerwy = liczba(wiersz['dungeon_time']);
+  let grzyby = liczba(wiersz['mushroom']);
+
+  if (teraz < koniecPrzerwy) {
+    if (grzyby <= 0) return c.json({ blad: 'Musisz odczekać albo zapłacić grzybem.' }, 409);
+    grzyby -= GRZYBOW_ZA_POMINIECIE;
+  } else {
+    koniecPrzerwy = teraz + PRZERWA_SEKUND;
+  }
+
+  // ------------------------------------------------------------ walka --
+
+  const rng = new PhpMtRand();
+  const przedmioty = await przedmiotyGracza(sql, wiersz.user_id);
+  const gracz = wojownikZGracza(wiersz, przedmioty);
+  const potwor = potworZLochu(opis, 'Strażnik piętra');
+
+  const doRysowania = await sql<Record<string, unknown>[]>`
+    SELECT slot, item_type, item_id, upgrade_level, dmg_min, dmg_max,
+           atr_type_1, atr_type_2, atr_type_3, atr_val_1, atr_val_2, atr_val_3,
+           gold, mush
+    FROM items WHERE owner_id = ${wiersz.user_id} AND slot IN (8, 9)
+  `;
+  const bronWSlocie = doRysowania.find((p) => liczba(p['slot']) === 8);
+  const tarczaWSlocie = doRysowania.find((p) => liczba(p['slot']) === 9);
+  const bronGracza = bronWSlocie ? liczba(bronWSlocie['item_id']) : 0;
+  const rysunekBroniGracza = bronWSlocie ? rysunekBroni(bronWSlocie) : rysunekPiesci();
+  const ikonaTarczyGracza = tarczaWSlocie ? zbudujPrzedmiot(tarczaWSlocie).obrazek : null;
+
+  const zycieGraczaPrzed = gracz.zycie;
+  const zyciePotworaPrzed = potwor.zycie;
+  const walka = rozegrajWalke(gracz, potwor, rng);
+  const wygrana = walka.wygral === 1;
+
+  // ------------------------------------------------------- rozliczenie --
+
+  let srebro = liczba(wiersz['silver']);
+  let nowyStan = stan;
+  let zdobytyPrzedmiot: PrzedmiotEkranu | null = null;
+  let zdobyteSrebro = 0;
+
+  if (wygrana) {
+    nowyStan = stan + 1;
+    zdobyteSrebro = srebroZaPietro(opis);
+    srebro += zdobyteSrebro;
+
+    /*
+     * Nagroda przedmiotowa. Klasa jest LOSOWA i nigdy nie jest klasa
+     * gracza — wieza daje rzeczy do sprzedania, a nie do zalozenia:
+     *
+     *     $class = rand(1, 3);
+     *     while ($class == $db_data['class']) $class = rand(1, 3);
+     *     $shop = rand(0, 2) - 1; if ($shop < 0) $shop = 0;
+     */
+    const klasaGracza = liczba(wiersz['class']) || 1;
+    let klasa = rng.rand(1, 3);
+    while (klasa === klasaGracza) klasa = rng.rand(1, 3);
+    const sklep = Math.max(0, rng.rand(0, 2) - 1);
+
+    const zdobycz = wylosujPrzedmiot(poziomNagrody(opis, liczba(wiersz['lvl']) || 1), klasa, {
+      sklep,
+      maAlbum: liczba(wiersz['album'] ?? BEZ_KLASERA) !== BEZ_KLASERA,
+      losuj: (od, doo) => rng.rand(od, doo),
+    });
+
+    if (zdobycz) {
+      /*
+       * `':gold' => 0` — oryginal zeruje zloto przedmiotu z wiezy, wiec
+       * sprzedaz nie oddaje za niego nic poza grzybami.
+       */
+      await sql`
+        INSERT INTO items (item_type, item_id, dmg_min, dmg_max,
+                           atr_type_1, atr_type_2, atr_type_3,
+                           atr_val_1, atr_val_2, atr_val_3,
+                           gold, mush, slot, owner_id)
+        VALUES (${zdobycz.item_type}, ${zdobycz.item_id}, ${zdobycz.dmg_min}, ${zdobycz.dmg_max},
+                ${zdobycz.atr_type_1}, ${zdobycz.atr_type_2}, ${zdobycz.atr_type_3},
+                ${zdobycz.atr_val_1}, ${zdobycz.atr_val_2}, ${zdobycz.atr_val_3},
+                0, ${zdobycz.mush}, ${miejsce}, ${wiersz.user_id})
+      `;
+      zdobytyPrzedmiot = {
+        ...zbudujPrzedmiot({ ...zdobycz, gold: 0, upgrade_level: 0 }),
+        slot: miejsce,
+      };
+    }
+  }
+
+  await sql`
+    UPDATE user_data SET
+      silver = ${srebro}, mushroom = ${grzyby},
+      dungeon_time = ${koniecPrzerwy}, tower_level = ${nowyStan}
+    WHERE user_id = ${wiersz.user_id}
+  `;
+
+  const [swiezy] = await sql<WierszGracza[]>`
+    SELECT * FROM user_data WHERE user_id = ${wiersz.user_id} LIMIT 1
+  `;
+
+  const rozliczenie: RozliczenieLochu = {
+    wygrana,
+    loch: 0,
+    /** Tlo walki w wiezy — `location_tower.jpg`, patrz `LOKACJA_WIEZY`. */
+    lokacja: LOKACJA_WIEZY,
+    poziom: pietroZeStanu(stan),
+    /** Wieza nie daje doswiadczenia, wiec i awansu z niej nie ma. */
+    awans: null,
+    nagroda: wygrana
+      ? { zloto: zdobyteSrebro, doswiadczenie: 0, honor: 0, grzyby: 0 }
+      : null,
+    premie: { klaser: 0 },
+    premieZlota: {},
+    zdobytyPrzedmiot,
+    plecakBylPelny: false,
+    ukonczony: przeszedlWieze(nowyStan),
+    walka: {
+      gracz: {
+        ...opisWojownika(gracz, zycieGraczaPrzed, bronGracza),
+        ...rysunekBroniGracza,
+        tarczaObrazek: ikonaTarczyGracza,
+      },
+      potwor: {
+        ...opisWojownika(potwor, zyciePotworaPrzed, opis.bron),
+        obrazek: opis.numer,
+        ...rysunekBroniPotwora(opis.bron),
+        tarczaObrazek: null,
+      },
+      ciosy: walka.ciosy,
+    },
+  };
+
+  const stanPo = await stanWiezy(sql, swiezy ?? wiersz);
   return c.json({
     ...stanPo,
     rozliczenie,

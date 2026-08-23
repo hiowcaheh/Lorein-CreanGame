@@ -7,6 +7,8 @@
  * pojawiaja sie w rozpisaniu pod nagroda; nic wiecej nie trzeba zmieniac.
  */
 
+import { PREMIA_Z_WIEZY } from './wieza-teksty';
+
 export interface PremieNagrody {
   /** Klaser Dokladnosci — `round(album / 1700, 2)`. */
   klaser?: number;
@@ -28,7 +30,7 @@ export const ZRODLA_PREMII = [
   { klucz: 'klaser', podpis: 'Premia kolekcjonera', klasa: 'premia-klaser' },
   { klucz: 'rzadkie', podpis: 'Rzadkie zadanie', klasa: 'premia-rzadkie' },
   { klucz: 'gildia', podpis: 'Premia gildii', klasa: 'premia-gildia' },
-  { klucz: 'wieza', podpis: 'Premia wieży', klasa: 'premia-wieza' },
+  { klucz: 'wieza', podpis: PREMIA_Z_WIEZY, klasa: 'premia-wieza' },
   { klucz: 'przedmioty', podpis: 'Premia z przedmiotów', klasa: 'premia-przedmioty' },
 ] as const satisfies readonly { klucz: keyof PremieNagrody; podpis: string; klasa: string }[];
 

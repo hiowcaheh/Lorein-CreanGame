@@ -22,6 +22,7 @@ function ramka(x: number, y: number, sz: number, wy: number): Ramka {
 }
 
 import { TYTULY_WYPRAW } from './karczma-teksty';
+import { OBRAZY_PIETER } from './wieza-teksty';
 
 export const KATALOG = '/res/sfgame/scr/taverne/';
 
@@ -166,7 +167,17 @@ export const POSTEP_PRZERWIJ = ramka(780, 700, 180, 50);
  */
 const NAJWYZSZA_KRAINA = 66;
 
+/**
+ * Wieza ma WLASNY plik `location_tower.jpg`, a nie numer w tym samym
+ * ciagu, co krainy — stad umowna wartosc, ktora odsyla serwer
+ * (`LOKACJA_WIEZY` w `backend/src/game/wieza.ts`).
+ */
+export const LOKACJA_WIEZY = 100;
+
 export function tloKrainy(lokacja: number): string {
+  if (lokacja === LOKACJA_WIEZY) {
+    return '/res/sfgame/scr/quest/locations/location_tower.jpg';
+  }
   const numer = Math.max(1, Math.min(NAJWYZSZA_KRAINA, lokacja));
   return `/res/sfgame/scr/quest/locations/location${numer}.jpg`;
 }
@@ -469,8 +480,24 @@ export const OBRAZ_RAMKI_SRODKOWEJ = '/res/sfgame/scr/fight/box2.png';
  * gdzie potwor o numerze `n` siedzi pod bitem `n - 1`.
  */
 export function obrazPotwora(numer: number): string {
+  const zWiezy = OBRAZY_PIETER[numer - PIERWSZY_POTWOR_WIEZY];
+  if (zWiezy) return `/res/sfgame/scr/fight/monster/${zWiezy}`;
   return `/res/sfgame/scr/fight/monster/monster${numer}.jpg`;
 }
+
+/**
+ * Numer pierwszego potwora z wiezy. Ich pliki oryginal ma zamazane
+ * skrotem MD5:
+ *
+ *     if (i >= 399 && i < 499) {
+ *         monsterChecksum = MD5(String(i) + "ScriptKiddieLovesToPeek");
+ *         DefineImg(..., "monster" + monsterChecksum + ".jpg");
+ *     }
+ *
+ * gdzie `i` to pozycja obrazka, o jeden nizsza od numeru potwora. Nazw
+ * nie da sie zlozyc w kliencie, wiec stoja gotowe w `wieza-teksty.ts`.
+ */
+const PIERWSZY_POTWOR_WIEZY = 400;
 
 /**
  * Tytul wyprawy — port `GetQuestTitle()` i `GetQuestRandom()`.

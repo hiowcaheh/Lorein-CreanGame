@@ -17,6 +17,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PODPISY, POTWORY, WYNIKI_WALKI } from '../../gra/karczma-teksty';
+import { PRZEGRANE_W_WIEZY, WYGRANE_W_WIEZY } from '../../gra/wieza-teksty';
 import { lacznaPremia } from '../../gra/premie';
 import {
   OknoNagrody,
@@ -102,6 +103,7 @@ import {
   tarczaX,
   tarczaY,
   tloKrainy,
+  LOKACJA_WIEZY,
   type Ramka,
 } from '../../gra/karczmaUklad';
 import type { CechyWalki, Gracz, Rozliczenie } from '../../gra/typy';
@@ -268,6 +270,19 @@ export function Walka({
    * z ostatniego stanu, a nie z tego, co juz odegrano.
    */
   const zdanieWyniku = useMemo(() => {
+    /*
+     * Wieza ma wlasne zdania i NIE oglada sie na to, jak walka poszla:
+     *
+     *     if (towerFightMode) {
+     *         text = txt[(charWin ? TXT_TOWER_WON : TXT_TOWER_LOST)
+     *                    + int(Math.random() * 5)];
+     *     }
+     */
+    if (rozliczenie.lokacja === LOKACJA_WIEZY) {
+      const zdania = wygrana ? WYGRANE_W_WIEZY : PRZEGRANE_W_WIEZY;
+      return zdania[Math.floor(Math.random() * zdania.length)] ?? '';
+    }
+
     let poGraczu = walka.gracz.zycie;
     let poPotworze = walka.potwor.zycie;
     for (const cios of walka.ciosy) {
@@ -280,7 +295,7 @@ export function Walka({
       : stopienWalki(poPotworze, walka.potwor.zycie);
     const piatka = (wygrana ? WYNIKI_WALKI.wygrana : WYNIKI_WALKI.przegrana)[stopien] ?? [];
     return piatka[Math.floor(Math.random() * piatka.length)] ?? '';
-  }, [walka, wygrana]);
+  }, [walka, wygrana, rozliczenie.lokacja]);
 
   /*
    * Klatki animacji sciagamy Z GORY, zanim pierwszy cios ich zazada.

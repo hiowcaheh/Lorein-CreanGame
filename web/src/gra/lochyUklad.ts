@@ -21,6 +21,16 @@ export const PRZESZEDL = 12;
 /** `Background = IMG_SCR_QUEST_BG_1 + 50` — czyli `location51.jpg`. */
 export const TLO_LISTY = '/res/sfgame/scr/quest/locations/location51.jpg';
 
+/**
+ * Tlo ekranu wiezy — `IMG_SCR_TOWER_BG`:
+ *
+ *     DefineImg(IMG_SCR_TOWER_BG, "scr/quest/locations/location_tower.jpg",
+ *               false, 280, 100);
+ *
+ * Wieza nie ma numeru w ciagu `location{50 + N}.jpg`, tylko wlasny plik.
+ */
+export const TLO_WIEZY = '/res/sfgame/scr/quest/locations/location_tower.jpg';
+
 /** Tlo pojedynczego lochu: `IMG_SCR_QUEST_BG_1 + 50 + DungeonNr`. */
 export function tloLochu(numer: number): string {
   return `/res/sfgame/scr/quest/locations/location${50 + numer}.jpg`;
@@ -33,6 +43,8 @@ export function obrazLochu(numer: number): string {
 
 export const OBRAZ_ZAMKNIETY = '/res/sfgame/scr/dungeons/unknown.png';
 export const OBRAZ_PRZESZEDL = '/res/sfgame/scr/dungeons/done.png';
+/** Znacznik przejsciowej wiezy — ma wlasny plik, wyzszy od zwyklego. */
+export const OBRAZ_PRZESZEDL_WIEZA = '/res/sfgame/scr/dungeons/done_tower.png';
 export const DZWIEK_OTWARCIA = '/res/sfgame/sfx/unlock.mp3';
 
 /** `POS_MQS_TITLE_Y`, wysrodkowany na `POS_SCREEN_TITLE_X`. */

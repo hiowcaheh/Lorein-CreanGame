@@ -26,7 +26,7 @@ import { Lochy, type StanLochow } from './ekrany/Lochy';
 import { Walka } from './ekrany/karczma/Walka';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
-import type { Gracz, OdpowiedzZTokenem, Rozliczenie, StanKarczmy, StanSklepu } from './gra/typy';
+import type { Gracz, OdpowiedzZTokenem, Rozliczenie, StanKarczmy, StanSklepu, StanWiezy } from './gra/typy';
 import { liczba } from './gra/liczby';
 
 type Zakladka =
@@ -223,6 +223,22 @@ export function App() {
       })
       .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Wrota są zatrzaśnięte.'));
   }, []);
+
+  /*
+   * Wejscie na pietro wiezy — `ACT_TOWER_TRY`. Odpowiedz ma ten sam
+   * ksztalt, co walka w lochu, wiec i ekran walki jest ten sam; tlo
+   * bierze sie z `lokacja: LOKACJA_WIEZY`.
+   */
+  function walczWWiezy() {
+    setBlad(null);
+    void zapytaj<StanWiezy & { rozliczenie: Rozliczenie; gracz?: Gracz }>('/wieza/walcz', {})
+      .then((odp) => {
+        setLochy((poprzedni) => (poprzedni ? { ...poprzedni, wieza: odp } : poprzedni));
+        if (odp.gracz) setGracz(odp.gracz);
+        setWalkaWLochu(odp.rozliczenie);
+      })
+      .catch((e) => setBlad(e instanceof BladApi ? e.message : 'Nie udało się wejść do wieży.'));
+  }
 
   function walczWLochu(numer: number) {
     setBlad(null);
@@ -455,6 +471,7 @@ export function App() {
             gracz={gracz}
             onWalcz={walczWLochu}
             onOdswiez={wczytajLochy}
+            onWalczWWiezy={walczWWiezy}
           />
         )}
         {zakladka === 'lochy' && walkaWLochu && (

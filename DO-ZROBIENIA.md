@@ -10,24 +10,23 @@ w `CLAUDE.md`.
 
 ---
 
-## 1. Wieza
+## 1. Wieza — pomocnicy
 
-Sto pieter, na kazdym jeden potwor. **Prostszy kawalek niz portal** —
-nie zalezy od niczego, czego jeszcze nie ma.
+Sama wieza JEST: sto pieter, potwory z `getTowerMonster()`, wejscie
+z kafla na drugiej planszy, walka, srebro i zdobycz. Zostala z niej
+jedna warstwa — **trzej pomocnicy**.
 
 | Czego trzeba | Gdzie to jest |
 | --- | --- |
-| potwory | `sf555/req.php` — `getTowerMonster($stage)`, sto wierszy `new Monster(...)`, ten sam ksztalt, co lochy. Da sie doloz'yc do `backend/scripts/gen-lochy.mjs` |
-| akcje serwera | `$ACT_SCREEN_TOWER` (312), `$ACT_TOWER_TRY` (313) |
-| kolumny | `user_data.tower_level` i tabela `tower_helper_items` — obie sa juz w `backend/db/schema.sql` |
-| ekran | `MainTimeline.as` — `ShowMainQuestScreen(100, 399 + towerLevel)`, tlo `IMG_SCR_TOWER_BG` = `scr/quest/locations/location_tower.jpg` |
-| kafel na liscie lochow | `scr/dungeons/button_tower.jpg` i `done_tower.png`; miejsce juz jest, patrz `KAFEL_WIEZY` w `web/src/gra/lochyUklad.ts` |
-| nazwa | plik jezykowy, pozycja 9538 („Wieza") |
+| akcje serwera | `$ACT_COPYCAT_BOOST` (314), `$ACT_MOVE_COPYCAT_ITEM` (318) |
+| kolumny | `user_data.copycat_lvl/str/dex/int/wit/luck` i tabela `tower_helper_items` — sa juz w `backend/db/schema.sql` |
+| pancerz pomocnika | `sf555/req.php` — `getCopycatRealArmor()` |
+| cztery rundy | `req.php`, `$ACT_TOWER_TRY`: `while ($round < 4 && $OP->getHP() > 0)` — trzej pomocnicy, potem gracz, a zycie potwora przechodzi z rundy do rundy |
+| ekran zarzadzania | `MainTimeline.as` — `ShowTowerScreen()`, wiazka `BNC_SCREEN_TOWER`: trzy portrety `npc/copycat_1..3.jpg`, ich ekwipunek (`DisplayInventory(towerSG, true, true, copyCatSel)`), przyciski ulepszania na `POS_SCR_CHAR_CHARIMG_X + 232` i przewijana wieza (`scr/tower/tower_base.png`, `tower_level.png`, `tower_roof.png`, okna) |
+| napisy | `TXT_TOWER_GUYS` (9770), `TXT_BOOST_COPYCAT` |
 
-**Osobna warstwa: pomocnicy.** `$ACT_COPYCAT_BOOST` (314) i
-`$ACT_MOVE_COPYCAT_ITEM` (318) — trzej towarzysze, ktorym zaklada sie
-wlasny ekwipunek (`tower_helper_items`, `getCopycatRealArmor()`). Da sie
-zrobic sama wieze bez nich i dolozyc ich pozniej.
+Dopoki ich nie ma, walka na pietrze to sama runda gracza — patrz wiersz
+o wiezy w tabeli odstepstw w `CLAUDE.md`.
 
 ## 2. Portal do piekiel
 

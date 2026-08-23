@@ -282,3 +282,18 @@ export interface StanSklepu {
   czasSerwera: number;
   gracz: Gracz;
 }
+
+/** Stan wiezy tak, jak podaje go backend (`GET /api/wieza`). */
+export interface StanWiezy {
+  /** Pietro, na ktorym gracz stoi — liczone od jedynki. */
+  pietro: number;
+  pieterWszystkich: number;
+  /** Numer potwora z tego pietra; -1, gdy pietra nie ma. */
+  potwor: number;
+  /** Czy wieza jest za nim — przeszedl setne pietro. */
+  ukonczona: boolean;
+  przerwaDo: number;
+  teraz: number;
+  grzyby: number;
+  wolneMiejsceWPlecaku: boolean;
+}
