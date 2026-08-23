@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { PodpowiedzPrzedmiotu } from '../../gra/PodpowiedzPrzedmiotu';
+import { lacznaPremia } from '../../gra/premie';
 import {
   OknoNagrody,
   wysokoscOknaNagrody,
@@ -94,7 +95,13 @@ export function OknoWyboru({
    * Premii gildii jeszcze nie ma czym wypelnic, wiec zostaja dwie:
    * klaser i rzadkie zadanie.
    */
-  const premiaLacznie = wybrane.premie.klaser + wybrane.premie.rzadkie;
+  /*
+   * Kazda nagroda ma swoje premie i swoj znaczek. Zlota nie podbija na
+   * razie nic (patrz `zlotoZWyprawy()` na serwerze), wiec strzalka przy
+   * nim sie nie pojawia — pojawi sie sama, gdy dojda gildia i wieza.
+   */
+  const premiaDoswiadczenia = wybrane.premie.klaser + wybrane.premie.rzadkie;
+  const premiaZlota = lacznaPremia(wybrane.premieZlota);
 
   return (
     <div className="karczma-okno" style={{ left: OKNO.lewo, top: OKNO.gora, width: OKNO.szerokosc, height: OKNO.wysokosc }}>
@@ -176,6 +183,7 @@ export function OknoWyboru({
           ODSTEPSTWO, patrz tabela w CLAUDE.md.
         */
         <button type="button" className="karczma-premia" onClick={() => przelacz('zloto')}>
+          {premiaZlota > 0 && <img className="skacze" src={ZNACZEK_PREMII} alt="z premią" />}
           {liczba(Math.floor(wybrane.zloto / 100))}
           <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
         </button>,
@@ -188,7 +196,7 @@ export function OknoWyboru({
         <button type="button" className="karczma-premia" onClick={() => przelacz('exp')}>
           {/* „EXP", nie pelne slowo — SWIADOME ODSTEPSTWO, patrz CLAUDE.md. */}
           {PODPISY.doswiadczenieKrotko}: {liczba(wybrane.doswiadczenie)}
-          {premiaLacznie > 0 && (
+          {premiaDoswiadczenia > 0 && (
             <img className="skacze" src={ZNACZEK_PREMII} alt="z premią" />
           )}
         </button>,

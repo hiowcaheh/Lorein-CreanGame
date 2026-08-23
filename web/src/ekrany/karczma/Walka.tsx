@@ -189,7 +189,17 @@ export function Walka({
    * podbita w oknie wyboru i tam stoi znaczek; po walce w lochu nagroda
    * powstaje dopiero teraz, wiec znaczek nalezy sie tutaj.
    */
-  const premiaLacznie = lacznaPremia(rozliczenie.premie);
+  /*
+   * Kazda nagroda ma SWOJE premie i swoj znaczek. Doswiadczenie podbija
+   * klaser i rzadkie zadanie; zlota nie podbija na razie nic (patrz
+   * `zlotoZWyprawy()` na serwerze), wiec strzalka przy nim sie nie
+   * pojawia — pojawi sie sama, gdy dojda premie gildii i wiezy.
+   *
+   * Loch nie odsyla osobnej listy dla zlota: tam premia jest jedna
+   * i wtedy zloto dziedziczy `premie`.
+   */
+  const premiaDoswiadczenia = lacznaPremia(rozliczenie.premie);
+  const premiaZlota = lacznaPremia(rozliczenie.premieZlota ?? rozliczenie.premie);
 
   /*
    * Ktora nagroda ma otwarte rozpisanie. Doswiadczenie i pieniadze maja
@@ -503,7 +513,7 @@ export function Walka({
                     liczbie i ikonie zdobyczy.
                   */}
                   {PODPISY.doswiadczenieKrotko}:{' '}
-                  {premiaLacznie > 0 && <ZnaczekPremii />}
+                  {premiaDoswiadczenia > 0 && <ZnaczekPremii />}
                   {liczba(nagroda.doswiadczenie)}
                 </div>
               )}
@@ -532,7 +542,7 @@ export function Walka({
                   }}
                   onClick={() => przelacz('zloto')}
                 >
-                  {premiaLacznie > 0 && <ZnaczekPremii />}
+                  {premiaZlota > 0 && <ZnaczekPremii />}
                   {/*
                     Samo ZLOTO. Srebro (koncowka ponizej stu) schodzi do
                     okienka — SWIADOME ODSTEPSTWO, patrz tabela w CLAUDE.md.
