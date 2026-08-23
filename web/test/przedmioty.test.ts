@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { nazwaPrzedmiotu, wierszeOpisu } from '../src/gra/przedmioty';
+import { celPrzeniesienia, nazwaPrzedmiotu, wierszeOpisu } from '../src/gra/przedmioty';
 import type { Przedmiot } from '../src/gra/typy';
 
 function przedmiot(czesci: Partial<Przedmiot>): Przedmiot {
@@ -88,5 +88,43 @@ describe('wierszeOpisu', () => {
       { etykieta: 'Pancerz', wartosc: '6' },
       { etykieta: 'Siła', wartosc: '+ 5' },
     ]);
+  });
+});
+
+describe('celPrzeniesienia', () => {
+  const rzecz = (typ: number): Przedmiot => ({
+    slot: 10,
+    typ,
+    podtyp: 1,
+    numer: 3,
+    ulepszenie: 0,
+    obrazek: '',
+    pocisk: null,
+    obrazenia: { min: 0, max: 0 },
+    atrybuty: [],
+    zloto: 0,
+    grzyby: 0,
+  });
+
+  it('upuszczenie na postac zostaje „zaloz na wlasciwe miejsce"', () => {
+    expect(celPrzeniesienia(rzecz(9), null)).toBeNull();
+  });
+
+  it('wlasciwe miejsce przechodzi bez zmian', () => {
+    // Pierscien to rodzaj 9, jego miejsce ma numer 6.
+    expect(celPrzeniesienia(rzecz(9), 6)).toBe(6);
+  });
+
+  it('cudze miejsce na postaci kieruje przedmiot na JEGO wlasne', () => {
+    // Pierscien rzucony na pole naszyjnika (4) ma trafic tam, gdzie
+    // nalezy, a nie zostac zalozony w zlym miejscu.
+    expect(celPrzeniesienia(rzecz(9), 4)).toBeNull();
+    expect(celPrzeniesienia(rzecz(8), 7)).toBeNull();
+    expect(celPrzeniesienia(rzecz(10), 6)).toBeNull();
+  });
+
+  it('plecak przyjmuje wszystko i celu nie zmienia', () => {
+    expect(celPrzeniesienia(rzecz(9), 12)).toBe(12);
+    expect(celPrzeniesienia(rzecz(1), 14)).toBe(14);
   });
 });

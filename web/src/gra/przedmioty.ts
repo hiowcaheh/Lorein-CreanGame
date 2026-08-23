@@ -254,6 +254,24 @@ export const RODZAJ_MIKSTURY = 12;
 /** Pierwszy slot plecaka. Nizsze numery to miejsca na zalozone rzeczy. */
 export const PIERWSZY_SLOT_PLECAKA = 10;
 
+/**
+ * Dokad NAPRAWDE poleci przedmiot upuszczony na miejsce `cel`.
+ *
+ * Kazdy przedmiot ma swoje jedno miejsce na postaci. Kiedy gracz celuje
+ * w miejsce nalezace do innego rodzaju — na przyklad rzuca pierscien na
+ * pole naszyjnika — nie odmawiamy, tylko kladziemy rzecz TAM, GDZIE JEJ
+ * miejsce. Tak samo dziala upuszczenie gdziekolwiek na postac
+ * (`cel === null`), i tak samo robi oryginal, gdy przedmiot leci na
+ * ciało: `$in[3] = getSlotIndex($item['item_type'])`.
+ *
+ * Plecak przyjmuje wszystko, wiec tam `cel` zostaje bez zmian.
+ */
+export function celPrzeniesienia(przedmiot: Przedmiot, cel: number | null): number | null {
+  if (cel === null || cel >= PIERWSZY_SLOT_PLECAKA) return cel;
+  return slotDlaRodzaju(przedmiot.typ) === cel ? cel : null;
+}
+
+
 /** Cena w zlocie i srebrze — sto srebra to jedno zloto, jak w oryginale. */
 export function cenaPrzedmiotu(p: Przedmiot): { zloto: number; srebro: number; grzyby: number } {
   return {

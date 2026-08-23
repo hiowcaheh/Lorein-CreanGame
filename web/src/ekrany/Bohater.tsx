@@ -25,7 +25,13 @@ import {
 } from '../gra/stajnia';
 import { Portret } from '../gra/Portret';
 import { NAZWY_KLAS, NAZWY_RAS } from '../gra/portret';
-import { RODZAJ_MIKSTURY, PIERWSZY_SLOT_PLECAKA, nazwaPrzedmiotu, slotDlaRodzaju } from '../gra/przedmioty';
+import {
+  RODZAJ_MIKSTURY,
+  PIERWSZY_SLOT_PLECAKA,
+  celPrzeniesienia,
+  nazwaPrzedmiotu,
+  slotDlaRodzaju,
+} from '../gra/przedmioty';
 import {
   NAPIS_DO,
   NAPIS_TYMCZASOWO,
@@ -189,7 +195,8 @@ export function Bohater({
       }
 
       if (naMiksture) return;
-      onPrzenies(przedmiot.slot, cel);
+      // Kazdy przedmiot ma swoje miejsce — patrz `celPrzeniesienia()`.
+      onPrzenies(przedmiot.slot, celPrzeniesienia(przedmiot, cel));
     },
   });
 

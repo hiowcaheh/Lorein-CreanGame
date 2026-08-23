@@ -42,13 +42,14 @@ export const MIEJSC_W_PLECAKU = 5;
 export const OSTATNI_SLOT_PLECAKA = PIERWSZY_SLOT_PLECAKA + MIEJSC_W_PLECAKU - 1;
 
 /**
- * Rodzaje o numerze mniejszym niz 8 to bron, tarcza i czesci zbroi.
+ * Od tego rodzaju przedmiot nie ma juz KLASY.
  *
- * Tylko one maja ograniczenia: musza trafic na swoje miejsce i musza byc
- * przeznaczone dla klasy gracza. Bizuteria (rodzaje 8, 9 i 10) zadnych
- * ograniczen nie ma — nosi ja kazdy.
+ * Rodzaje 1-7 to bron, tarcza i czesci zbroi — kazdy z nich jest zrobiony
+ * dla jednej klasy. Bizuterie (8 naszyjniki, 9 pierscienie, 10 talizmany)
+ * nosi kazdy, wiec sprawdzanie klasy jej nie dotyczy. Miejsce na postaci
+ * ma za to swoje KAZDY z nich — patrz `czyMozeLezec()`.
  */
-const PIERWSZY_RODZAJ_BEZ_OGRANICZEN = 8;
+const PIERWSZY_RODZAJ_BEZ_KLASY = 8;
 
 /** Przedmiot w postaci, w jakiej trzyma go tabela `items`. */
 export interface PrzedmiotWBazie {
@@ -85,10 +86,24 @@ export interface Przeniesienie {
 /**
  * Sprawdza, czy przedmiot moze lezec w danym slocie.
  *
- * Warunek jest dokladnie ten, ktory sprawdza `req.php` przed zamiana
- * miejsc: przedmiot rodzaju mniejszego niz 8 musi trafic na swoje
- * miejsce i musi byc przeznaczony dla klasy gracza. Miejsca w plecaku
- * (numer 10 i wyzej) przyjmuja wszystko.
+ * Miejsca w plecaku (numer 10 i wyzej) przyjmuja wszystko.
+ *
+ * SWIADOME ODSTEPSTWO przy BIZUTERII (tabela w CLAUDE.md). Oryginal
+ * konczy kazdy ze swoich czterech warunkow czlonem `$item['item_type'] < 8`:
+ *
+ *     if ($changeItm == false && $in[3] < 10
+ *         && getSlotIndex($item['item_type']) != $in[3]
+ *         && $item['item_type'] < 8) { ... odmowa ... }
+ *
+ * czyli naszyjnik, pierscien i talizman moze tam wladowac w KAZDE
+ * miejsce na postaci — da sie zalozyc trzy pierscienie naraz. Wlasciciel
+ * gry uznal to za blad: kazdy przedmiot ma miec swoje jedno miejsce, tak
+ * jak buty czy helm. Sprawdzenie MIEJSCA obejmuje wiec i bizuterie.
+ *
+ * Sprawdzenie KLASY zostaje przy rodzajach 1-7, dokladnie jak
+ * w oryginale: bizuteria klasy nie ma (`item_id` ponizej tysiaca daje
+ * zawsze jedynke), wiec objecie jej tym warunkiem odcieloby ja wszystkim
+ * poza wojownikiem.
  */
 export function czyMozeLezec(
   przedmiot: PrzedmiotWBazie,
@@ -96,10 +111,15 @@ export function czyMozeLezec(
   klasaGracza: number,
 ): Odmowa | null {
   if (slot >= PIERWSZY_SLOT_PLECAKA) return null;
-  if (przedmiot.item_type >= PIERWSZY_RODZAJ_BEZ_OGRANICZEN) return null;
 
   if (slotDlaRodzaju(przedmiot.item_type) !== slot) return 'zle-miejsce';
-  if (klasaPrzedmiotu(przedmiot.item_id) !== klasaGracza) return 'inna-klasa';
+
+  if (
+    przedmiot.item_type < PIERWSZY_RODZAJ_BEZ_KLASY &&
+    klasaPrzedmiotu(przedmiot.item_id) !== klasaGracza
+  ) {
+    return 'inna-klasa';
+  }
   return null;
 }
 

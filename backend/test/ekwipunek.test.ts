@@ -62,6 +62,38 @@ describe('czyMozeLezec', () => {
     const bronMaga = rzecz({ item_type: 1, item_id: 1005 });
     expect(czyMozeLezec(bronMaga, 12, 1)).toBeNull();
   });
+
+  /*
+   * ODSTEPSTWO (tabela w CLAUDE.md). Oryginal konczy kazdy ze swoich
+   * warunkow czlonem `$item['item_type'] < 8`, wiec bizuterie da sie
+   * tam wladowac w kazde miejsce na postaci — i zalozyc trzy pierscienie
+   * naraz. U nas kazdy przedmiot ma swoje jedno miejsce.
+   */
+  it('bizuteria tez ma swoje jedno miejsce', () => {
+    const naszyjnik = rzecz({ item_type: 8, item_id: 3 });
+    const pierscien = rzecz({ item_type: 9, item_id: 3 });
+    const talizman = rzecz({ item_type: 10, item_id: 3 });
+
+    expect(czyMozeLezec(naszyjnik, 4, 1)).toBeNull();
+    expect(czyMozeLezec(pierscien, 6, 1)).toBeNull();
+    expect(czyMozeLezec(talizman, 7, 1)).toBeNull();
+
+    // Kazde inne miejsce na postaci jest juz zle.
+    expect(czyMozeLezec(pierscien, 4, 1)).toBe('zle-miejsce');
+    expect(czyMozeLezec(pierscien, 7, 1)).toBe('zle-miejsce');
+    expect(czyMozeLezec(naszyjnik, 6, 1)).toBe('zle-miejsce');
+    expect(czyMozeLezec(talizman, 4, 1)).toBe('zle-miejsce');
+    expect(czyMozeLezec(naszyjnik, 8, 1)).toBe('zle-miejsce');
+  });
+
+  it('bizuteria dalej nie ma ograniczen KLASOWYCH', () => {
+    // Wezszy warunek klasy dotyczy tylko rodzajow 1-7. Bizuteria ma
+    // `item_id` ponizej tysiaca, wiec `klasaPrzedmiotu` daje jedynke —
+    // objecie jej tym warunkiem odcieloby ja magowi i zwiadowcy.
+    const pierscien = rzecz({ item_type: 9, item_id: 3 });
+    expect(czyMozeLezec(pierscien, 6, 2)).toBeNull();
+    expect(czyMozeLezec(pierscien, 6, 3)).toBeNull();
+  });
 });
 
 describe('zaplanujPrzeniesienie', () => {

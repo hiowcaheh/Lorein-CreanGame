@@ -24,6 +24,7 @@ import { usePrzeciaganie } from '../gra/usePrzeciaganie';
 import {
   PIERWSZY_SLOT_PLECAKA,
   RODZAJ_MIKSTURY,
+  celPrzeniesienia,
   czyEpicki,
   slotDlaRodzaju,
 } from '../gra/przedmioty';
@@ -151,7 +152,8 @@ export function Sklep({
        * zakladanie, zdejmowanie i porzadki w plecaku. Wczesniej sklep
        * po prostu nic z tym nie robil i przedmiot wracal na miejsce.
        */
-      onPrzenies(przedmiot.slot, cel);
+      // Kazdy przedmiot ma swoje miejsce — patrz `celPrzeniesienia()`.
+      onPrzenies(przedmiot.slot, celPrzeniesienia(przedmiot, cel));
     },
   });
 
