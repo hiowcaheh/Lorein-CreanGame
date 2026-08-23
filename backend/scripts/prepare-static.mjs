@@ -135,7 +135,13 @@ console.log('zapisano stare.html (dawna wersja na Ruffle)');
  */
 console.log('\nBuduje aplikacje webowa...');
 
-const cichy = { cwd: webRoot, stdio: 'inherit' };
+/*
+ * `VITE_WERSJA` wchodzi do zbudowanego klienta i pokazuje sie na stronie
+ * `?diag=1`. Bez tego jedynym sposobem na sprawdzenie, ktora wersja gry
+ * stoi na wdrozeniu, bylo zgadywanie po wygladzie ekranow — a przy
+ * pominietym budowaniu Vercela wyglada to tak samo, jak brak zmian.
+ */
+const cichy = { cwd: webRoot, stdio: 'inherit', env: { ...process.env, VITE_WERSJA: stamp } };
 execFileSync('npm', ['ci', '--no-audit', '--no-fund'], cichy);
 execFileSync('npm', ['run', 'build'], cichy);
 

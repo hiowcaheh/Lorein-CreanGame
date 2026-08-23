@@ -22,6 +22,17 @@ interface Wynik {
 
 const LIMIT_MS = 20000;
 
+/**
+ * Wersja ZBUDOWANEGO klienta — commit i godzina budowania.
+ *
+ * Wstawia ja `backend/scripts/prepare-static.mjs` w chwili budowania
+ * (`VITE_WERSJA`). Bez niej nie da sie odroznic „wdrozenie ma nowy kod"
+ * od „Vercel pominal budowanie i oddaje stary plik" — a z zewnatrz
+ * wyglada to identycznie. `/api/version` mowi o samym backendzie
+ * i potrafi byc swiezy, gdy klient jest stary.
+ */
+const WERSJA_KLIENTA = (import.meta.env['VITE_WERSJA'] as string | undefined) ?? 'lokalnie';
+
 async function zbadaj(
   nazwa: string,
   sciezka: string,
@@ -114,6 +125,7 @@ export function Diagnostyka() {
   }
 
   const doSkopiowania = [
+    `wersja klienta: ${WERSJA_KLIENTA}`,
     `pamiec przegladarki: ${pamiecDziala() ? 'dziala' : 'ZABLOKOWANA (prywatne okno albo blokada ciasteczek)'}`,
     `token sesji: ${token() ? 'jest' : 'brak'}`,
     `strona: ${location.href}`,
@@ -127,6 +139,14 @@ export function Diagnostyka() {
 
       <div className="karta" style={{ marginBottom: '1rem' }}>
         <div className="diag">
+          {/*
+            Pierwszy wiersz, bo to od niego zaczyna sie kazde „czy ja na
+            pewno widze nowa wersje?".
+          */}
+          <div className="ok">
+            <b>—</b> wersja klienta
+            <div>{WERSJA_KLIENTA}</div>
+          </div>
           <div className={pamiecDziala() ? 'ok' : 'blad'}>
             <b>{pamiecDziala() ? 'OK' : 'BŁĄD'}</b> pamięć przeglądarki
             <div>
