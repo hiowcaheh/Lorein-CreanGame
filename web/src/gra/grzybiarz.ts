@@ -75,9 +75,34 @@ export const ODSTEP_PACZEK = 8;
  * kilkudziesieciu wypraw. Stoi po lewej, pod reka grzybiarza: ramie
  * konczy sie na y = 484, a tlo ma 700 px wysokosci.
  */
-export const PANEL_TESTOWY = { lewo: 20, gora: 490, szerokosc: 460, wysokosc: 196 };
-export const PRZYCISK_TESTOWY = { szerokosc: 218, wysokosc: 34 };
-export const ODSTEP_TESTOWYCH = { x: 8, y: 6 };
+/*
+ * Wysokosc wyliczona z liczby przyciskow, a nie wpisana na oko:
+ * naglowek (`ODSTEP_NAGLOWKA`), potem tyle rzedow, ile trzeba przy
+ * DWOCH kolumnach. Ramie grzybiarza konczy sie na 484, a ekran ma 700 —
+ * na panel zostaje 210 px i wszystko musi sie w nich zmiescic.
+ */
+export const PRZYCISK_TESTOWY = { szerokosc: 218, wysokosc: 30 };
+export const ODSTEP_TESTOWYCH = { x: 8, y: 2 };
+export const ODSTEP_NAGLOWKA = 24;
+export const KOLUMN_TESTOWYCH = 2;
+
+/** Gorna krawedz rzedu `i`-tego przycisku. */
+export function gornaTestowego(i: number): number {
+  return (
+    ODSTEP_NAGLOWKA +
+    Math.floor(i / KOLUMN_TESTOWYCH) * (PRZYCISK_TESTOWY.wysokosc + ODSTEP_TESTOWYCH.y)
+  );
+}
+
+export const PANEL_TESTOWY = {
+  lewo: 20,
+  gora: 490,
+  szerokosc: 460,
+  get wysokosc(): number {
+    const rzedow = Math.ceil(SZTUCZKI.length / KOLUMN_TESTOWYCH);
+    return ODSTEP_NAGLOWKA + rzedow * (PRZYCISK_TESTOWY.wysokosc + ODSTEP_TESTOWYCH.y) + 6;
+  },
+};
 
 export interface SztuczkaTestowa {
   klucz: string;
@@ -94,6 +119,7 @@ export const SZTUCZKI: SztuczkaTestowa[] = [
   { klucz: 'grzyby-1000', napis: '+1000 grzybów' },
   { klucz: 'piwa-zeruj', napis: 'Wyzeruj piwa' },
   { klucz: 'poziom-1', napis: 'Poziom 1 (reset)' },
+  { klucz: 'lustro-prawie', napis: 'Lustro 12/13' },
 ];
 
 export function cenaSlownie(grosze: number): string {

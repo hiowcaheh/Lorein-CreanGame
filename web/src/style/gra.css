@@ -55,9 +55,6 @@
    * odstepstw w CLAUDE.md).
    */
   --blekit: #9ecbff;
-  /* Progi wielkosci kwot — patrz `klasaWielkosci()` w `gra/liczby.ts`. */
-  --liczba-duza: #7fae6a;
-  --liczba-ogromna: #c85a4a;
   /*
    * Sam CYTAT epika jest blizej oryginalu: `CLR_EPICITEMQUOTE = 0x8888FF`
    * rozjasniony tylko na tyle, zeby dalo sie go czytac na czarnym tle
@@ -260,14 +257,6 @@ img { max-width: 100%; }
 }
 
 .zasoby button.linia:hover { filter: brightness(1.15); }
-
-/*
- * Kolory rzedow wielkosci — od miliona zielony, od dziesieciu milionow
- * czerwony. Odcienie z palety gry: zielen pergaminowa, czerwien ta sama,
- * co `--zly`. SWIADOME ODSTEPSTWO, patrz tabela w CLAUDE.md.
- */
-.duza { color: var(--liczba-duza); }
-.ogromna { color: var(--liczba-ogromna); }
 
 /* Dokladne kwoty — zwykla podpowiedz, pod paskiem zasobow. */
 .zasoby-dokladnie {
@@ -849,7 +838,7 @@ button.postac-cecha.klikalna:hover { filter: brightness(1.2); }
 
 .podpowiedz.rozbicie-cechy .wiersz > span:nth-child(2) { position: static; }
 .rozbicie-cechy .zPrzedmiotow { color: var(--blekit); }
-.rozbicie-cechy .zMikstur { color: var(--liczba-duza); }
+.rozbicie-cechy .zMikstur { color: var(--pergamin); }
 .rozbicie-cechy .razem { color: var(--pergamin); }
 
 /*
@@ -2160,7 +2149,16 @@ button.postac-pancerz {
   text-shadow: 0 1px 2px #000;
 }
 
-.grzybiarz-testy .przycisk { font-size: 17px; }
+/*
+ * Przyciski panelu sa gestsze od zwyklych — jest ich dziewiec, a ramie
+ * grzybiarza zostawia na panel tylko 210 px wysokosci. Bez zdjecia
+ * `min-height` z `.przycisk` (50 px) ostatni rzad wychodzil poza ekran.
+ */
+.grzybiarz-testy .przycisk {
+  padding: 4px 10px;
+  min-height: 0;
+  font-size: 17px;
+}
 
 /*
  * Kawalki Magicznego Lustra — leza NA portrecie, przygaszone.

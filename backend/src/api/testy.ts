@@ -15,6 +15,7 @@ import { intval } from '../compat/php.js';
 import { config } from '../config.js';
 import { LEVELS } from '../protocol/gamedata.js';
 import { loadDefaultStats } from '../game/stats.js';
+import { KAWALKOW as KAWALKOW_LUSTRA } from '../game/lustro.js';
 import { wczytajGracza } from './gracz.js';
 import { tokenZNaglowka } from './konto.js';
 
@@ -22,6 +23,9 @@ export const testy = new Hono();
 
 /** Ile srebra to jedno zloto — tak samo, jak w pasku u gory. */
 const SREBRA_W_ZLOCIE = 100;
+
+/** Lustro bez ostatniego kawalka — dwanascie jedynek i zero. */
+const BEZ_OSTATNIEGO_KAWALKA = '1'.repeat(KAWALKOW_LUSTRA - 1) + '0';
 
 /** Najwyzszy poziom, na jaki pozwala tablica progow. */
 const NAJWYZSZY_POZIOM = LEVELS.length - 1;
@@ -34,7 +38,8 @@ export type Sztuczka =
   | 'zloto-10000000'
   | 'grzyby-1000'
   | 'piwa-zeruj'
-  | 'poziom-1';
+  | 'poziom-1'
+  | 'lustro-prawie';
 
 interface WierszGracza extends Record<string, unknown> {
   user_id: number;
@@ -87,6 +92,24 @@ testy.post('/testy/:sztuczka', async (c) => {
     case 'piwa-zeruj':
       await sql`UPDATE user_data SET beers = 0 WHERE user_id = ${wiersz.user_id}`;
       break;
+
+    case 'lustro-prawie': {
+      /*
+       * Lustro bez OSTATNIEGO kawalka. Sluzy do obejrzenia tego, co
+       * dzieje sie w chwili zlozenia: kawalki blyskaja i znikaja
+       * z portretu. Bez tego trzeba by uzbierac trzynascie odlamkow.
+       *
+       * Zostaje brakujacy kawalek numer trzynascie, wiec z wyprawy
+       * wypadnie wlasnie on — pod warunkiem, ze w czterech pierwszych
+       * kieszeniach plecaka nie lezy juz zaden przedmiot rodzaju 11
+       * (`check_for_key()` blokuje wtedy caly ten rodzaj).
+       */
+      await sql`
+        UPDATE user_data SET magic_mirror = ${BEZ_OSTATNIEGO_KAWALKA}
+        WHERE user_id = ${wiersz.user_id}
+      `;
+      break;
+    }
 
     case 'poziom-1': {
       /*

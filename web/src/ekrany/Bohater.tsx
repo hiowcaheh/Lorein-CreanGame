@@ -43,9 +43,6 @@ import {
   IKONY_KLAS,
   KATALOG_ODZNAK,
   KAWALEK_LUSTRA,
-  KLASER,
-  OBRAZ_KLASERA,
-  POZYCJI_W_KLASERZE,
   KATALOG_SLOTOW,
   KOLUMNA_CENY,
   KOLUMNY_CECH,
@@ -127,9 +124,6 @@ function liczbowaRamka(r: Ramka) {
 function styl(r: Ramka): React.CSSProperties {
   return { left: r.lewo, top: r.gora, width: r.szerokosc, height: r.wysokosc };
 }
-
-/** Naglowek i dwa wiersze podpowiedzi klasera — 16 px zapasu na obwodke. */
-const WYSOKOSC_PODPOWIEDZI_KLASERA = 16 + 3 * 26;
 
 /** Wiersz cech: POS_CHAR_PROP_Y + i * REL_CHAR_PROP_Y, minus poczatek ekranu. */
 function wiersz(i: number): number {
@@ -277,7 +271,6 @@ export function Bohater({
    */
   const [otwartaCecha, setOtwartaCecha] = useState<number | null>(null);
   const [pokazPancerz, setPokazPancerz] = useState(false);
-  const [pokazKlaser, setPokazKlaser] = useState(false);
   /** Ktory wiersz cechy ma otwarte rozbicie na czlony. */
   const [rozbitaCecha, setRozbitaCecha] = useState<number | null>(null);
 
@@ -606,25 +599,6 @@ export function Bohater({
         ))}
 
       {/*
-        Klaser Dokladnosci — `IMG_CHAR_ALBUM` pokazuje sie dopiero, gdy
-        gracz go ma (`SG_ALBUM >= 10000`, u nas `klaser >= 0`).
-        Podpowiedz z oryginalu: „Znaleziono: N / 1700, X%".
-      */}
-      {gracz.klaser >= 0 && (
-        <button
-          type="button"
-          className="postac-klaser"
-          style={styl(KLASER)}
-          title={`Klaser Dokładności — znaleziono: ${gracz.klaser} / ${POZYCJI_W_KLASERZE} (${
-            Math.round((gracz.klaser / POZYCJI_W_KLASERZE) * 10000) / 100
-          }%)`}
-          onClick={() => setPokazKlaser((czy) => !czy)}
-        >
-          <img src={OBRAZ_KLASERA} alt="Klaser Dokładności" />
-        </button>
-      )}
-
-      {/*
         Przycisk „Klaser" — `BTN_CHAR_ALBUM` w `POS_CHAR_PLAYERBTN_X1`
         i `POS_CHAR_PLAYERBTN_Y` (830, 715). Oryginal stawia go dopiero
         wtedy, gdy `Savegame[SG_ALBUM] >= 10000`, czyli gdy gracz klaser
@@ -638,38 +612,6 @@ export function Bohater({
         >
           Klaser
         </button>
-      )}
-
-      {pokazKlaser && (
-        <div
-          className="podpowiedz postac-podpowiedz-klasera"
-          /*
-            NAD ikonka, wysrodkowana na niej. Pod spodem sie nie miesci:
-            ikonka konczy sie na 664, a ekran gry ma 700 px wysokosci —
-            okienko wychodzilo poza dol i nie dalo sie go przeczytac.
-          */
-          style={{
-            left: parseFloat(KLASER.lewo) + parseFloat(KLASER.szerokosc) / 2 - 150,
-            top: parseFloat(KLASER.gora) - WYSOKOSC_PODPOWIEDZI_KLASERA - 8,
-            width: 300,
-          }}
-          role="dialog"
-          aria-label="Klaser Dokładności"
-        >
-          <div className="nazwa">Klaser Dokładności</div>
-          <div className="wiersz">
-            <span>Znaleziono:</span>
-            <span style={{ left: 137 }}>
-              {gracz.klaser} / {POZYCJI_W_KLASERZE}
-            </span>
-          </div>
-          <div className="wiersz">
-            <span>Premia do doświadczenia:</span>
-            <span style={{ left: 220 }}>
-              +{Math.round((gracz.klaser / POZYCJI_W_KLASERZE) * 100)}%
-            </span>
-          </div>
-        </div>
       )}
 
       {/*

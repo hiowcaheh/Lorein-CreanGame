@@ -271,6 +271,14 @@ interface Rozliczenie {
   lokacja: number;
   awans: number | null;
   nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
+  /**
+   * Skladniki premii, ktore juz siedza w `nagroda.doswiadczenie`.
+   *
+   * Ekran po walce rozpisuje z nich, ile dokladnie dolozylo kazde
+   * zrodlo — tak samo jak po walce w lochu. Zlota premie nie dotycza:
+   * `finishQuest()` podbija samo doswiadczenie.
+   */
+  premie?: { klaser: number; rzadkie: number };
   /** Przedmiot, ktory wpadl do plecaka — albo powod, dla ktorego nie wpadl. */
   /**
    * Zdobyty przedmiot — CALY, bo ekran walki pokazuje jego ikone
@@ -506,6 +514,15 @@ async function rozliczWyprawe(sql: Sql, wiersz: WierszGracza): Promise<Rozliczen
           grzyby: znalezioneGrzyby,
         }
       : null,
+    /*
+     * Te same liczby, ktore podbily doswiadczenie kilka wierszy wyzej —
+     * z klasera SPRZED wyprawy, bo `$albumbonus` czyta sie przed
+     * `addMonster()`.
+     */
+    premie: {
+      klaser: Math.round(premiaZKlasera(klaserPrzed) * 100),
+      rzadkie: zadanie.premia,
+    },
     zdobytyPrzedmiot,
     plecakBylPelny,
     /*

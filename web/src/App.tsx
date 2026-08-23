@@ -27,7 +27,7 @@ import { Walka } from './ekrany/karczma/Walka';
 import { TworzeniePostaci, type DanePostaci } from './ekrany/TworzeniePostaci';
 import { BLAD, KLIK, zagraj } from './gra/dzwieki';
 import type { Gracz, OdpowiedzZTokenem, Rozliczenie, StanKarczmy, StanSklepu } from './gra/typy';
-import { klasaWielkosci, liczba } from './gra/liczby';
+import { liczba } from './gra/liczby';
 
 type Zakladka =
   | 'miasto'
@@ -700,7 +700,7 @@ function Zasoby({ srebro, grzyby }: { srebro: number; grzyby: number }) {
         title="Złoto i srebro — kliknij, żeby zobaczyć dokładną kwotę"
         onClick={() => setDokladnie((czy) => !czy)}
       >
-        <span className={klasaWielkosci(zloto)}>{liczba(zloto)}</span>
+        <span>{liczba(zloto)}</span>
         <img src="/res/sfgame/if/icon_gold.png" alt="złota" />
         {zeSrebrem && (
           <>
@@ -711,7 +711,7 @@ function Zasoby({ srebro, grzyby }: { srebro: number; grzyby: number }) {
       </button>
 
       <div className="linia" title="Grzyby">
-        <span className={klasaWielkosci(grzyby)}>{liczba(grzyby)}</span>
+        <span>{liczba(grzyby)}</span>
         <img className="grzyb" src="/res/sfgame/if/icon_pilz.png" alt="grzybów" />
       </div>
 

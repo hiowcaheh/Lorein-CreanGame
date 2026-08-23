@@ -21,7 +21,9 @@ import {
   PLANSZA,
   PRZYCISK_TESTOWY,
   RAMIE,
+  KOLUMN_TESTOWYCH,
   SZTUCZKI,
+  gornaTestowego,
   TLO,
   WYSOKOSC_PACZKI,
   cenaSlownie,
@@ -172,8 +174,8 @@ export function Grzybiarz({
               className="przycisk"
               disabled={pracuje !== ''}
               style={{
-                left: (i % 2) * (PRZYCISK_TESTOWY.szerokosc + ODSTEP_TESTOWYCH.x),
-                top: 30 + Math.floor(i / 2) * (PRZYCISK_TESTOWY.wysokosc + ODSTEP_TESTOWYCH.y),
+                left: (i % KOLUMN_TESTOWYCH) * (PRZYCISK_TESTOWY.szerokosc + ODSTEP_TESTOWYCH.x),
+                top: gornaTestowego(i),
                 width: PRZYCISK_TESTOWY.szerokosc,
                 minHeight: PRZYCISK_TESTOWY.wysokosc,
               }}
