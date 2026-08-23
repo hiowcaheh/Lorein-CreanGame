@@ -199,6 +199,7 @@ interface RozliczenieLochu {
   nagroda: { zloto: number; doswiadczenie: number; honor: number; grzyby: number } | null;
   /** Skladniki premii, w procentach — klient rozpisuje je po klikniecu. */
   premie: { klaser: number };
+  premieZlota: Record<string, number>;
   /** Ekran walki potrafi pokazac, ze plecak byl pelny; tutaj nigdy nie jest. */
   plecakBylPelny: boolean;
   zdobytyPrzedmiot: PrzedmiotEkranu | null;
@@ -321,9 +322,12 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
 
   /*
    * SWIADOME ODSTEPSTWO (tabela w CLAUDE.md): premia kolekcjonera liczy
-   * sie takze w lochu, i to zarowno do doswiadczenia, jak i do zlota.
-   * `req.php` doklada `$OP->getExp()` i `$OP->getGold()` surowo — premie
-   * chodza tam tylko przy wyprawie (`finishQuest`).
+   * sie takze w lochu. `req.php` doklada `$OP->getExp()` i `$OP->getGold()`
+   * surowo — premie chodza tam tylko przy wyprawie (`finishQuest`).
+   *
+   * Dotyczy WYLACZNIE doswiadczenia, tak samo jak przy wyprawie: tam
+   * `$albumbonus` wchodzi do `$exp`, a zloto liczy sie osobnym wzorem,
+   * ktory klasera w ogole nie zna.
    */
   const bonusKlasera = maKlaser ? premiaZKlasera(klaserPrzed) : 0;
   const zPremia = (ile: number) => Math.trunc(ile * (1 + bonusKlasera));
@@ -332,8 +336,11 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
     nowyStan = stan + 1;
     doswiadczenie += zPremia(doswiadczeniePotwora);
 
-    // `$this->silver = $exp * 2.5;` — zloto potwora liczy sie z doswiadczenia.
-    const zlotoPotwora = zPremia(Math.trunc(doswiadczeniePotwora * 2.5));
+    /*
+     * `$this->silver = $exp * 2.5;` — zloto potwora liczy sie z GOLEGO
+     * doswiadczenia, jeszcze przed premia.
+     */
+    const zlotoPotwora = Math.trunc(doswiadczeniePotwora * 2.5);
     const zamiastZlota =
       losPrzedmiotu === 1 || nowyStan === PRZESZEDL || liczba(wiersz['dungeon_13']) >= 2;
 
@@ -444,13 +451,15 @@ lochy.post('/lochy/:numer/walcz', async (c) => {
           zloto:
             losPrzedmiotu === 1 || nowyStan === PRZESZEDL
               ? 0
-              : zPremia(Math.trunc(doswiadczeniePotwora * 2.5)),
+              : Math.trunc(doswiadczeniePotwora * 2.5),
           doswiadczenie: zPremia(doswiadczeniePotwora),
           honor: 0,
           grzyby: 0,
         }
       : null,
     premie: { klaser: Math.round(bonusKlasera * 100) },
+    /** Zlota zadna premia nie dotyczy — patrz komentarz przy `zPremia`. */
+    premieZlota: {},
     zdobytyPrzedmiot,
     plecakBylPelny: false,
     ukonczony: nowyStan >= PRZESZEDL,

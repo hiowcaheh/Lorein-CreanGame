@@ -47,8 +47,7 @@ describe('zasady karczmy', () => {
    *     if ($gold > 1000000000) $gold = 1000000000;
    *
    * gdzie `$gbonus = 1 + (treasure + dung) / 50`. Klasera tam NIE MA —
-   * `$albumbonus` wchodzi wylacznie do doswiadczenia. Dolozenie go jest
-   * decyzja wlasciciela gry (tabela odstepstw w CLAUDE.md).
+   * `$albumbonus` wchodzi wylacznie do doswiadczenia.
    */
   it('zloto bez zadnych premii zostaje takie, jakie bylo', () => {
     expect(zlotoZWyprawy(1000)).toBe(1000);
@@ -64,11 +63,10 @@ describe('zasady karczmy', () => {
     expect(zlotoZWyprawy(1000, { wieza: 11 })).toBe(1100);
   });
 
-  it('klaser podbija zloto tak samo, jak doswiadczenie', () => {
-    // Pelny klaser to `round(1700 / 1700, 2)` = 1, czyli mnoznik dwa.
-    expect(zlotoZWyprawy(1000, { album: 1700 })).toBe(2000);
-    // Polowa klasera to 0,5 — `round(850 / 1700, 2)`.
-    expect(zlotoZWyprawy(1000, { album: 850 })).toBe(1500);
+  it('klaser zlota NIE dotyczy — podbija wylacznie doswiadczenie', () => {
+    // `$albumbonus` wchodzi tylko do `$exp`; wzor na zloto go nie zna.
+    expect(zlotoZWyprawy(1000)).toBe(1000);
+    expect(doswiadczenieZWyprawy(1000, { album: 1700 })).toBe(2000);
   });
 
   it('powyzej dziesieciu tysiecy kwota zaokragla sie do setek', () => {

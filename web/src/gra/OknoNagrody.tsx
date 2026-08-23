@@ -118,7 +118,8 @@ export function OknoNagrody({
       )}
 
       <div className="wiersz razem">
-        <span>Razem</span>
+        {/* „Razem" tylko wtedy, gdy naprawde jest co sumowac. */}
+        <span>{skladniki.length > 0 ? 'Razem' : 'Nagroda'}</span>
         <span>{kwota(wartosc, rodzaj)}</span>
       </div>
     </div>
