@@ -118,20 +118,14 @@ export function klatkaPortalu(i: number): string {
 /*
  * EKRAN JEDNEGO LOCHU.
  *
- * `SHP_MAINQUEST` to przydymiony prostokat w `POS_MQ_SQUARE` o rozmiarze
- * `SIZE_MQ_SQUARE`, z przezroczystoscia 0,6. Zaczyna sie 20 px NAD
- * obszarem gry — w oryginale lezy na calej scenie, u nas obszar gry
- * konczy sie na 0, wiec gorna krawedz przycinamy i o tyle samo skracamy
- * wysokosc. Dolna krawedz zostaje tam, gdzie byla.
+ * Wszystkie POLOZENIA TRESCI sa z oryginalu co do piksela: tytul na
+ * `POS_MQ_SQUARE_Y + REL_MQ_TITLE_Y`, opis na `POS_MQ_SQUARE + REL_MQ_TEXT`,
+ * przeciwnik w `POS_MAINQUEST_ENEMY` z ramka o `REL_MQ_BORDER` wyzej
+ * i w lewo, przycisk prawa krawedzia na `POS_MQ_SQUARE_X + SIZE_MQ_SQUARE_X
+ * - REL_MQ_TEXT_X`.
+ *
+ * SWIADOMYM ODSTEPSTWEM jest sama PLANSZA — patrz nizej.
  */
-const KWADRAT_GORA = 80 - POCZATEK_Y;
-export const PLANSZA = {
-  lewo: 470 - POCZATEK_X,
-  gora: Math.max(0, KWADRAT_GORA),
-  szerokosc: 610,
-  wysokosc: 570 + Math.min(0, KWADRAT_GORA),
-};
-export const PRZEZROCZYSTOSC_PLANSZY = 0.6;
 
 /** `POS_MQ_SQUARE_Y + REL_MQ_TITLE_Y`, wysrodkowany jak tytul ekranu. */
 export const TYTUL_LOCHU_Y = 80 + 90 - POCZATEK_Y;
@@ -153,17 +147,47 @@ export const RAMKA_PRZECIWNIKA = {
 export const OBRAZ_RAMKI = '/res/sfgame/scr/fight/character_border.png';
 
 /**
- * Przycisk „OK": prawa krawedz na `POS_MQ_SQUARE_X + SIZE_MQ_SQUARE_X
- * - REL_MQ_TEXT_X`, gora na `POS_MQ_SQUARE_Y + SIZE_MQ_SQUARE_Y
- * - REL_MQ_BUTTON_Y` (a `REL_MQ_BUTTON_Y` jest UJEMNE, wiec przycisk
- * schodzi PONIZEJ planszy).
+ * Przyciski „Wroc" i „OK" — 174x45, prawy prawa krawedzia na
+ * `POS_MQ_SQUARE_X + SIZE_MQ_SQUARE_X - REL_MQ_TEXT_X`.
+ *
+ * Wysokosc jest juz NASZA: oryginal stawia je 20 px PONIZEJ planszy
+ * (`REL_MQ_BUTTON_Y = -20` jest odejmowane), u nas stoja na niej —
+ * patrz `PLANSZA`. Zostaje 30 px odstepu od ramki przeciwnika, ktora
+ * konczy sie na `RAMKA_PRZECIWNIKA.gora + rozmiar`.
  */
+const ODSTEP_OD_RAMKI = 30;
 export const PRZYCISK = {
   szerokosc: 174,
   wysokosc: 45,
   prawo: 470 + 610 - 20 - POCZATEK_X,
-  gora: 80 + 570 + 20 - POCZATEK_Y,
+  gora: RAMKA_PRZECIWNIKA.gora + RAMKA_PRZECIWNIKA.rozmiar + ODSTEP_OD_RAMKI,
 };
+
+/**
+ * Przydymiona plansza — SWIADOME ODSTEPSTWO (tabela w CLAUDE.md).
+ *
+ * Oryginal ma `SHP_MAINQUEST` w `POS_MQ_SQUARE` (470, 80) o rozmiarze
+ * `SIZE_MQ_SQUARE` 610x570 i alfie 0,6, czyli konczaca sie na 650 —
+ * a przyciski stawia PONIZEJ niej, na 670. U nas wychodzily z tego dwie
+ * brzydkie rzeczy naraz: jasny pas pod plansza z dwoma przyciskami na
+ * nim, oraz plansza przyklejona do gornej krawedzi obszaru gry (bo scena
+ * zaczyna sie na 100, a oryginal wpuszcza plansze 20 px na pas tytulu).
+ *
+ * Wlasciciel gry poprosil, zeby przyciski weszly NA plansze i zeby nad
+ * nia zostalo tyle samo pustego miejsca, co pod spodem. Plansza liczy
+ * sie wiec z TRESCI: obejmuje wszystko od tytulu po przyciski, z rownym
+ * marginesem z gory i z dolu. Szerokosc i polozenie w poziomie zostaja
+ * z oryginalu.
+ */
+const MARGINES_PLANSZY = 40;
+const DOL_TRESCI = PRZYCISK.gora + PRZYCISK.wysokosc;
+export const PLANSZA = {
+  lewo: 470 - POCZATEK_X,
+  gora: TYTUL_LOCHU_Y - MARGINES_PLANSZY,
+  szerokosc: 610,
+  wysokosc: DOL_TRESCI - TYTUL_LOCHU_Y + MARGINES_PLANSZY * 2,
+};
+export const PRZEZROCZYSTOSC_PLANSZY = 0.6;
 
 /** `LBL_MAINQUEST_MUSHHINT` — po lewej od przycisku, na jego wysokosci. */
 export const PODPOWIEDZ = {
